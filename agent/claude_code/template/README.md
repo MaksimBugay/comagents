@@ -1,16 +1,16 @@
 # Claude Code agent template
 
 Starting point for a comagents agent implemented with [Claude Code](https://code.claude.com/docs).
-Copy it to `agent/<agent-name>/` and replace the example content.
+Copy it to `agent/claude_code/<agent-name>/` and replace the example content.
 
 ```bash
-cp -R agent/template/claude_code agent/<agent-name>
+cp -R agent/claude_code/template agent/claude_code/<agent-name>
 ```
 
 ## Layout
 
 ```
-claude_code/
+template/
 ├── CLAUDE.md                     # agent role + workflow, always loaded
 ├── .mcp.json                     # MCP servers available to the agent (none by default)
 ├── .gitignore                    # keeps personal overrides out of git
@@ -39,7 +39,7 @@ and both pick up `java-style` when they edit `.java` files.
 ## Run
 
 ```bash
-cd agent/<agent-name>
+cd agent/claude_code/<agent-name>
 claude                                    # interactive
 claude -p "/write-unit-test src/main/java/com/comagents/agentproxy/AgentController.java"
 claude --agent test-writer -p "cover AgentController"   # run a subagent as the main agent

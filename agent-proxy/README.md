@@ -22,7 +22,10 @@ $ curl localhost:8080/code_review/info
 ./mvnw package && java -jar target/agent-proxy-0.1.jar   # JVM
 
 docker build -t agent-proxy:0.1 .    # native image (no local GraalVM needed)
-docker run --rm -p 8080:8080 agent-proxy:0.1
+docker run --rm -p 8080:8080 \
+  -e CLONE_COMAGENTS_SOURCES_URL=https://github.com/<org>/<repo>.git \
+  -e SOURCES_REPO_ACCESS_TOKEN \
+  agent-proxy:0.1                    # token taken from the host env, not the command line
 
 kubectl apply -f k8s/deployment.yaml
 ```
@@ -37,3 +40,5 @@ The Docker image is a mostly-static native binary on `distroless/base-debian13:n
 | `MICRONAUT_SERVER_PORT`  | `8080`  | HTTP port              |
 | `AGENT_PROXY_VERSION`    | `0.1`   | Reported `version`     |
 | `HOSTNAME`               | `local` | Reported `instance` (pod name in Kubernetes) |
+| `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`) |
+| `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |

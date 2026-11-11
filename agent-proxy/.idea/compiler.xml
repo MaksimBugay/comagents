@@ -48,6 +48,10 @@
           <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-model/2.2.4/micronaut-sourcegen-model-2.2.4.jar" />
           <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-generator/2.2.4/micronaut-sourcegen-generator-2.2.4.jar" />
           <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-generator-java/2.2.4/micronaut-sourcegen-generator-java-2.2.4.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/validation/micronaut-validation-processor/5.2.1/micronaut-validation-processor-5.2.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/validation/micronaut-validation/5.2.1/micronaut-validation-5.2.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/jakarta/validation/jakarta.validation-api/3.1.1/jakarta.validation-api-3.1.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/reactor/micronaut-reactor/4.3.0/micronaut-reactor-4.3.0.jar" />
         </processorPath>
         <module name="agent-proxy" />
       </profile>

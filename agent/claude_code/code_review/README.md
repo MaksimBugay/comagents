@@ -1,6 +1,6 @@
 # code_review agent
 
-Read-only Java 25 / Spring Boot code reviewer, built from `agent/template/claude_code`.
+Read-only Java 25 / Spring Boot code reviewer, built from `agent/claude_code/template`.
 
 ```
 code_review/
@@ -26,7 +26,7 @@ at this agent's configuration. Each piece of an `--add-dir` folder loads differe
 - `settings.json`: not loaded; pass it with `--settings`
 
 ```bash
-AGENT=/path/to/comagents/agent/code_review
+AGENT=/path/to/comagents/agent/claude_code/code_review
 cd /path/to/repo-under-review
 CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 claude \
        --add-dir "$AGENT" --settings "$AGENT/.claude/settings.json" \
