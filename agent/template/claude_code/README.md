@@ -1,0 +1,53 @@
+# Claude Code agent template
+
+Starting point for a comagents agent implemented with [Claude Code](https://code.claude.com/docs).
+Copy it to `agent/<agent-name>/` and replace the example content.
+
+```bash
+cp -R agent/template/claude_code agent/<agent-name>
+```
+
+## Layout
+
+```
+claude_code/
+├── CLAUDE.md                     # agent role + workflow, always loaded
+├── .mcp.json                     # MCP servers available to the agent (none by default)
+├── .gitignore                    # keeps personal overrides out of git
+└── .claude/
+    ├── settings.json             # shared permissions (allow/deny), hooks, env
+    ├── rules/                    # topic rules; `paths:` frontmatter = load only for matching files
+    │   └── java-style.md
+    ├── skills/                   # reusable procedures, invoked as /<name> or picked by the model
+    │   └── write-unit-test/
+    │       ├── SKILL.md          # frontmatter + instructions ($ARGUMENTS = invocation args)
+    │       └── examples.md       # supporting file, read on demand
+    └── agents/                   # subagents: own context, tools, model; delegated to by description
+        └── test-writer.md
+```
+
+| Piece     | Use it for                                    | Loaded                                        |
+|-----------|-----------------------------------------------|-----------------------------------------------|
+| CLAUDE.md | who the agent is, its workflow                | every session                                 |
+| rules     | conventions for a topic or file type          | at start, or when a `paths` file is touched   |
+| skills    | step-by-step procedures, with optional files  | on `/name` or when the description matches    |
+| agents    | delegated roles with isolated context         | when delegated to (or `claude --agent <name>`)|
+
+The example pieces are connected: `test-writer` preloads the `write-unit-test` skill,
+and both pick up `java-style` when they edit `.java` files.
+
+## Run
+
+```bash
+cd agent/<agent-name>
+claude                                    # interactive
+claude -p "/write-unit-test src/main/java/com/comagents/agentproxy/AgentController.java"
+claude --agent test-writer -p "cover AgentController"   # run a subagent as the main agent
+```
+
+## Adding more
+
+- Rule: `.claude/rules/<topic>.md`, optional `paths:` list of globs.
+- Skill: `.claude/skills/<name>/SKILL.md` with `name`, `description` (+ optional `allowed-tools`, `argument-hint`, `disable-model-invocation`).
+- Subagent: `.claude/agents/<name>.md` with `name`, `description` (+ optional `tools`, `model`, `skills`).
+- Personal overrides: `CLAUDE.local.md`, `.claude/settings.local.json` (git-ignored).
