@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="service backbone">
+      <change afterPath="$PROJECT_DIR$/.dockerignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.mvn/wrapper/maven-wrapper.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.mvn/wrapper/maven-wrapper.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aot-jar.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aot-native-image.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/k8s/deployment.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/micronaut-cli.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mvnw" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mvnw.bat" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/AgentController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/AgentInfo.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/Application.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/logback.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentControllerTest.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "MaksimBugay"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/MaksimBugay/comagents.git",
+    "accountId": "b58717c3-b997-474a-bb76-4dd2dc2ec64b"
+  }
+}]]></component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0001345588020125" />
+      <entry key="MS500" value="1.2134893848878785" />
+      <entry key="S2" value="2.393942953580487" />
+      <entry key="S5" value="3.1868558921454264" />
+      <entry key="S10" value="3.5572877131696083" />
+      <entry key="S30" value="3.8435072368114023" />
+      <entry key="S60" value="3.9205773582287993" />
+      <entry key="M2" value="3.9599898219043683" />
+      <entry key="M5" value="3.9839235801964232" />
+      <entry key="M10" value="3.9919496797025857" />
+      <entry key="M15" value="3.994630424714212" />
+      <entry key="M30" value="3.9973138638398495" />
+      <entry key="H1" value="3.9986565946079495" />
+      <entry key="H2" value="3.999328212953137" />
+      <entry key="H4" value="3.999664085386003" />
+      <entry key="D1" value="3.9999440113015123" />
+      <entry key="W1" value="3.9999920015427564" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.9795530035440103" />
+      <entry key="MS500" value="1.2086704827057921" />
+      <entry key="S2" value="2.391565278264383" />
+      <entry key="S5" value="3.185558612339542" />
+      <entry key="S10" value="3.5565561986222045" />
+      <entry key="S30" value="3.843241836807159" />
+      <entry key="S60" value="3.9204417409876013" />
+      <entry key="M2" value="3.959921266270568" />
+      <entry key="M5" value="3.9838959763473336" />
+      <entry key="M10" value="3.9919358473174493" />
+      <entry key="M15" value="3.994621196340611" />
+      <entry key="M30" value="3.9973092462576636" />
+      <entry key="H1" value="3.998654284967329" />
+      <entry key="H2" value="3.9993270579203597" />
+      <entry key="H4" value="3.999663507816487" />
+      <entry key="D1" value="3.999943915032547" />
+      <entry key="W1" value="3.999991987789866" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 1,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3LxLXe9oAzdWR0yWhlSKWLuHbeN" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "JUnit.AgentControllerTest.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/mbugai/work/comagents/agent-proxy",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "vcs.Git"
+  }
+}]]></component>
+  <component name="RunManager" selected="JUnit.AgentControllerTest">
+    <configuration name="AgentControllerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="agent-proxy" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.comagents.agentproxy.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.comagents.agentproxy" />
+      <option name="MAIN_CLASS_NAME" value="com.comagents.agentproxy.AgentControllerTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Application" type="MicronautRunConfigurationType" factoryName="Micronaut" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.comagents.agentproxy.Application" />
+      <module name="agent-proxy" />
+      <option name="alternativeJrePath" />
+      <option name="alternativeJrePathEnabled" value="false" />
+      <option name="mainClass" value="com.comagents.agentproxy.Application" />
+      <option name="passParentEnvs" value="true" />
+      <option name="programParameters" />
+      <option name="vmParameters" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.AgentControllerTest" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-ac68fc9d2b05-intellij.indexing.shared.core-IU-263.7307.200" />
+        <option value="bundled-js-predefined-d6986cc7102b-56aff7b04f6f-JavaScript-IU-263.7307.200" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="" />
+      <created>1794390812586</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1794390812586</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="service backbone" />
+    <option name="LAST_COMMIT_MESSAGE" value="service backbone" />
+  </component>
+</project>

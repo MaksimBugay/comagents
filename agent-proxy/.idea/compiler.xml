@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Annotation profile for agent-proxy" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <option name="micronaut.processing.group" value="com.comagents.agentproxy" />
+        <option name="micronaut.processing.module" value="agent-proxy" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-inject-java/5.2.22/micronaut-inject-java-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/2.0.20/slf4j-api-2.0.20.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-core-processor/5.2.22/micronaut-core-processor-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-aop/5.2.22/micronaut-aop-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/com/github/javaparser/javaparser-symbol-solver-core/3.28.2/javaparser-symbol-solver-core-3.28.2.jar" />
+          <entry name="$MAVEN_REPOSITORY$/com/github/javaparser/javaparser-core/3.28.2/javaparser-core-3.28.2.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/checkerframework/checker-qual/4.2.3/checker-qual-4.2.3.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-bytecode-writer/2.2.4/micronaut-sourcegen-bytecode-writer-2.2.4.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-bytecode-writer-core/2.2.4/micronaut-sourcegen-bytecode-writer-core-2.2.4.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/ow2/asm/asm-commons/9.10.1/asm-commons-9.10.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/ow2/asm/asm-tree/9.10.1/asm-tree-9.10.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/ow2/asm/asm-util/9.10.1/asm-util-9.10.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/ow2/asm/asm-analysis/9.10.1/asm-analysis-9.10.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-core-reactive/5.2.22/micronaut-core-reactive-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-http-validation/5.2.22/micronaut-http-validation-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-http-server/5.2.22/micronaut-http-server-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-http/5.2.22/micronaut-http-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-context-propagation/5.2.22/micronaut-context-propagation-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-router/5.2.22/micronaut-router-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/projectreactor/reactor-core/3.8.8/reactor-core-3.8.8.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-websocket/5.2.22/micronaut-websocket-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-http-client-core/5.2.22/micronaut-http-client-core-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-discovery-core/5.2.22/micronaut-discovery-core-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-retry/5.2.22/micronaut-retry-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/serde/micronaut-serde-processor/3.2.6/micronaut-serde-processor-3.2.6.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-inject/5.2.22/micronaut-inject-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/jakarta/inject/jakarta.inject-api/2.0.1/jakarta.inject-api-2.0.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-core/5.2.22/micronaut-core-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/serde/micronaut-serde-api/3.2.6/micronaut-serde-api-3.2.6.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-context/5.2.22/micronaut-context-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/micronaut-json-core/5.2.22/micronaut-json-core-5.2.22.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-annotations/2.2.4/micronaut-sourcegen-annotations-2.2.4.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-model/2.2.4/micronaut-sourcegen-model-2.2.4.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-generator/2.2.4/micronaut-sourcegen-generator-2.2.4.jar" />
+          <entry name="$MAVEN_REPOSITORY$/io/micronaut/sourcegen/micronaut-sourcegen-generator-java/2.2.4/micronaut-sourcegen-generator-java-2.2.4.jar" />
+        </processorPath>
+        <module name="agent-proxy" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="agent-proxy" options="-parameters -Amicronaut.processing.group=com.comagents.agentproxy -Amicronaut.processing.module=agent-proxy" />
+    </option>
+  </component>
+</project>
