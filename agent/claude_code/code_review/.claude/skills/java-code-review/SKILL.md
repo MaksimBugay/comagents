@@ -1,8 +1,8 @@
 ---
 name: java-code-review
-description: Review Java 25 / Spring Boot code, diffs, branches, or commit ranges for actionable correctness, security, performance, concurrency, design, dependency, and test issues, and produce a severity-ordered report. Use when a code review is requested; not for implementation work.
-argument-hint: "[path... | <base>..<head> | branch]"
-allowed-tools: Read Grep Glob Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git status *) Bash(git merge-base *) Bash(git rev-parse *) Bash(git ls-files *) Bash(git blame *) Bash(./mvnw *) Bash(mvn *) Bash(./gradlew *)
+description: Review Java 25 / Spring Boot code — a whole project, selected files or folders, or a patch file — for actionable correctness, security, performance, concurrency, design, dependency, and test issues, and produce a severity-ordered report. Works without git. Use when a code review is requested; not for implementation work.
+argument-hint: "[path... | file.patch]"
+allowed-tools: Read Grep Glob Bash(./mvnw *) Bash(mvn *) Bash(./gradlew *)
 ---
 
 # Java code review
@@ -14,35 +14,43 @@ Review target: $ARGUMENTS
 
 ## 1. Determine the scope
 
+The project may be a plain snapshot of the sources without version control. Do not use git, and do not
+rely on history, branches, or a diff being available.
+
 Resolve the target in this order and state the resolved scope at the top of the report:
 
-1. Explicit paths → review those files (and the code they depend on as needed).
-2. A commit range (`a..b`) or branch → `git diff <merge-base>..<head>` of that range.
-3. Nothing given → the current branch's changes against its base:
-   `git diff $(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main)` plus uncommitted
-   changes (`git status`). If there are no changes either, report `review incomplete` and ask for a target
-   rather than reviewing the whole repository.
+1. Explicit files or folders → review those (and the code they depend on as needed).
+2. A patch file (`*.patch`, `*.diff`) → review the changes it describes, reading the current files for
+   context. The patch is the diff for the checklist's diff-review rules.
+3. Nothing given → the whole project in the working directory. Start from the build file and the entry
+   points (`@SpringBootApplication`, controllers, scheduled and async jobs, message listeners), then follow
+   the code they reach. If the project is too large to read completely, review security-sensitive code,
+   shared infrastructure, and concurrent code first, and list everything not reviewed under Coverage as
+   `unverified`.
 
-Skip generated and vendored code (`target/`, `build/`, generated sources) unless explicitly targeted.
+Skip generated and vendored code (`target/`, `build/`, generated sources) and this agent's own
+configuration (`CLAUDE.md`, `.claude/`) unless explicitly targeted.
 
 ## 2. Prepare
 
-1. Read the reviewed project's `CLAUDE.md`/`AGENTS.md` and `README.md`; their conventions are
-   authoritative over this skill.
+1. Read the reviewed project's `AGENTS.md` and `README.md` if present; their conventions are
+   authoritative over this skill. `CLAUDE.md` and `.claude/` in the project root are this agent's own
+   configuration, not the project's.
 2. Read [the review checklist](references/review-checklist.md) completely.
 3. Apply the standard in `.claude/rules/java-spring-boot.md`.
-4. For each changed unit, read the implementation, its callers, its tests, and the build file
-   (`pom.xml`/`build.gradle*`) before reaching conclusions. For a diff, read enough surrounding code to
-   establish impact; the diff alone is not evidence.
+4. For each reviewed unit, read the implementation, its callers, its tests, and the build file
+   (`pom.xml`/`build.gradle*`) before reaching conclusions. For a patch, read enough surrounding code to
+   establish impact; the patch alone is not evidence.
 5. Stay read-only (`.claude/rules/read-only.md`).
 
 ## 3. Verify
 
 Run the narrowest meaningful checks and record each command with its result:
 
-- focused tests for the changed classes (`./mvnw -B -q test -Dtest=<TestClass>`), the full suite
-  (`./mvnw -B verify`) for shared code, build, or dependency changes when feasible;
-- `./mvnw -B -q dependency:tree` when dependencies changed.
+- focused tests for the reviewed classes (`./mvnw -B -q test -Dtest=<TestClass>`); the full suite
+  (`./mvnw -B verify`) for a whole-project review or for shared code, build, or dependency changes when
+  feasible;
+- `./mvnw -B -q dependency:tree` for a whole-project review or when dependencies changed.
 
 If a command cannot run (missing toolchain, network, resources), say so; never report it as passed.
 
@@ -56,8 +64,8 @@ Assign exactly one severity to every finding:
 - `P3 Minor`: a limited-impact actionable issue, including a cosmetic issue worth changing.
 
 List findings in strict descending severity. Consolidate findings with the same root cause under the
-highest demonstrated severity. Do not invent findings to fill a level or impose a quota. In diff reviews,
-mark pre-existing issues as `(pre-existing)`.
+highest demonstrated severity. Do not invent findings to fill a level or impose a quota. In patch
+reviews, mark pre-existing issues as `(pre-existing)`.
 
 Use this structure:
 

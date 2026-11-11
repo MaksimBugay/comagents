@@ -1,23 +1,32 @@
 package com.comagents.agentproxy.vcs;
 
-import java.nio.file.Path;
-import java.util.Objects;
-import java.util.UUID;
+import com.comagents.agentproxy.workspace.SessionFolders;
 
-public interface VcsService {
+import java.nio.file.Path;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+public sealed interface VcsService permits VcsGithubService {
 
     void clone(String sourcesRepoUrl, String destinationPath);
 
-    void cloneComAgentsSources();
+    /**
+     * Clones the comagents sources into a temporary folder, hands it to {@code sourcesConsumer}, and
+     * deletes it afterwards, so the folder is only valid while the consumer runs.
+     */
+    void cloneComAgentsSources(Consumer<Path> sourcesConsumer);
 
     /**
-     * Clones into {@code <java.io.tmpdir>/<session id>/<repo name>}, the repo name being the last URL
+     * Clones into {@code <session folder>/<repo name>} (see {@link SessionFolders}), the repo name being the last URL
      * path segment without {@code .git}, e.g. {@code https://github.com/acme/agents.git} →
      * {@code /tmp/3f2b…-9c1d/agents}.
+     *
+     * @return the folder the repository was cloned into
      */
-    default void clone(String sourcesRepoUrl, UUID sessionId) {
-        Objects.requireNonNull(sessionId, "sessionId");
-        clone(sourcesRepoUrl, Path.of(System.getProperty("java.io.tmpdir"), sessionId.toString(), repoName(sourcesRepoUrl)).toString());
+    default Path clone(String sourcesRepoUrl, UUID sessionId) {
+        Path destination = SessionFolders.of(sessionId).resolve(repoName(sourcesRepoUrl));
+        clone(sourcesRepoUrl, destination.toString());
+        return destination;
     }
 
     private static String repoName(String sourcesRepoUrl) {

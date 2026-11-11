@@ -50,6 +50,17 @@ class AgentControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/info", Map.of("agent", "UNKNOWN_AGENT")));
     }
 
+    @Test
+    void startRejectsDifferentAgentsInPathAndRequest() {
+        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/info", Map.of("agent", "IMAGE_GENERATOR")));
+    }
+
+    @Test
+    void startReportsAgentWithoutSetupService() {
+        // IMAGE_GENERATOR runs on CODEX, which has no AgentSetupService yet
+        assertEquals(HttpStatus.NOT_IMPLEMENTED, startStatus("/image_generator/info", Map.of("agent", "IMAGE_GENERATOR")));
+    }
+
     private HttpStatus startStatus(String uri, Map<String, Object> body) {
         HttpClientResponseException e = assertThrows(HttpClientResponseException.class,
                 () -> client.toBlocking().exchange(HttpRequest.POST(uri, body)));

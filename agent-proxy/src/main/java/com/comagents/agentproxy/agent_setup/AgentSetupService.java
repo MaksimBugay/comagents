@@ -1,9 +1,13 @@
 package com.comagents.agentproxy.agent_setup;
 
-import jakarta.inject.Singleton;
+import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.agentproxy.domain.AiAgentAttributes;
+import com.comagents.agentproxy.domain.AiHarnessProvider;
+import jakarta.validation.constraints.NotNull;
 
-@Singleton
-public class AgentSetupService {
+public sealed interface AgentSetupService permits AgentWithClaudeCodeSetupService {
 
-    
+    void setup(@NotNull AiAgent agent, @NotNull AiAgentAttributes attributes);
+
+    AiHarnessProvider getAiHarnessProvider();
 }

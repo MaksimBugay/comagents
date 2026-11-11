@@ -1,7 +1,7 @@
-package com.comagents.agentproxy.vcs.github;
+package com.comagents.agentproxy.vcs;
 
 import com.comagents.agentproxy.conf.AgentProxyConf;
-import com.comagents.agentproxy.vcs.VcsService;
+import com.comagents.agentproxy.workspace.FileTrees;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.StreamingHttpClient;
@@ -16,8 +16,7 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -29,20 +28,15 @@ import java.util.zip.ZipInputStream;
  * GitHub REST API zipball endpoint. The result has no {@code .git} directory.
  */
 @Singleton
-public class VcsGithubService implements VcsService {
+public final class VcsGithubService implements VcsService {
 
     private static final String GITHUB_API_URL = "https://api.github.com";
-
-    private static final Path COMAGENTS_SOURCES_PATH = Path.of(System.getProperty("java.io.tmpdir"), "comagents");
 
     private static final Pattern REPO_URL = Pattern.compile("^https://github\\.com/([^/]+)/([^/]+?)(?:\\.git)?/?$");
 
     private final String accessToken;
 
     private final String comAgentsSourcesUrl;
-
-    // concurrent first calls must not both download into the same directory
-    private final Lock comAgentsSourcesLock = new ReentrantLock();
 
     // streaming client: the archive is written to disk chunk by chunk instead of buffered in memory
     private final StreamingHttpClient githubClient;
@@ -106,14 +100,22 @@ public class VcsGithubService implements VcsService {
     }
 
     @Override
-    public void cloneComAgentsSources() {
-        comAgentsSourcesLock.lock();
+    public void cloneComAgentsSources(Consumer<Path> sourcesConsumer) {
+        // a folder per call: concurrent setups never share or delete each other's sources
+        Path sources = createTempDirectory("comagents-");
         try {
-            if (!hasFiles(COMAGENTS_SOURCES_PATH)) {
-                clone(comAgentsSourcesUrl, COMAGENTS_SOURCES_PATH.toString());
-            }
+            clone(comAgentsSourcesUrl, sources.toString());
+            sourcesConsumer.accept(sources);
         } finally {
-            comAgentsSourcesLock.unlock();
+            FileTrees.deleteIfExists(sources);
+        }
+    }
+
+    private static Path createTempDirectory(String prefix) {
+        try {
+            return Files.createTempDirectory(prefix);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to create a temporary folder", e);
         }
     }
 

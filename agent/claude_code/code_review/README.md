@@ -6,7 +6,7 @@ Read-only Java 25 / Spring Boot code reviewer, built from `agent/claude_code/tem
 code_review/
 ├── CLAUDE.md                                  # role, workflow, hard constraints
 └── .claude/
-    ├── settings.json                          # read-only git + build allowed; Edit/Write and mutating git denied
+    ├── settings.json                          # build allowed; Edit/Write, rm/mv and mutating git denied
     ├── rules/
     │   ├── read-only.md                       # never change the code
     │   └── java-spring-boot.md                # the standard code is reviewed against
@@ -17,24 +17,19 @@ code_review/
 
 ## Run
 
-Run it from the repository to review, so git and the build see that project, and point Claude Code
-at this agent's configuration. Each piece of an `--add-dir` folder loads differently:
+The agent does not need git: the project under review can be a plain snapshot of the sources.
 
-- skills: loaded automatically
-- `CLAUDE.md` and rules: only with `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`
-  (path-scoped rules are never loaded this way, which is why both rules here are unscoped)
-- `settings.json`: not loaded; pass it with `--settings`
+agent-proxy copies `CLAUDE.md` and `.claude/` into the root of the project to review, so Claude Code
+loads the role, settings, rules, and skills automatically, and puts this README in
+`/tmp/<session id>/code_review/`. Then run Claude Code from the project root:
 
 ```bash
-AGENT=/path/to/comagents/agent/claude_code/code_review
-cd /path/to/repo-under-review
-CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 claude \
-       --add-dir "$AGENT" --settings "$AGENT/.claude/settings.json" \
-       -p "/java-code-review"                       # current branch vs main
-#      -p "/java-code-review src/main/java/com/acme/OrderService.java"
-#      -p "/java-code-review main..feature/payments"
+cd /tmp/<session id>/<repo name>
+claude -p "/java-code-review"                                       # whole project
+#      -p "/java-code-review src/main/java/com/acme/OrderService.java"  # files or folders
+#      -p "/java-code-review /path/to/changes.patch"                  # a patch file
 ```
 
-Or start `claude` inside this folder and give it the repository path as the target.
+To run it by hand, copy `CLAUDE.md` and `.claude/` into the project root the same way.
 
 No MCP servers are configured yet.
