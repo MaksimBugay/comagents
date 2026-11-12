@@ -16,14 +16,19 @@ import java.util.List;
  *                      They live here rather than in the agent's {@code .claude/settings.json} because a headless run
  *                      never trusts its folder, so Claude Code ignores (and warns about) a project's allow rules
  * @param kickOffPrompt the first instruction of every session
+ * @param resumePrompt  the instruction when an archived session is resumed; {@link #DEFAULT_RESUME_PROMPT} if null
  */
 @Serdeable
 public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
-                                String kickOffPrompt) {
+                                String kickOffPrompt, @Nullable String resumePrompt) {
 
     public static final String FILE_NAME = "agent.json";
 
+    public static final String DEFAULT_RESUME_PROMPT = "You were stopped before you finished. Continue the task from where "
+            + "you stopped, and return your final answer as you would have.";
+
     public ClaudeAgentConfig {
         allowedTools = allowedTools == null ? List.of() : List.copyOf(allowedTools);
+        resumePrompt = resumePrompt == null || resumePrompt.isBlank() ? DEFAULT_RESUME_PROMPT : resumePrompt;
     }
 }

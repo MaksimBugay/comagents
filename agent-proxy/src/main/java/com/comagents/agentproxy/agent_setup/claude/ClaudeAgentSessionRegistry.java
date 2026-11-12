@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 /**
  * Runs Claude Code headless ({@code claude -p}), one child process per session, and keeps track of the runs.
@@ -130,14 +132,18 @@ public class ClaudeAgentSessionRegistry {
          *                               stays reserved until {@link #close}
          */
         public ClaudeAgentSession start(AiAgent agent, Path workingDirectory) {
+            return startRun(agent, workingDirectory, false);
+        }
+
+        private ClaudeAgentSession startRun(AiAgent agent, Path workingDirectory, boolean resume) {
             if (started || closed) {
                 throw new IllegalStateException("Slot for session " + sessionId + " was already " + (started ? "started" : "closed"));
             }
-            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory);
+            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume);
             sessions.put(sessionId, session);
             reservedSessionIds.remove(sessionId);
             started = true;
-            LOG.info("[{} {}] started in {}", agent.getAgentName(), sessionId, workingDirectory);
+            LOG.info("[{} {}] {} in {}", agent.getAgentName(), sessionId, resume ? "resumed" : "started", workingDirectory);
             Thread.ofVirtual().name("claude-output-" + sessionId).start(() -> streamOutput(session));
             Thread.ofVirtual().name("claude-watchdog-" + sessionId).start(() -> watch(session));
             return session;
@@ -154,16 +160,20 @@ public class ClaudeAgentSessionRegistry {
         }
     }
 
-    private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory) {
+    private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory, boolean resume) {
         Path agentFolder = SessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
-        List<String> command = command(readConfig(agent, agentFolder), sessionId);
+        List<String> command = command(readConfig(agent, agentFolder), sessionId, resume);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
-                agentFolder.resolve("claude-stream.jsonl"), SessionFolders.agentResponseFile(sessionId, agent));
+                agentFolder.resolve("claude-stream.jsonl"), SessionFolders.agentResponseFile(sessionId, agent), resume);
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
         processBuilder.environment().put("CLAUDE_CONFIG_DIR", agentFolder.resolve(CLAUDE_STATE_FOLDER).toString());
+        if (resume) {
+            // documented by Claude Code: finish the turn that archive() interrupted before following the new prompt
+            processBuilder.environment().put("CLAUDE_CODE_RESUME_INTERRUPTED_TURN", "1");
+        }
         try {
             session.attach(processBuilder
                     .directory(workingDirectory.toFile())
@@ -266,6 +276,74 @@ public class ClaudeAgentSessionRegistry {
         return agentFolder;
     }
 
+    /**
+     * Continues an archived session: {@code claude -p "<resume prompt>" --resume <session id>} in the archived working
+     * directory, with the session's own Claude Code state, the agent's {@code agent.json} and a session slot like any
+     * run. Works from the archive on disk ({@code session-state.json}), so also for a session this registry no longer
+     * knows (e.g. after a restart). The new run appends to the session's transcript; the archive file is removed, so
+     * the session can be archived again.
+     *
+     * @return the resumed run
+     * @throws IllegalStateException       when the session is not archived, or Claude Code can't be started
+     * @throws ClaudeSessionLimitException when all concurrent session slots are busy; the session stays archived
+     */
+    public ClaudeAgentSession resume(UUID sessionId) {
+        Path stateFile = findArchive(sessionId)
+                .orElseThrow(() -> new IllegalStateException("Claude session " + sessionId + " is not archived"));
+        ClaudeSessionArchive archive = readArchive(stateFile);
+        ClaudeAgentSession archived = sessions.get(sessionId);
+        if (archived != null) {
+            if (archived.getState() != AgentSessionState.ARCHIVED) {
+                throw new IllegalStateException("Claude session " + sessionId + " is " + archived.getState() + ", not archived");
+            }
+            // the resumed run takes over the session id; a concurrent resume loses this compare-and-remove
+            if (!sessions.remove(sessionId, archived)) {
+                throw new IllegalStateException("Claude session " + sessionId + " is already being resumed");
+            }
+        }
+        try (SessionSlot slot = reserve(sessionId)) {
+            ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true);
+            deleteArchive(stateFile, sessionId);
+            return resumed;
+        } catch (RuntimeException e) {
+            if (archived != null) {
+                sessions.putIfAbsent(sessionId, archived);
+            }
+            throw e;
+        }
+    }
+
+    // session-state.json in one of the session's agent folders
+    private static Optional<Path> findArchive(UUID sessionId) {
+        Path sessionFolder = SessionFolders.of(sessionId);
+        if (!Files.isDirectory(sessionFolder)) {
+            return Optional.empty();
+        }
+        try (Stream<Path> agentFolders = Files.list(sessionFolder)) {
+            return agentFolders.map(folder -> folder.resolve(ClaudeSessionArchive.STATE_FILE))
+                    .filter(Files::isRegularFile)
+                    .findFirst();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to list " + sessionFolder, e);
+        }
+    }
+
+    private ClaudeSessionArchive readArchive(Path stateFile) {
+        try {
+            return jsonMapper.readValue(Files.readAllBytes(stateFile), ClaudeSessionArchive.class);
+        } catch (IOException e) {
+            throw new IllegalStateException("Unreadable archive " + stateFile, e);
+        }
+    }
+
+    private static void deleteArchive(Path stateFile, UUID sessionId) {
+        try {
+            Files.deleteIfExists(stateFile);
+        } catch (IOException e) {
+            LOG.warn("[{}] removing {} after resume failed", sessionId, stateFile, e);
+        }
+    }
+
     private void saveState(ClaudeAgentSession session, Path agentFolder) {
         ClaudeSessionArchive archive = new ClaudeSessionArchive(session.getSessionId(), session.getAgent(),
                 session.getWorkingDirectory().toString(), session.getState(), session.getStartedAt(),
@@ -290,10 +368,11 @@ public class ClaudeAgentSessionRegistry {
         }
     }
 
-    private List<String> command(ClaudeAgentConfig config, UUID sessionId) {
+    // a new run creates Claude Code's session under our id; a resumed run continues it
+    private List<String> command(ClaudeAgentConfig config, UUID sessionId, boolean resume) {
         List<String> command = new ArrayList<>(List.of(
-                claudeExecutable, "-p", config.kickOffPrompt(),
-                "--session-id", sessionId.toString(),
+                claudeExecutable, "-p", resume ? config.resumePrompt() : config.kickOffPrompt(),
+                resume ? "--resume" : "--session-id", sessionId.toString(),
                 "--output-format", "stream-json", "--verbose",
                 // nobody can answer Claude Code's built-in question tool in a headless run
                 "--disallowedTools", "AskUserQuestion"));
@@ -327,7 +406,10 @@ public class ClaudeAgentSessionRegistry {
     // reading continuously also keeps Claude Code from stalling on a full output pipe
     private void streamOutput(ClaudeAgentSession session) {
         try (BufferedReader output = session.process().inputReader(StandardCharsets.UTF_8);
-             BufferedWriter transcript = Files.newBufferedWriter(session.getTranscriptFile(), StandardCharsets.UTF_8)) {
+             // a resumed run continues the transcript of the archived one
+             BufferedWriter transcript = Files.newBufferedWriter(session.getTranscriptFile(), StandardCharsets.UTF_8,
+                     StandardOpenOption.CREATE, StandardOpenOption.WRITE,
+                     session.isResumed() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING)) {
             for (String line; (line = output.readLine()) != null; ) {
                 transcript.write(line);
                 transcript.newLine();

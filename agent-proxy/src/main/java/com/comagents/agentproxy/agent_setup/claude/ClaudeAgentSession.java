@@ -22,6 +22,7 @@ public final class ClaudeAgentSession {
     private final Path workingDirectory;
     private final Path transcriptFile;
     private final Path responseFile;
+    private final boolean resumed;
     private final Instant startedAt = Instant.now();
 
     private final AtomicReference<AgentSessionState> state = new AtomicReference<>(AgentSessionState.RUNNING);
@@ -35,7 +36,9 @@ public final class ClaudeAgentSession {
     // overlapping waits keep the session WAITING until the last one ends; guarded by this
     private int pendingWaits;
 
-    ClaudeAgentSession(UUID sessionId, AiAgent agent, Path workingDirectory, Path transcriptFile, Path responseFile) {
+    ClaudeAgentSession(UUID sessionId, AiAgent agent, Path workingDirectory, Path transcriptFile, Path responseFile,
+                       boolean resumed) {
+        this.resumed = resumed;
         this.sessionId = sessionId;
         this.agent = agent;
         this.workingDirectory = workingDirectory;
@@ -63,6 +66,11 @@ public final class ClaudeAgentSession {
     /** The final answer, written when the run ends with a result. */
     public Path getResponseFile() {
         return responseFile;
+    }
+
+    /** Whether this run continues an archived session ({@code resume}) rather than starting a new one. */
+    public boolean isResumed() {
+        return resumed;
     }
 
     public Instant getStartedAt() {

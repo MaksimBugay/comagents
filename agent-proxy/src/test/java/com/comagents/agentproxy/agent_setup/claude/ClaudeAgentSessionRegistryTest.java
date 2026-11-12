@@ -47,6 +47,16 @@ class ClaudeAgentSessionRegistryTest {
             printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"num_turns":2,"result":"# Report\\n\\nAll good"}'
             """;
 
+    // first run: works until archived; resumed run (--resume): finishes with an answer
+    private static final String INTERRUPTED_THEN_RESUMED = """
+            printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
+            printf '%s' "$CLAUDE_CODE_RESUME_INTERRUPTED_TURN" > "$(dirname "$0")/resume-env.txt"
+            case " $* " in
+              *" --resume "*) printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"resumed answer"}' ;;
+              *) printf '%s\\n' 'first run'; exec sleep 60 ;;
+            esac
+            """;
+
     @TempDir
     Path scripts;
 
@@ -436,6 +446,108 @@ class ClaudeAgentSessionRegistryTest {
     private static ClaudeSessionArchive readArchive(Path agentFolder) throws IOException {
         return ObjectMapper.getDefault()
                 .readValue(Files.readAllBytes(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE)), ClaudeSessionArchive.class);
+    }
+
+    @Test
+    void resumeContinuesArchivedSession() throws Exception {
+        registry = registry(fakeClaude(INTERRUPTED_THEN_RESUMED), 2, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession first = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        await("first run produced output").atMost(WAIT)
+                .until(() -> Files.exists(first.getTranscriptFile()) && Files.readString(first.getTranscriptFile()).contains("first run"));
+        Path agentFolder = registry.archive(sessionId);
+
+        ClaudeAgentSession resumed = registry.resume(sessionId);
+
+        assertTrue(resumed.isResumed());
+        assertEquals(Optional.of(AgentSessionState.DONE), resumed.awaitFinished(WAIT));
+        assertEquals(Optional.of(resumed), registry.findSession(sessionId));
+        List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
+        assertEquals(List.of("-p", ClaudeAgentConfig.DEFAULT_RESUME_PROMPT, "--resume", sessionId.toString()), args.subList(0, 4));
+        assertFalse(args.contains("--session-id"));
+        assertEquals("test-model", args.get(args.indexOf("--model") + 1), "same agent.json as the first run");
+        assertEquals("1", Files.readString(scripts.resolve("resume-env.txt")), "finish the interrupted turn first");
+        assertEquals("resumed answer", Files.readString(resumed.getResponseFile()));
+        String transcript = Files.readString(resumed.getTranscriptFile());
+        assertTrue(transcript.contains("first run") && transcript.contains("resumed answer"), "transcript covers both runs");
+        assertFalse(Files.exists(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE)), "no longer archived");
+    }
+
+    @Test
+    void resumeUsesAgentResumePrompt() throws Exception {
+        registry = registry(fakeClaude(INTERRUPTED_THEN_RESUMED), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"kickOffPrompt": "Review it", "resumePrompt": "Pick up the review where you left it."}""");
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        registry.archive(sessionId);
+
+        registry.resume(sessionId).awaitFinished(WAIT);
+
+        assertEquals("Pick up the review where you left it.", Files.readAllLines(scripts.resolve("args.txt")).get(1));
+    }
+
+    @Test
+    void resumeWorksFromDiskForSessionUnknownToRegistry() throws Exception {
+        registry = registry(fakeClaude(INTERRUPTED_THEN_RESUMED), 2, WAIT);
+        UUID sessionId = newSessionId();
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        registry.archive(sessionId);
+        // e.g. after an agent-proxy restart: a new registry that never saw the session
+        ClaudeAgentSessionRegistry restarted = registry(fakeClaude(INTERRUPTED_THEN_RESUMED), 2, WAIT);
+
+        ClaudeAgentSession resumed = restarted.resume(sessionId);
+
+        assertEquals(Optional.of(AgentSessionState.DONE), resumed.awaitFinished(WAIT));
+        assertEquals(workingDirectory, resumed.getWorkingDirectory());
+    }
+
+    @Test
+    void resumeRejectsSessionThatIsNotArchived() throws Exception {
+        registry = registry(fakeClaude(INTERRUPTED_THEN_RESUMED), 2, WAIT);
+        UUID sessionId = newSessionId();
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        assertThrows(IllegalStateException.class, () -> registry.resume(sessionId), "running, never archived");
+        assertThrows(IllegalStateException.class, () -> registry.resume(UUID.randomUUID()), "unknown");
+
+        // a stale archive file does not make a running session resumable
+        Files.writeString(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeSessionArchive.STATE_FILE),
+                "{\"sessionId\":\"" + sessionId + "\",\"agent\":\"CODE_REVIEW\",\"workingDirectory\":\"" + workingDirectory
+                        + "\",\"stateBeforeArchive\":\"RUNNING\",\"startedAt\":\"2026-11-12T10:00:00Z\","
+                        + "\"lastOutputAt\":\"2026-11-12T10:00:00Z\",\"archivedAt\":\"2026-11-12T10:00:00Z\"}");
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> registry.resume(sessionId));
+        assertTrue(e.getMessage().contains("RUNNING"));
+    }
+
+    @Test
+    void resumeAboveLimitKeepsSessionArchived() throws Exception {
+        registry = registry(fakeClaude(INTERRUPTED_THEN_RESUMED), 1, WAIT);
+        UUID archivedId = newSessionId();
+        registry.createSession(archivedId, AiAgent.CODE_REVIEW, workingDirectory);
+        Path agentFolder = registry.archive(archivedId);
+        UUID busyId = newSessionId();
+        registry.createSession(busyId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        assertThrows(ClaudeSessionLimitException.class, () -> registry.resume(archivedId));
+
+        assertEquals(AgentSessionState.ARCHIVED, registry.findSession(archivedId).orElseThrow().getState());
+        assertTrue(Files.exists(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE)));
+        registry.killSession(busyId);
+    }
+
+    @Test
+    void resumedSessionCanBeArchivedAgain() throws Exception {
+        registry = registry(fakeClaude(INTERRUPTED_THEN_RESUMED), 2, WAIT);
+        UUID sessionId = newSessionId();
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        registry.archive(sessionId);
+        registry.resume(sessionId).awaitFinished(WAIT);
+
+        ClaudeSessionArchive state = readArchive(registry.archive(sessionId));
+
+        assertEquals(AgentSessionState.DONE, state.stateBeforeArchive());
+        assertEquals("resumed answer", state.resultText());
     }
 
     @Test

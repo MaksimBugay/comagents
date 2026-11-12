@@ -48,6 +48,7 @@ How agent-proxy runs the agent headless (`claude -p`):
 | `effort` | `--effort` | `low`, `medium`, `high`, `xhigh` or `max`; optional |
 | `allowedTools` | `--allowedTools` | tools the agent may use without approval, in permission-rule syntax |
 | `kickOffPrompt` | the prompt | the first instruction of every session; required |
+| `resumePrompt` | the prompt on resume | the instruction when an archived session is resumed; optional, a generic "continue where you stopped" by default |
 
 Allow rules go here, not in `.claude/settings.json`: a headless run never trusts the folder it starts in, so
 Claude Code ignores a project's `allow` rules (and warns about it). Deny rules stay in `settings.json`, which
