@@ -1,8 +1,11 @@
 package com.comagents.agentproxy;
 
+import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.response.AgentResponse;
-import com.comagents.agentproxy.workspace.FileTrees;
+import com.comagents.agentproxy.response.AgentResponseUnavailable;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.http.HttpStatus;
@@ -25,11 +28,14 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// "false" stands in for Claude Code: it exits with an error at once, so a started session ends FAILED
 @MicronautTest
 @Property(name = "agent-response.cleanup-delay", value = "1s")
+@Property(name = "claude.executable", value = "false")
 class AgentResponseControllerTest {
 
     private final UUID sessionId = UUID.randomUUID();
@@ -38,9 +44,12 @@ class AgentResponseControllerTest {
     @Client("/")
     HttpClient client;
 
+    @Inject
+    ClaudeAgentSessionRegistry registry;
+
     @AfterEach
     void deleteSessionFolder() {
-        FileTrees.deleteIfExists(SessionFolders.of(sessionId));
+        registry.cleanAllSessionData(sessionId);
     }
 
     @Test
@@ -63,11 +72,32 @@ class AgentResponseControllerTest {
     }
 
     @Test
-    void notFoundBeforeAgentAnswered() throws IOException {
+    void notFoundWithoutStateForUnknownSession() throws IOException {
         Files.createDirectories(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
 
-        assertEquals(HttpStatus.NOT_FOUND, statusOf(uri()));
+        HttpClientResponseException e = assertThrows(HttpClientResponseException.class, () -> client.toBlocking().retrieve(uri()));
+
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
+        AgentResponseUnavailable body = e.getResponse().getBody(AgentResponseUnavailable.class).orElseThrow();
+        assertNull(body.state());
+        assertTrue(body.message().contains("session not found"));
         assertTrue(Files.exists(SessionFolders.of(sessionId)), "nothing is cleaned up without a response");
+    }
+
+    @Test
+    void notFoundWithSessionStateWhenAgentGaveNoResponse() throws Exception {
+        Path agentFolder = SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
+        Files.createDirectories(agentFolder);
+        Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
+                {"kickOffPrompt": "Review it"}""");
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, agentFolder).awaitFinished(Duration.ofSeconds(20));
+
+        HttpClientResponseException e = assertThrows(HttpClientResponseException.class, () -> client.toBlocking().retrieve(uri()));
+
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
+        AgentResponseUnavailable body = e.getResponse().getBody(AgentResponseUnavailable.class).orElseThrow();
+        assertEquals(AgentSessionState.FAILED, body.state());
+        assertTrue(body.message().endsWith("session is FAILED"));
     }
 
     @Test

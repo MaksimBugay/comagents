@@ -1,6 +1,8 @@
 package com.comagents.agentproxy.agent_setup;
 
+import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.domain.AiHarnessProvider;
@@ -11,6 +13,7 @@ import jakarta.inject.Singleton;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 // non-sealed, not final: method validation (@NotNull on setup) needs a generated subclass proxy
@@ -20,9 +23,9 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     // what Claude Code loads from the folder it runs in
     private static final List<String> CLAUDE_CODE_FILES = List.of("CLAUDE.md", ".claude", ".mcp.json");
 
-    // documentation about the agent (every agent has one), kept beside the repository instead of overwriting
-    // the repository's own; copying it also creates <session folder>/<agent name>
-    private static final List<String> AGENT_DOCS = List.of(AgentFiles.README);
+    // kept beside the repository, not in it: the agent's README (every agent has one) and agent-proxy's run settings
+    // for it (agent.json); copying them also creates <session folder>/<agent name>
+    private static final List<String> AGENT_FOLDER_FILES = List.of(AgentFiles.README, ClaudeAgentConfig.FILE_NAME);
 
     private final VcsService vcsService;
 
@@ -40,7 +43,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         Path workingDirectory = prepareWorkingDirectory(attributes, agentFolder);
         vcsService.cloneComAgentsSources(comAgentsSources -> {
             AgentFiles.copyInto(workingDirectory, comAgentsSources, agent, CLAUDE_CODE_FILES);
-            AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_DOCS);
+            AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
         });
         claudeAgentSessionRegistry.createSession(attributes.sessionId(), agent, workingDirectory);
     }
@@ -51,6 +54,12 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
             return vcsService.clone(attributes.cloneSourceUrl(), attributes.sessionId());
         }
         return agentFolder;
+    }
+
+    @Override
+    public Optional<AgentSessionStatus> status(UUID sessionId) {
+        return claudeAgentSessionRegistry.findSession(sessionId)
+                .map(session -> new AgentSessionStatus(session.getState(), session.getStartedAt(), session.getFinishedAt()));
     }
 
     @Override

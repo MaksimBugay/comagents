@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 
 import java.nio.file.Path;
@@ -23,8 +24,8 @@ public final class ClaudeAgentSession {
     private final Path responseFile;
     private final Instant startedAt = Instant.now();
 
-    private final AtomicReference<ClaudeAgentSessionState> state = new AtomicReference<>(ClaudeAgentSessionState.RUNNING);
-    private final CompletableFuture<ClaudeAgentSessionState> finished = new CompletableFuture<>();
+    private final AtomicReference<AgentSessionState> state = new AtomicReference<>(AgentSessionState.RUNNING);
+    private final CompletableFuture<AgentSessionState> finished = new CompletableFuture<>();
 
     private volatile Process process;
     private volatile String resultText;
@@ -69,7 +70,7 @@ public final class ClaudeAgentSession {
         return Optional.ofNullable(finishedAt);
     }
 
-    public ClaudeAgentSessionState getState() {
+    public AgentSessionState getState() {
         return state.get();
     }
 
@@ -78,7 +79,7 @@ public final class ClaudeAgentSession {
      *
      * @return the final state, or empty if the run is still going after {@code timeout}
      */
-    public Optional<ClaudeAgentSessionState> awaitFinished(Duration timeout) throws InterruptedException {
+    public Optional<AgentSessionState> awaitFinished(Duration timeout) throws InterruptedException {
         try {
             return Optional.of(finished.get(timeout.toMillis(), TimeUnit.MILLISECONDS));
         } catch (TimeoutException e) {
@@ -97,7 +98,7 @@ public final class ClaudeAgentSession {
     }
 
     /** Moves from {@code expected} to {@code next}; false if the state was already something else. */
-    boolean transition(ClaudeAgentSessionState expected, ClaudeAgentSessionState next) {
+    boolean transition(AgentSessionState expected, AgentSessionState next) {
         return state.compareAndSet(expected, next);
     }
 

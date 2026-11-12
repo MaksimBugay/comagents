@@ -1,10 +1,10 @@
 package com.comagents.agentproxy;
 
 import com.comagents.agentproxy.agent_setup.AgentSetupService;
+import com.comagents.agentproxy.agent_setup.AgentSetupServices;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
-import com.comagents.agentproxy.domain.AiHarnessProvider;
 import com.comagents.agentproxy.request.StartAgentRequest;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpRequest;
@@ -23,29 +23,22 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 @Controller("/{agentName}")
 public class AgentController {
 
     private final String applicationName;
     private final String version;
     private final String instance;
-    private final Map<AiHarnessProvider, AgentSetupService> agentSetupServiceMap;
+    private final AgentSetupServices agentSetupServices;
 
     public AgentController(@Value("${micronaut.application.name}") String applicationName,
                            @Value("${agent-proxy.version:unknown}") String version,
                            @Value("${HOSTNAME:local}") String instance,
-                           List<AgentSetupService> agentSetupServiceList) {
+                           AgentSetupServices agentSetupServices) {
         this.applicationName = applicationName;
         this.version = version;
         this.instance = instance;
-        // toMap fails fast at startup if two setup services claim the same provider
-        this.agentSetupServiceMap = agentSetupServiceList.stream()
-                .collect(Collectors.toMap(AgentSetupService::getAiHarnessProvider, Function.identity()));
+        this.agentSetupServices = agentSetupServices;
     }
 
     @Get("/info")
@@ -53,10 +46,14 @@ public class AgentController {
         return new AgentInfo(agentName, applicationName, version, instance);
     }
 
+    /**
+     * Prepares the session and starts the agent in the background: 202 Accepted. Follow it with
+     * {@code GET /agent-status/{agentName}/{sessionId}}, then fetch {@code GET /agent-response/{agentName}/{sessionId}}.
+     */
     // setup downloads and copies files (blocking I/O), which must not run on the Netty event loop
     @Post("/start")
     @ExecuteOn(TaskExecutors.BLOCKING)
-    public AgentInfo start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentRequest startAgentRequest) {
+    public HttpResponse<AgentInfo> start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentRequest startAgentRequest) {
         requireSameAgent(agentName, startAgentRequest.agent());
         setupServiceFor(startAgentRequest.agent()).setup(
                 startAgentRequest.agent(),
@@ -65,10 +62,8 @@ public class AgentController {
                         startAgentRequest.cloneSourceUrl()
                 )
         );
-        return new AgentInfo(startAgentRequest.agent().getAgentName(), applicationName, version, instance);
+        return HttpResponse.accepted().body(new AgentInfo(startAgentRequest.agent().getAgentName(), applicationName, version, instance));
     }
-
-
 
     @Error(exception = ClaudeSessionLimitException.class)
     public HttpResponse<JsonError> sessionLimitReached(HttpRequest<?> request, ClaudeSessionLimitException e) {
@@ -76,13 +71,9 @@ public class AgentController {
     }
 
     private AgentSetupService setupServiceFor(AiAgent agent) {
-        AgentSetupService agentSetupService = agentSetupServiceMap.get(agent.getAiHarnessProvider());
-        if (agentSetupService == null) {
-            // the agent is known but no setup service bean exists for its harness provider yet
-            throw new HttpStatusException(HttpStatus.NOT_IMPLEMENTED,
-                    "No setup service for harness provider " + agent.getAiHarnessProvider() + " (agent " + agent.getAgentName() + ")");
-        }
-        return agentSetupService;
+        // the agent is known but no setup service bean exists for its harness provider yet
+        return agentSetupServices.forAgent(agent).orElseThrow(() -> new HttpStatusException(HttpStatus.NOT_IMPLEMENTED,
+                "No setup service for harness provider " + agent.getAiHarnessProvider() + " (agent " + agent.getAgentName() + ")"));
     }
 
     private static void requireSameAgent(String agentName, AiAgent requestAgent) {

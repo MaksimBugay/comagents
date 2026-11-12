@@ -11,6 +11,8 @@ cp -R agent/claude_code/template agent/claude_code/<agent-name>
 
 ```
 template/
+├── agent.json                    # agent-proxy run settings: model, effort, kick-off prompt (required)
+├── README.md                     # what the agent does (required)
 ├── CLAUDE.md                     # agent role + workflow, always loaded
 ├── .mcp.json                     # MCP servers available to the agent (none by default)
 ├── .gitignore                    # keeps personal overrides out of git

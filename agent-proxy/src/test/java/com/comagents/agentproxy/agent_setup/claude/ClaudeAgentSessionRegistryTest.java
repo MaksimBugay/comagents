@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.serde.ObjectMapper;
@@ -26,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ClaudeAgentSessionRegistryTest {
 
     private static final Duration WAIT = Duration.ofSeconds(20);
+
+    private static final String KICK_OFF_PROMPT = "Review the project in the current directory.";
 
     private static final String SUCCESSFUL_RUN = """
             printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
@@ -61,26 +64,47 @@ class ClaudeAgentSessionRegistryTest {
 
         ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
 
-        assertEquals(Optional.of(ClaudeAgentSessionState.DONE), session.awaitFinished(WAIT));
+        assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
         assertEquals(SessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".md"), session.getResponseFile());
         assertEquals("# Report\n\nAll good", Files.readString(session.getResponseFile()));
         assertEquals(6, Files.readAllLines(session.getTranscriptFile()).size());
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
-        assertTrue(args.containsAll(List.of("-p", "--session-id", sessionId.toString(), "--output-format", "stream-json", "--verbose")));
-        assertFalse(args.contains("--settings"), "no .claude/settings.json in the working directory");
+        assertEquals(List.of("-p", KICK_OFF_PROMPT), args.subList(0, 2));
+        assertTrue(args.containsAll(List.of("--session-id", sessionId.toString(), "--output-format", "stream-json", "--verbose")));
+        assertEquals("test-model", args.get(args.indexOf("--model") + 1));
+        assertEquals("high", args.get(args.indexOf("--effort") + 1));
+        assertFalse(args.contains("--allowedTools"), "no .claude/settings.json in the working directory");
         assertEquals("", Files.readString(scripts.resolve("stdin.txt")));
     }
 
     @Test
-    void passesAgentSettingsWhenPresent() throws Exception {
+    void passesAllowRulesOnTheCommandLine() throws Exception {
         Files.createDirectories(workingDirectory.resolve(".claude"));
-        Files.writeString(workingDirectory.resolve(".claude/settings.json"), "{}");
+        Files.writeString(workingDirectory.resolve(".claude/settings.json"), """
+                {"permissions": {"allow": ["Skill", "WebFetch(domain:osv.dev)"], "deny": ["Bash", "Edit"]}}""");
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
 
         registry.createSession(newSessionId(), AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
 
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
-        assertEquals(".claude/settings.json", args.get(args.indexOf("--settings") + 1));
+        int allowedTools = args.indexOf("--allowedTools");
+        assertEquals(List.of("Skill", "WebFetch(domain:osv.dev)"), args.subList(allowedTools + 1, allowedTools + 3));
+        assertFalse(args.contains("Bash"), "deny rules stay in the project settings, which Claude Code applies itself");
+        assertFalse(args.contains("--settings"));
+    }
+
+    @Test
+    void omitsModelAndEffortWhenNotConfigured() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"kickOffPrompt": "Review it"}""");
+
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
+        assertFalse(args.contains("--model"));
+        assertFalse(args.contains("--effort"));
     }
 
     @Test
@@ -89,7 +113,7 @@ class ClaudeAgentSessionRegistryTest {
 
         ClaudeAgentSession session = registry.createSession(newSessionId(), AiAgent.CODE_REVIEW, workingDirectory);
 
-        assertEquals(Optional.of(ClaudeAgentSessionState.FAILED), session.awaitFinished(WAIT));
+        assertEquals(Optional.of(AgentSessionState.FAILED), session.awaitFinished(WAIT));
         assertFalse(Files.exists(session.getResponseFile()));
     }
 
@@ -101,7 +125,7 @@ class ClaudeAgentSessionRegistryTest {
 
         registry.killSession(sessionId);
 
-        assertEquals(Optional.of(ClaudeAgentSessionState.KILLED), session.awaitFinished(WAIT));
+        assertEquals(Optional.of(AgentSessionState.KILLED), session.awaitFinished(WAIT));
     }
 
     @Test
@@ -110,7 +134,7 @@ class ClaudeAgentSessionRegistryTest {
 
         ClaudeAgentSession session = registry.createSession(newSessionId(), AiAgent.CODE_REVIEW, workingDirectory);
 
-        assertEquals(Optional.of(ClaudeAgentSessionState.TIMED_OUT), session.awaitFinished(WAIT));
+        assertEquals(Optional.of(AgentSessionState.TIMED_OUT), session.awaitFinished(WAIT));
     }
 
     @Test
@@ -139,9 +163,25 @@ class ClaudeAgentSessionRegistryTest {
     @Test
     void rejectsAgentWithoutKickOffPrompt() throws Exception {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"model": "test-model", "kickOffPrompt": "  "}""");
 
-        assertThrows(NullPointerException.class,
-                () -> registry.createSession(newSessionId(), AiAgent.IMAGE_GENERATOR, workingDirectory));
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory));
+        assertTrue(e.getMessage().contains("kickOffPrompt"));
+        assertTrue(registry.findSession(sessionId).isEmpty());
+    }
+
+    @Test
+    void rejectsAgentWithoutConfigFile() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        Files.delete(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeAgentConfig.FILE_NAME));
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory));
+        assertTrue(e.getMessage().contains("agent.json"));
     }
 
     @Test
@@ -168,12 +208,18 @@ class ClaudeAgentSessionRegistryTest {
         assertTrue(registry.findSession(sessionId).isEmpty());
     }
 
-    // what setup does before a session starts: the agent folder exists in the session folder
+    // what setup does before a session starts: the agent folder exists and holds the agent's agent.json
     private UUID newSessionId() throws IOException {
         UUID sessionId = UUID.randomUUID();
         sessionIds.add(sessionId);
-        Files.createDirectories(SessionFolders.of(sessionId).resolve(AiAgent.CODE_REVIEW.getAgentName()));
+        Files.createDirectories(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
+        writeAgentConfig(sessionId, """
+                {"model": "test-model", "effort": "high", "kickOffPrompt": "%s"}""".formatted(KICK_OFF_PROMPT));
         return sessionId;
+    }
+
+    private static void writeAgentConfig(UUID sessionId, String json) throws IOException {
+        Files.writeString(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeAgentConfig.FILE_NAME), json);
     }
 
     private Path fakeClaude(String body) throws IOException {

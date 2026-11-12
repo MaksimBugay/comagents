@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_response;
 
-import com.comagents.agentproxy.agent_setup.AgentSetupService;
+import com.comagents.agentproxy.agent_setup.AgentSetupServices;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.response.AgentResponse;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -19,7 +19,6 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -35,12 +34,12 @@ public class AgentResponseService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AgentResponseService.class);
 
-    private final List<AgentSetupService> agentSetupServices;
+    private final AgentSetupServices agentSetupServices;
     private final TaskScheduler taskScheduler;
     private final Duration cleanupDelay;
     private final Set<UUID> scheduledCleanups = ConcurrentHashMap.newKeySet();
 
-    public AgentResponseService(List<AgentSetupService> agentSetupServices,
+    public AgentResponseService(AgentSetupServices agentSetupServices,
                                 @Named(TaskExecutors.SCHEDULED) TaskScheduler taskScheduler,
                                 @Value("${agent-response.cleanup-delay:5m}") Duration cleanupDelay) {
         this.agentSetupServices = agentSetupServices;
@@ -79,18 +78,13 @@ public class AgentResponseService {
 
     private void cleanUp(AiAgent agent, UUID sessionId) {
         try {
-            setupServiceFor(agent).cleanUp(sessionId);
+            agentSetupServices.forAgent(agent)
+                    .orElseThrow(() -> new IllegalStateException("No setup service for harness provider " + agent.getAiHarnessProvider()))
+                    .cleanUp(sessionId);
         } catch (RuntimeException e) {
             LOG.error("[{} {}] deleting session files failed", agent.getAgentName(), sessionId, e);
         } finally {
             scheduledCleanups.remove(sessionId);
         }
-    }
-
-    private AgentSetupService setupServiceFor(AiAgent agent) {
-        return agentSetupServices.stream()
-                .filter(service -> service.getAiHarnessProvider() == agent.getAiHarnessProvider())
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No setup service for harness provider " + agent.getAiHarnessProvider()));
     }
 }

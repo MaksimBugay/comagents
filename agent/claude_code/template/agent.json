@@ -1,0 +1,5 @@
+{
+  "model": "sonnet",
+  "effort": "medium",
+  "kickOffPrompt": "Replace with the agent's first instruction. It runs headless (claude -p): nobody can answer questions, and the final answer is returned as the agent's response."
+}

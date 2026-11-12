@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -24,7 +25,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,15 +69,16 @@ public class ClaudeAgentSessionRegistry {
 
     /**
      * Starts the agent's kick-off prompt in {@code workingDirectory} and returns immediately. Setup must have
-     * prepared the session first: the working directory and {@code <session folder>/<agent name>} must exist.
+     * prepared the session first: the working directory and {@code <session folder>/<agent name>} must exist, and
+     * the agent folder must hold the agent's {@code agent.json} (model, effort, kick-off prompt).
      *
      * @throws ClaudeSessionLimitException when all concurrent session slots are busy
      * @throws IllegalStateException       when the session id is already registered or the session is not prepared
      */
     public ClaudeAgentSession createSession(UUID sessionId, AiAgent agent, Path workingDirectory) {
-        String kickOffPrompt = Objects.requireNonNull(agent.getKickOffPrompt(), () -> "Agent " + agent.getAgentName() + " has no kick-off prompt");
         Path agentFolder = SessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
+        List<String> command = command(readConfig(agent, agentFolder), sessionId, readAllowRules(workingDirectory));
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), SessionFolders.agentResponseFile(sessionId, agent));
         if (sessions.putIfAbsent(sessionId, session) != null) {
@@ -88,7 +89,7 @@ public class ClaudeAgentSessionRegistry {
             throw new ClaudeSessionLimitException(maxConcurrentSessions);
         }
         try {
-            session.attach(new ProcessBuilder(command(kickOffPrompt, sessionId, workingDirectory))
+            session.attach(new ProcessBuilder(command)
                     .directory(workingDirectory.toFile())
                     // nothing is piped in: without this, claude -p waits 3 s for stdin data on every run
                     .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")))
@@ -112,7 +113,7 @@ public class ClaudeAgentSessionRegistry {
     /** Stops a running session; does nothing if it is unknown or already finished. */
     public void killSession(UUID sessionId) {
         ClaudeAgentSession session = sessions.get(sessionId);
-        if (session != null && session.transition(ClaudeAgentSessionState.RUNNING, ClaudeAgentSessionState.KILLED)) {
+        if (session != null && session.transition(AgentSessionState.RUNNING, AgentSessionState.KILLED)) {
             LOG.info("[{} {}] killing", session.getAgent().getAgentName(), sessionId);
             stop(session.process());
         }
@@ -147,19 +148,61 @@ public class ClaudeAgentSessionRegistry {
         }
     }
 
-    private List<String> command(String kickOffPrompt, UUID sessionId, Path workingDirectory) {
+    private List<String> command(ClaudeAgentConfig config, UUID sessionId, List<String> allowRules) {
         List<String> command = new ArrayList<>(List.of(
-                claudeExecutable, "-p", kickOffPrompt,
+                claudeExecutable, "-p", config.kickOffPrompt(),
                 "--session-id", sessionId.toString(),
                 "--output-format", "stream-json", "--verbose",
                 // nobody can answer Claude Code's built-in question tool in a headless run
                 "--disallowedTools", "AskUserQuestion"));
-        // a headless run never trusts the folder, so allow rules in the project settings would be ignored;
-        // passing the same file with --settings applies them (see spec/claude_q_and_a.md, "verify")
-        if (Files.isRegularFile(workingDirectory.resolve(".claude/settings.json"))) {
-            command.addAll(List.of("--settings", ".claude/settings.json"));
+        if (config.model() != null) {
+            command.addAll(List.of("--model", config.model()));
+        }
+        if (config.effort() != null) {
+            command.addAll(List.of("--effort", config.effort()));
+        }
+        if (!allowRules.isEmpty()) {
+            command.add("--allowedTools");
+            command.addAll(allowRules);
         }
         return command;
+    }
+
+    private ClaudeAgentConfig readConfig(AiAgent agent, Path agentFolder) {
+        Path configFile = agentFolder.resolve(ClaudeAgentConfig.FILE_NAME);
+        try {
+            ClaudeAgentConfig config = jsonMapper.readValue(Files.readAllBytes(configFile), ClaudeAgentConfig.class);
+            if (config == null || config.kickOffPrompt() == null || config.kickOffPrompt().isBlank()) {
+                throw new IllegalStateException(configFile + " has no kickOffPrompt");
+            }
+            return config;
+        } catch (IOException e) {
+            throw new IllegalStateException("Agent " + agent.getAgentName() + " has no readable " + configFile, e);
+        }
+    }
+
+    /**
+     * A headless run never trusts the folder it starts in, so Claude Code ignores the {@code permissions.allow}
+     * rules of the project's {@code .claude/settings.json} (deny rules still apply). The same rules are passed on the
+     * command line instead, where the trust check does not apply.
+     */
+    private List<String> readAllowRules(Path workingDirectory) {
+        Path settingsFile = workingDirectory.resolve(".claude/settings.json");
+        if (!Files.isRegularFile(settingsFile)) {
+            return List.of();
+        }
+        try {
+            JsonNode settings = jsonMapper.readValue(Files.readAllBytes(settingsFile), JsonNode.class);
+            JsonNode permissions = settings == null || !settings.isObject() ? null : settings.get("permissions");
+            JsonNode allow = permissions == null || !permissions.isObject() ? null : permissions.get("allow");
+            List<String> rules = new ArrayList<>();
+            if (allow != null && allow.isArray()) {
+                allow.values().forEach(rule -> rules.add(rule.coerceStringValue()));
+            }
+            return rules;
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read " + settingsFile, e);
+        }
     }
 
     // reading continuously also keeps Claude Code from stalling on a full output pipe
@@ -206,7 +249,7 @@ public class ClaudeAgentSessionRegistry {
 
     private void enforceTimeout(ClaudeAgentSession session) {
         if (!waitForExit(session.process(), sessionTimeout)
-                && session.transition(ClaudeAgentSessionState.RUNNING, ClaudeAgentSessionState.TIMED_OUT)) {
+                && session.transition(AgentSessionState.RUNNING, AgentSessionState.TIMED_OUT)) {
             LOG.warn("[{} {}] still running after {}, stopping", session.getAgent().getAgentName(), session.getSessionId(), sessionTimeout);
             stop(session.process());
         }
@@ -221,7 +264,7 @@ public class ClaudeAgentSessionRegistry {
         Process process = session.process();
         int exitCode = waitForExit(process, STOP_GRACE_PERIOD) ? process.exitValue() : forceStop(process);
         boolean succeeded = exitCode == 0 && session.isResultSuccessful();
-        session.transition(ClaudeAgentSessionState.RUNNING, succeeded ? ClaudeAgentSessionState.DONE : ClaudeAgentSessionState.FAILED);
+        session.transition(AgentSessionState.RUNNING, succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
         session.resultText().ifPresent(text -> writeResponse(session, text));
         sessionSlots.release();
         session.markFinished();
