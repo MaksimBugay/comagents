@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -55,6 +56,8 @@ public class ClaudeAgentSessionRegistry {
     private final Duration sessionTimeout;
     private final Semaphore sessionSlots;
     private final Map<UUID, ClaudeAgentSession> sessions = new ConcurrentHashMap<>();
+    // reserved, not yet started: a session id is either here or in sessions, never both
+    private final Set<UUID> reservedSessionIds = ConcurrentHashMap.newKeySet();
 
     public ClaudeAgentSessionRegistry(JsonMapper jsonMapper,
                                       @Value("${claude.executable:claude}") String claudeExecutable,
@@ -68,26 +71,86 @@ public class ClaudeAgentSessionRegistry {
     }
 
     /**
-     * Starts the agent's kick-off prompt in {@code workingDirectory} and returns immediately. Setup must have
-     * prepared the session first: the working directory and {@code <session folder>/<agent name>} must exist, and
-     * the agent folder must hold the agent's {@code agent.json} (model, effort, kick-off prompt).
+     * Takes a session slot and claims the session id, before any setup work is done. Use it with
+     * try-with-resources: the slot is freed again on close unless {@link SessionSlot#start} handed it to a run.
      *
      * @throws ClaudeSessionLimitException when all concurrent session slots are busy
-     * @throws IllegalStateException       when the session id is already registered or the session is not prepared
+     * @throws IllegalStateException       when the session id is already reserved or registered
      */
+    public SessionSlot reserve(UUID sessionId) {
+        // start() adds to sessions before removing from reservedSessionIds, so one of the two checks always sees it
+        if (!reservedSessionIds.add(sessionId)) {
+            throw new IllegalStateException("Claude session " + sessionId + " is already being set up");
+        }
+        if (sessions.containsKey(sessionId)) {
+            reservedSessionIds.remove(sessionId);
+            throw new IllegalStateException("Claude session " + sessionId + " already exists");
+        }
+        if (!sessionSlots.tryAcquire()) {
+            reservedSessionIds.remove(sessionId);
+            throw new ClaudeSessionLimitException(maxConcurrentSessions);
+        }
+        return new SessionSlot(sessionId);
+    }
+
+    /** {@link #reserve} and {@link SessionSlot#start} in one step, for sessions that are already prepared. */
     public ClaudeAgentSession createSession(UUID sessionId, AiAgent agent, Path workingDirectory) {
+        try (SessionSlot slot = reserve(sessionId)) {
+            return slot.start(agent, workingDirectory);
+        }
+    }
+
+    /** A reserved session slot; see {@link #reserve}. */
+    public final class SessionSlot implements AutoCloseable {
+
+        private final UUID sessionId;
+        private boolean started;
+        private boolean closed;
+
+        private SessionSlot(UUID sessionId) {
+            this.sessionId = sessionId;
+        }
+
+        /**
+         * Starts the agent's kick-off prompt in {@code workingDirectory} and returns immediately; from here on the
+         * run owns the slot. Setup must have prepared the session: the working directory and
+         * {@code <session folder>/<agent name>} must exist, and the agent folder must hold the agent's
+         * {@code agent.json} (model, effort, allowed tools, kick-off prompt).
+         *
+         * @throws IllegalStateException when the session is not prepared or Claude Code can't be started; the slot
+         *                               stays reserved until {@link #close}
+         */
+        public ClaudeAgentSession start(AiAgent agent, Path workingDirectory) {
+            if (started || closed) {
+                throw new IllegalStateException("Slot for session " + sessionId + " was already " + (started ? "started" : "closed"));
+            }
+            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory);
+            sessions.put(sessionId, session);
+            reservedSessionIds.remove(sessionId);
+            started = true;
+            LOG.info("[{} {}] started in {}", agent.getAgentName(), sessionId, workingDirectory);
+            Thread.ofVirtual().name("claude-output-" + sessionId).start(() -> streamOutput(session));
+            Thread.ofVirtual().name("claude-watchdog-" + sessionId).start(() -> enforceTimeout(session));
+            return session;
+        }
+
+        /** Frees the slot and the session id if the run was never started; otherwise does nothing. */
+        @Override
+        public void close() {
+            if (!started && !closed) {
+                reservedSessionIds.remove(sessionId);
+                sessionSlots.release();
+            }
+            closed = true;
+        }
+    }
+
+    private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory) {
         Path agentFolder = SessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
         List<String> command = command(readConfig(agent, agentFolder), sessionId);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), SessionFolders.agentResponseFile(sessionId, agent));
-        if (sessions.putIfAbsent(sessionId, session) != null) {
-            throw new IllegalStateException("Claude session " + sessionId + " already exists");
-        }
-        if (!sessionSlots.tryAcquire()) {
-            sessions.remove(sessionId);
-            throw new ClaudeSessionLimitException(maxConcurrentSessions);
-        }
         try {
             session.attach(new ProcessBuilder(command)
                     .directory(workingDirectory.toFile())
@@ -95,14 +158,9 @@ public class ClaudeAgentSessionRegistry {
                     .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")))
                     .redirectErrorStream(true)
                     .start());
-        } catch (IOException | RuntimeException e) {
-            sessions.remove(sessionId);
-            sessionSlots.release();
+        } catch (IOException e) {
             throw new IllegalStateException("Failed to start Claude Code for session " + sessionId, e);
         }
-        LOG.info("[{} {}] started in {}", agent.getAgentName(), sessionId, workingDirectory);
-        Thread.ofVirtual().name("claude-output-" + sessionId).start(() -> streamOutput(session));
-        Thread.ofVirtual().name("claude-watchdog-" + sessionId).start(() -> enforceTimeout(session));
         return session;
     }
 

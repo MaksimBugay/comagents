@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Runs the registry against a fake {@code claude} script, so no test calls the real Claude API. */
+@SuppressWarnings("resource")
 class ClaudeAgentSessionRegistryTest {
 
     private static final Duration WAIT = Duration.ofSeconds(20);
@@ -206,6 +207,59 @@ class ClaudeAgentSessionRegistryTest {
 
         assertTrue(registry.findSession(sessionId).isEmpty());
         assertFalse(Files.exists(SessionFolders.of(sessionId)));
+    }
+
+    @Test
+    void reservationRejectsSessionsAboveLimit() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 1, WAIT);
+        ClaudeAgentSessionRegistry.SessionSlot held = registry.reserve(UUID.randomUUID());
+
+        assertThrows(ClaudeSessionLimitException.class, () -> registry.reserve(UUID.randomUUID()));
+
+        held.close();
+        registry.reserve(UUID.randomUUID()).close();
+    }
+
+    @Test
+    void closingUnstartedSlotFreesSessionId() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = UUID.randomUUID();
+
+        try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(sessionId)) {
+            assertThrows(IllegalStateException.class, () -> registry.reserve(sessionId), "id is claimed while reserved");
+        }
+
+        registry.reserve(sessionId).close();
+        assertTrue(registry.findSession(sessionId).isEmpty());
+    }
+
+    @Test
+    void failedStartKeepsSlotReservedUntilClosed() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 1, WAIT);
+        UUID sessionId = UUID.randomUUID();
+
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
+            assertThrows(IllegalStateException.class, () -> slot.start(AiAgent.CODE_REVIEW, workingDirectory), "not prepared");
+            assertThrows(ClaudeSessionLimitException.class, () -> registry.reserve(UUID.randomUUID()));
+        }
+
+        registry.reserve(UUID.randomUUID()).close();
+    }
+
+    @Test
+    void startedSlotIsHeldByTheRunUntilItFinishes() throws Exception {
+        registry = registry(fakeClaude("exec sleep 60"), 1, WAIT.multipliedBy(10));
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session;
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
+            session = slot.start(AiAgent.CODE_REVIEW, workingDirectory);
+        }
+
+        assertThrows(ClaudeSessionLimitException.class, () -> registry.reserve(UUID.randomUUID()), "closing a started slot keeps it");
+
+        registry.killSession(sessionId);
+        session.awaitFinished(WAIT);
+        registry.reserve(UUID.randomUUID()).close();
     }
 
     @Test

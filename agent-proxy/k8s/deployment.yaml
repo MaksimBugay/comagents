@@ -5,7 +5,9 @@ metadata:
   labels:
     app.kubernetes.io/name: agent-proxy
 spec:
-  replicas: 2
+  # one replica: sessions live in the pod's memory and /tmp, so status and response calls must reach the pod that
+  # runs the session (spec/known_gaps.md, gap 3)
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: agent-proxy
@@ -32,17 +34,45 @@ spec:
           env:
             - name: AGENT_PROXY_VERSION
               value: "0.1"
+            - name: CLONE_COMAGENTS_SOURCES_URL
+              value: https://github.com/MaksimBugay/comagents.git
+            # kubectl create secret generic agent-proxy-secrets \
+            #   --from-literal=sources-repo-access-token="$SOURCES_REPO_ACCESS_TOKEN" \
+            #   --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY"
+            - name: SOURCES_REPO_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: agent-proxy-secrets
+                  key: sources-repo-access-token
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-proxy-secrets
+                  key: anthropic-api-key
+            # Claude Code keeps settings, session transcripts and .claude.json here instead of the home folder,
+            # which holds the installed binary and is read-only
+            - name: CLAUDE_CONFIG_DIR
+              value: /claude-config
+            # memory below is sized for this many parallel Claude Code runs
+            - name: CLAUDE_SESSION_MAX_CONCURRENT
+              value: "2"
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: 500m
+              memory: 1Gi
             limits:
-              memory: 128Mi
+              memory: 4Gi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          # the only writable paths: session folders (/tmp) and Claude Code's state
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: claude-config
+              mountPath: /claude-config
           startupProbe:
             httpGet:
               path: /health/liveness
@@ -59,6 +89,14 @@ spec:
               path: /health/readiness
               port: http
             periodSeconds: 5
+      volumes:
+        # cloned repositories, agent files and responses; deleted with the pod
+        - name: tmp
+          emptyDir:
+            sizeLimit: 5Gi
+        - name: claude-config
+          emptyDir:
+            sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service

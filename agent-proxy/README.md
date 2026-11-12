@@ -31,7 +31,10 @@ docker run --rm -p 8080:8080 \
   -e ANTHROPIC_API_KEY \
   agent-proxy:0.1                    # token and key taken from the host env, not the command line
 
-kubectl apply -f k8s/deployment.yaml
+kubectl create secret generic agent-proxy-secrets \
+  --from-literal=sources-repo-access-token="$SOURCES_REPO_ACCESS_TOKEN" \
+  --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY"
+kubectl apply -f k8s/deployment.yaml   # one replica; /tmp and Claude Code's state on emptyDir volumes
 ```
 
 The Docker image is a mostly-static native binary (starts in ~10 ms, ~20 MiB RSS) on `debian:trixie-slim`,

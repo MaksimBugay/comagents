@@ -2,11 +2,13 @@ package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry.SessionSlot;
 import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.domain.AiHarnessProvider;
 import com.comagents.agentproxy.vcs.VcsService;
+import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
@@ -37,15 +39,28 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     }
 
 
+    /**
+     * Reserves a session slot first, so a busy service or a session id already in use is rejected before any
+     * download; a failed setup frees the slot and leaves no half-prepared session folder behind.
+     */
     @Override
     public void setup(AiAgent agent, AiAgentAttributes attributes) {
-        Path agentFolder = SessionFolders.agentFolder(attributes.sessionId(), agent);
-        Path workingDirectory = prepareWorkingDirectory(attributes, agentFolder);
-        vcsService.cloneComAgentsSources(comAgentsSources -> {
-            AgentFiles.copyInto(workingDirectory, comAgentsSources, agent, CLAUDE_CODE_FILES);
-            AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
-        });
-        claudeAgentSessionRegistry.createSession(attributes.sessionId(), agent, workingDirectory);
+        UUID sessionId = attributes.sessionId();
+        try (SessionSlot slot = claudeAgentSessionRegistry.reserve(sessionId)) {
+            try {
+                Path agentFolder = SessionFolders.agentFolder(sessionId, agent);
+                Path workingDirectory = prepareWorkingDirectory(attributes, agentFolder);
+                vcsService.cloneComAgentsSources(comAgentsSources -> {
+                    AgentFiles.copyInto(workingDirectory, comAgentsSources, agent, CLAUDE_CODE_FILES);
+                    AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
+                });
+                slot.start(agent, workingDirectory);
+            } catch (RuntimeException e) {
+                // only reached with the slot reserved, so the folder belongs to this failed setup
+                FileTrees.deleteIfExists(SessionFolders.of(sessionId));
+                throw e;
+            }
+        }
     }
 
     // Claude Code runs in the cloned repository, or in the agent folder when there is nothing to clone
