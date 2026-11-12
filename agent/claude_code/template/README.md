@@ -11,13 +11,13 @@ cp -R agent/claude_code/template agent/claude_code/<agent-name>
 
 ```
 template/
-├── agent.json                    # agent-proxy run settings: model, effort, kick-off prompt (required)
+├── agent.json                    # agent-proxy run settings: model, effort, allowed tools, kick-off prompt (required)
 ├── README.md                     # what the agent does (required)
 ├── CLAUDE.md                     # agent role + workflow, always loaded
 ├── .mcp.json                     # MCP servers available to the agent (none by default)
 ├── .gitignore                    # keeps personal overrides out of git
 └── .claude/
-    ├── settings.json             # shared permissions (allow/deny), hooks, env
+    ├── settings.json             # deny rules, hooks, env; allow rules go in agent.json (see below)
     ├── rules/                    # topic rules; `paths:` frontmatter = load only for matching files
     │   └── java-style.md
     ├── skills/                   # reusable procedures, invoked as /<name> or picked by the model
@@ -37,6 +37,21 @@ template/
 
 The example pieces are connected: `test-writer` preloads the `write-unit-test` skill,
 and both pick up `java-style` when they edit `.java` files.
+
+## agent.json
+
+How agent-proxy runs the agent headless (`claude -p`):
+
+| Field | Passed as | |
+|---|---|---|
+| `model` | `--model` | alias (`opus`, `sonnet`) or full model name; optional |
+| `effort` | `--effort` | `low`, `medium`, `high`, `xhigh` or `max`; optional |
+| `allowedTools` | `--allowedTools` | tools the agent may use without approval, in permission-rule syntax |
+| `kickOffPrompt` | the prompt | the first instruction of every session; required |
+
+Allow rules go here, not in `.claude/settings.json`: a headless run never trusts the folder it starts in, so
+Claude Code ignores a project's `allow` rules (and warns about it). Deny rules stay in `settings.json`, which
+Claude Code always applies.
 
 ## Run
 

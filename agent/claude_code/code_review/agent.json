@@ -1,5 +1,15 @@
 {
   "model": "claude-opus-5-5",
   "effort": "high",
+  "allowedTools": [
+    "Skill",
+    "WebSearch",
+    "WebFetch(domain:github.com)",
+    "WebFetch(domain:osv.dev)",
+    "WebFetch(domain:nvd.nist.gov)",
+    "WebFetch(domain:central.sonatype.com)",
+    "WebFetch(domain:search.maven.org)",
+    "WebFetch(domain:repo1.maven.org)"
+  ],
   "kickOffPrompt": "Review the Java project in the current working directory with the java-code-review skill. Review the whole project: it is a snapshot of the sources without git history, so there is no diff to review. You are running non-interactively and nobody can answer questions: when something is unclear, make the most reasonable assumption, list it under Open questions in the report, and continue. Return the complete review report, in the format the skill defines, as your final answer."
 }

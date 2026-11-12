@@ -73,24 +73,36 @@ class ClaudeAgentSessionRegistryTest {
         assertTrue(args.containsAll(List.of("--session-id", sessionId.toString(), "--output-format", "stream-json", "--verbose")));
         assertEquals("test-model", args.get(args.indexOf("--model") + 1));
         assertEquals("high", args.get(args.indexOf("--effort") + 1));
-        assertFalse(args.contains("--allowedTools"), "no .claude/settings.json in the working directory");
+        assertFalse(args.contains("--allowedTools"), "agent.json lists no allowed tools");
         assertEquals("", Files.readString(scripts.resolve("stdin.txt")));
     }
 
     @Test
-    void passesAllowRulesOnTheCommandLine() throws Exception {
+    void passesAllowedToolsFromAgentConfig() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"allowedTools": ["Skill", "WebFetch(domain:osv.dev)"], "kickOffPrompt": "Review it"}""");
+
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
+        int allowedTools = args.indexOf("--allowedTools");
+        assertEquals(List.of("Skill", "WebFetch(domain:osv.dev)"), args.subList(allowedTools + 1, allowedTools + 3));
+    }
+
+    @Test
+    void ignoresAllowRulesInProjectSettings() throws Exception {
         Files.createDirectories(workingDirectory.resolve(".claude"));
         Files.writeString(workingDirectory.resolve(".claude/settings.json"), """
-                {"permissions": {"allow": ["Skill", "WebFetch(domain:osv.dev)"], "deny": ["Bash", "Edit"]}}""");
+                {"permissions": {"allow": ["Bash(rm *)"], "deny": ["Edit"]}}""");
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
 
         registry.createSession(newSessionId(), AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
 
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
-        int allowedTools = args.indexOf("--allowedTools");
-        assertEquals(List.of("Skill", "WebFetch(domain:osv.dev)"), args.subList(allowedTools + 1, allowedTools + 3));
-        assertFalse(args.contains("Bash"), "deny rules stay in the project settings, which Claude Code applies itself");
-        assertFalse(args.contains("--settings"));
+        assertFalse(args.contains("--allowedTools"), "only agent.json grants tools");
+        assertFalse(args.contains("Bash(rm *)"));
     }
 
     @Test

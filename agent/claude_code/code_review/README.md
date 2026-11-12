@@ -4,10 +4,10 @@ Read-only Java 25 / Spring Boot code reviewer, built from `agent/claude_code/tem
 
 ```
 code_review/
-├── agent.json                                 # agent-proxy run settings: model, effort, kick-off prompt
+├── agent.json                                 # agent-proxy run settings: model, effort, allowed tools, kick-off prompt
 ├── CLAUDE.md                                  # role, workflow, hard constraints
 └── .claude/
-    ├── settings.json                          # skill + scoped web lookups allowed; shell, Edit and Write denied
+    ├── settings.json                          # deny rules: shell, Edit and Write (allowed tools are in agent.json)
     ├── rules/
     │   ├── read-only.md                       # never change the code
     │   └── java-spring-boot.md                # the standard code is reviewed against

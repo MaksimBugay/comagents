@@ -78,7 +78,7 @@ public class ClaudeAgentSessionRegistry {
     public ClaudeAgentSession createSession(UUID sessionId, AiAgent agent, Path workingDirectory) {
         Path agentFolder = SessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
-        List<String> command = command(readConfig(agent, agentFolder), sessionId, readAllowRules(workingDirectory));
+        List<String> command = command(readConfig(agent, agentFolder), sessionId);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), SessionFolders.agentResponseFile(sessionId, agent));
         if (sessions.putIfAbsent(sessionId, session) != null) {
@@ -148,7 +148,7 @@ public class ClaudeAgentSessionRegistry {
         }
     }
 
-    private List<String> command(ClaudeAgentConfig config, UUID sessionId, List<String> allowRules) {
+    private List<String> command(ClaudeAgentConfig config, UUID sessionId) {
         List<String> command = new ArrayList<>(List.of(
                 claudeExecutable, "-p", config.kickOffPrompt(),
                 "--session-id", sessionId.toString(),
@@ -161,9 +161,9 @@ public class ClaudeAgentSessionRegistry {
         if (config.effort() != null) {
             command.addAll(List.of("--effort", config.effort()));
         }
-        if (!allowRules.isEmpty()) {
+        if (!config.allowedTools().isEmpty()) {
             command.add("--allowedTools");
-            command.addAll(allowRules);
+            command.addAll(config.allowedTools());
         }
         return command;
     }
@@ -181,29 +181,6 @@ public class ClaudeAgentSessionRegistry {
         }
     }
 
-    /**
-     * A headless run never trusts the folder it starts in, so Claude Code ignores the {@code permissions.allow}
-     * rules of the project's {@code .claude/settings.json} (deny rules still apply). The same rules are passed on the
-     * command line instead, where the trust check does not apply.
-     */
-    private List<String> readAllowRules(Path workingDirectory) {
-        Path settingsFile = workingDirectory.resolve(".claude/settings.json");
-        if (!Files.isRegularFile(settingsFile)) {
-            return List.of();
-        }
-        try {
-            JsonNode settings = jsonMapper.readValue(Files.readAllBytes(settingsFile), JsonNode.class);
-            JsonNode permissions = settings == null || !settings.isObject() ? null : settings.get("permissions");
-            JsonNode allow = permissions == null || !permissions.isObject() ? null : permissions.get("allow");
-            List<String> rules = new ArrayList<>();
-            if (allow != null && allow.isArray()) {
-                allow.values().forEach(rule -> rules.add(rule.coerceStringValue()));
-            }
-            return rules;
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to read " + settingsFile, e);
-        }
-    }
 
     // reading continuously also keeps Claude Code from stalling on a full output pipe
     private void streamOutput(ClaudeAgentSession session) {

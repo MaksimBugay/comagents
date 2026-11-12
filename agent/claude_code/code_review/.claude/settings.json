@@ -1,16 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "allow": [
-      "Skill",
-      "WebSearch",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:osv.dev)",
-      "WebFetch(domain:nvd.nist.gov)",
-      "WebFetch(domain:central.sonatype.com)",
-      "WebFetch(domain:search.maven.org)",
-      "WebFetch(domain:repo1.maven.org)"
-    ],
     "deny": [
       "Bash",
       "Edit",
