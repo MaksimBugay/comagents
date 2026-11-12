@@ -133,8 +133,9 @@ public final class ClaudeAgentSession {
     }
 
     synchronized void startWaiting() {
-        if (pendingWaits++ == 0) {
-            transition(AgentSessionState.RUNNING, AgentSessionState.WAITING);
+        if (pendingWaits++ == 0 && transition(AgentSessionState.RUNNING, AgentSessionState.WAITING)) {
+            // the idle timeout for the wait counts from its start, not from the last output before it
+            recordOutput();
         }
     }
 

@@ -194,21 +194,34 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
-    void waitingSessionIsNotKilledWhenSilent() throws Exception {
+    void silentWaitingSessionIsArchivedNotDeleted() throws Exception {
         registry = registry(fakeClaude("exec sleep 60"), 2, WAIT.multipliedBy(10), Duration.ofMillis(500));
         UUID sessionId = newSessionId();
         ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
 
         try (ClaudeAgentSessionRegistry.Waiting _ = registry.markWaiting(sessionId)) {
-            assertEquals(AgentSessionState.WAITING, session.getState());
-            Thread.sleep(2500);    // five idle timeouts of silence
-            assertEquals(AgentSessionState.WAITING, session.getState());
-            assertTrue(registry.findSession(sessionId).isPresent());
+            assertEquals(Optional.of(AgentSessionState.ARCHIVED), session.awaitFinished(WAIT));
         }
 
-        // back to RUNNING with a fresh idle timer, then silent again: stopped and deleted as usual
-        assertEquals(Optional.of(AgentSessionState.TIMED_OUT), session.awaitFinished(WAIT));
-        await("idle session deleted after the wait ended").atMost(WAIT).until(() -> registry.findSession(sessionId).isEmpty());
+        assertEquals(AgentSessionState.ARCHIVED, session.getState(), "ending the wait does not revive it");
+        assertTrue(registry.findSession(sessionId).isPresent(), "kept, not deleted");
+        assertTrue(Files.isDirectory(workingDirectory));
+        ClaudeSessionArchive state = readArchive(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
+        assertEquals(AgentSessionState.WAITING, state.stateBeforeArchive());
+    }
+
+    @Test
+    void idleTimeoutOfWaitCountsFromItsStart() throws Exception {
+        registry = registry(fakeClaude("exec sleep 60"), 2, WAIT.multipliedBy(10), Duration.ofSeconds(2));
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        Thread.sleep(1500);    // silent, but not yet idle
+
+        try (ClaudeAgentSessionRegistry.Waiting _ = registry.markWaiting(sessionId)) {
+            Thread.sleep(1500);    // 3 s since the last output, only 1.5 s since the wait started
+            assertEquals(AgentSessionState.WAITING, session.getState());
+            assertEquals(Optional.of(AgentSessionState.ARCHIVED), session.awaitFinished(WAIT));
+        }
     }
 
     @Test

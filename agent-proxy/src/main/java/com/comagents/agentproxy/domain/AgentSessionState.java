@@ -3,7 +3,10 @@ package com.comagents.agentproxy.domain;
 /** Lifecycle of an agent run, whatever harness runs it. */
 public enum AgentSessionState {
     RUNNING,
-    /** Paused while waiting for something outside the agent; silence is expected, so the idle timeout does not apply. */
+    /**
+     * Paused while waiting for something outside the agent. Silence is expected, so the idle timeout doesn't delete it:
+     * a wait longer than the idle timeout archives the session for a later resume.
+     */
     WAITING,
     /** The agent exited normally and reported a successful result. */
     DONE,

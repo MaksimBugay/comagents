@@ -192,8 +192,9 @@ public class ClaudeAgentSessionRegistry {
     }
 
     /**
-     * Marks the session {@code WAITING} until the returned handle is closed, so the idle timeout
-     * leaves it alone; closing it returns the session to {@code RUNNING} and restarts the idle timer. Use with
+     * Marks the session {@code WAITING} until the returned handle is closed. A waiting session silent for longer than
+     * the idle timeout, counted from when the wait started, is archived rather than deleted (see {@link #archive}).
+     * Closing the handle returns the session to {@code RUNNING} and restarts the idle timer. Use with
      * try-with-resources around the wait. Kill, the session time limit and process exit still apply while waiting.
      *
      * @throws IllegalStateException when the session is unknown or no longer running
@@ -456,7 +457,8 @@ public class ClaudeAgentSessionRegistry {
      *       ({@code TIMED_OUT}); its files stay for {@code /agent-status} and {@code /agent-response}.</li>
      *   <li>{@code claude.session.idle-timeout}: a {@code RUNNING} session without output for that long is stuck, so
      *       it is stopped ({@code TIMED_OUT}) and all its data deleted, as with {@link #cleanAllSessionData}.
-     *       A {@code WAITING} session is silent on purpose and exempt.</li>
+     *       A {@code WAITING} session silent for that long (counted from when it started waiting) is
+     *       {@link #archive archived} instead: stopped, but kept for a later {@link #resume}.</li>
      * </ul>
      */
     private void watch(ClaudeAgentSession session) {
@@ -472,13 +474,32 @@ public class ClaudeAgentSessionRegistry {
                 }
                 return;
             }
-            // the compare-and-set fails for a WAITING session, which is then left alone
-            if (now.isAfter(session.getLastOutputAt().plus(idleTimeout))
-                    && session.transition(AgentSessionState.RUNNING, AgentSessionState.TIMED_OUT)) {
-                LOG.warn("[{} {}] no output for {}, stopping and deleting the session", agentName, sessionId, idleTimeout);
+            if (now.isAfter(session.getLastOutputAt().plus(idleTimeout))) {
+                if (session.transition(AgentSessionState.RUNNING, AgentSessionState.TIMED_OUT)) {
+                    LOG.warn("[{} {}] no output for {}, stopping and deleting the session", agentName, sessionId, idleTimeout);
+                    stop(session.process());
+                    cleanAllSessionData(sessionId);
+                    return;
+                }
+                if (session.getState() == AgentSessionState.WAITING) {
+                    archiveIdleWaitingSession(session);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void archiveIdleWaitingSession(ClaudeAgentSession session) {
+        String agentName = session.getAgent().getAgentName();
+        UUID sessionId = session.getSessionId();
+        LOG.warn("[{} {}] waiting without output for {}, archiving the session", agentName, sessionId, idleTimeout);
+        try {
+            archive(sessionId);
+        } catch (RuntimeException e) {
+            // the state could not be saved: stop the run anyway, keeping its files
+            LOG.error("[{} {}] archiving failed, stopping the session", agentName, sessionId, e);
+            if (session.finish(AgentSessionState.TIMED_OUT)) {
                 stop(session.process());
-                cleanAllSessionData(sessionId);
-                return;
             }
         }
     }
