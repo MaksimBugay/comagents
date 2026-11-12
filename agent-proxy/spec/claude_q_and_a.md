@@ -1,6 +1,7 @@
 # Claude Code sessions with remote Q&A
 
-Status: design, not implemented.
+Status: running Claude Code headless (sections 1–2), session status and response, archive and resume are
+implemented (`ClaudeAgentSessionRegistry`); Pushca and the Q&A parts (sections 3–6) are design only.
 
 agent-proxy prepares a session folder (`POST /{agentName}/start`: clone repo, copy agent files), then runs
 Claude Code headless in it. While Claude works, a human admin follows its output and answers its questions
@@ -13,7 +14,8 @@ Everything below relies on documented Claude Code features; sources are listed a
 
 1. Run Claude Code headless per session, in the session's working directory, with the agent's kick-off prompt.
 2. Stream Claude's progress into agent-proxy logs and to the admin (Pushca).
-3. Let Claude ask the admin questions mid-task and continue with the answer, in the same run.
+3. Let Claude ask the admin questions mid-task and continue with the answer: in the same run for a quick answer,
+   by resuming the session for a slow one (section 4).
 4. Let the admin approve or deny actions the agent's permissions don't already allow.
 5. Let the admin (or agent-proxy) send new instructions to an existing session.
 
@@ -24,7 +26,7 @@ admin ◄──── Pushca ────► HumanChannel (agent-proxy)
                            ▲   ▲            │
             progress events│   │questions,  │ new instructions
                            │   │approvals   ▼
-                 ClaudeRunner  MCP server /mcp ◄── tool calls (HTTP): ask_human, approve
+  ClaudeAgentSessionRegistry  MCP server /mcp ◄── tool calls (HTTP): ask_human, approve
                    │    ▲                                │
        starts /    │    │ stream-json (stdout)           │
        resumes     ▼    │                                │
@@ -40,52 +42,70 @@ needed: `claude -p` runs without a TTY.
   nothing was cloned (same rule as `AgentWithClaudeCodeSetupService`).
 - **Session id:** reuse our `sessionId` as Claude's session id. `--session-id` accepts any valid UUID, so
   agent-proxy never has to read Claude's id back.
-- **Environment:** inherits the container env (`ANTHROPIC_API_KEY`, `DISABLE_AUTOUPDATER=1`), plus the
-  variables in section 4.
+- **Environment:** inherits the container env (`ANTHROPIC_API_KEY`, `DISABLE_AUTOUPDATER=1`), plus:
+  - `CLAUDE_CONFIG_DIR=/tmp/<sessionId>/<agentName>/claude-state`: Claude Code's own state for the session
+    (settings, the conversation `--resume` reads, `.claude.json`), deleted with the session, kept by an archive,
+    never shared between sessions;
+  - `CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1` on resumed runs: finish the interrupted turn first.
+- **stdin** is `/dev/null`: with an open pipe, `claude -p` waits 3 s for input on every run.
 
-First run (`POST /{agentName}/start`, after setup):
+First run (`POST /{agentName}/start`, after setup). Model, effort, allowed tools and the prompt come from the
+agent's `agent.json` in the comagents sources:
 
 ```bash
-claude -p "<kick-off prompt>" \
+claude -p "<kickOffPrompt>" \
   --session-id <sessionId> \
   --output-format stream-json --verbose \
-  --settings .claude/settings.json \
-  --mcp-config '<agent-proxy MCP server, see section 4>' \
-  --allowedTools "mcp__agentproxy__ask_human" \
-  --disallowedTools "AskUserQuestion" \
+  --disallowedTools AskUserQuestion \
+  [--model <model>] [--effort <effort>] \
+  --allowedTools <agent.json allowedTools…> mcp__agentproxy__ask_human \
+  --mcp-config '<agent-proxy MCP server, section 4>' \
   --permission-prompt-tool mcp__agentproxy__approve
 ```
 
-Follow-up runs (section 6) use `--resume <sessionId>` instead of `--session-id <sessionId>`.
+Implemented today: everything except the last three lines (`mcp__agentproxy__ask_human`, `--mcp-config`,
+`--permission-prompt-tool`), which belong to sections 4–5.
+
+Resumed runs (`resume` after `archive`, the long path of section 4, section 6) use `--resume <sessionId>` instead
+of `--session-id <sessionId>`, with the agent's `resumePrompt` (or the answer prompt of section 4).
 
 ### Permissions in headless mode
 
 - In `-p` mode a tool call that needs approval and isn't pre-allowed is **denied**, not left waiting
   (unless `--permission-prompt-tool` handles it, section 5).
-- A headless run never shows the workspace trust dialog. Per the docs, `permissions.allow` rules and
-  `permissions.additionalDirectories` in a **project** `.claude/settings.json` only apply after the folder
-  is trusted; `deny` rules apply immediately. So agent-proxy passes the agent's settings explicitly with
-  `--settings .claude/settings.json`, which is a command-line settings source. **verify** that `allow`
-  rules from `--settings` apply in an untrusted folder (documented for MCP approvals, not for permissions).
+- A headless run never shows the workspace trust dialog, and every session starts in a new folder, so the
+  folder is never trusted. `permissions.allow` rules (and `permissions.additionalDirectories`) in a project
+  `.claude/settings.json` are then ignored; Claude Code warns "Ignoring N permissions.allow entries … this
+  workspace has not been trusted". Passing the same file with `--settings` does not help. `deny` rules apply
+  immediately.
+- So an agent's `.claude/settings.json` holds only `deny` rules, and its allowed tools are in `agent.json`
+  (`allowedTools`), which agent-proxy passes as `--allowedTools`. Command-line flags are not subject to the
+  trust check. A cloned repository's own `allow` rules are never passed on.
 - File access outside the working directory: `--add-dir /tmp/<sessionId>` per agent if needed.
 - Absolute paths in permission rules use a double slash: `Edit(//tmp/<sessionId>/**)`.
 
 ### HTTP API
 
-`POST /{agentName}/start` must not wait for Claude: a whole-project review can take many minutes.
+`POST /{agentName}/start` doesn't wait for Claude: a whole-project review can take many minutes.
 
-- `POST /{agentName}/start` sets up the session, starts the run, returns **202 Accepted** with the session id.
-- `GET /{agentName}/sessions/{sessionId}` returns the state: `RUNNING`, `WAITING_FOR_HUMAN`, `DONE`,
-  `FAILED`, `TIMED_OUT`, plus the result when there is one.
+- `POST /{agentName}/start` sets up the session, starts the run in the background, returns **202 Accepted**.
+- `GET /agent-status/{agentName}/{sessionId}`: `state` (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`,
+  `KILLED`, `ARCHIVED`), start and finish times, and whether a response is available; 404 for an unknown session.
+- `GET /agent-response/{agentName}/{sessionId}`: the agent's final answer (`body` base64, `createdAt`). Without
+  one: 404 with the session's `state`, so the caller knows whether to try again (`RUNNING`, `WAITING`). The
+  session's files are deleted 5 min after the first successful fetch, except for archived sessions.
 
 ### Limits
 
-- **Time limit** per run (configurable). On expiry, stop the process and record `TIMED_OUT`.
-- **Concurrency cap** per container (configurable, e.g. 2–4). Claude Code's docs recommend 4 GB+ RAM, and
-  each run is a separate process. Reject (429) or queue starts above the cap.
-- `k8s/deployment.yaml` must raise its memory limit (currently 128 MiB) and add writable `emptyDir`
-  volumes for `/tmp` and `/home/nonroot` (Claude Code writes `~/.claude`), because the root filesystem is
-  read-only there.
+- **Time limit** per run, `claude.session.timeout` (60 min): the process is stopped, state `TIMED_OUT`, files kept.
+- **Idle timeout**, `claude.session.idle-timeout` (10 min without any output): a `RUNNING` session is stopped and
+  deleted; a `WAITING` session (silent on purpose) is archived instead, its timer counted from when the wait
+  started.
+- **Concurrency cap**, `claude.session.max-concurrent` (2): Claude Code's docs recommend 4 GB+ RAM per run. The
+  slot is reserved before setup, so a busy service answers **429** before cloning anything.
+- **Kubernetes** (`k8s/deployment.yaml`): one replica (sessions live in the pod), 4 GiB memory limit, read-only
+  root filesystem with `/tmp` as the only writable path (`emptyDir`, session folders including Claude Code's
+  state), API key and GitHub token from the `agent-proxy-secrets` Secret.
 
 ## 2. Streaming output
 
@@ -129,8 +149,11 @@ public interface HumanChannel {
     /** Sends a progress event about the session to the admin. */
     void publish(UUID sessionId, AgentEvent event);
 
-    /** Asks the admin a question; completes with the answer, or empty when the deadline passes. */
-    Optional<String> ask(UUID sessionId, String question, Duration deadline);
+    /**
+     * Sends a question to the admin. The future completes with the answer whenever it arrives, seconds or days
+     * later; section 4 decides whether the asking tool call is still waiting for it.
+     */
+    CompletableFuture<String> ask(UUID sessionId, UUID questionId, String question);
 
     /** Asks the admin to allow or deny a tool call. */
     ApprovalDecision approve(UUID sessionId, ApprovalRequest request, Duration deadline);
@@ -143,74 +166,140 @@ public interface HumanChannel {
 
 ## 4. Claude asks the admin: the `ask_human` MCP tool
 
-agent-proxy runs its own MCP server, and Claude calls its tool when it needs a decision. The call blocks
-(on a virtual thread) until the admin answers, then Claude continues the same turn with the answer.
+agent-proxy runs its own MCP server with an `ask_human(question)` tool. An answer can come back two ways,
+depending on how fast the admin is:
 
-### Library
+- **Quick answer:** the tool call waits up to `agent-question.quick-answer-timeout` (e.g. 3 min). An answer in
+  that window is the tool's result, and Claude continues the same turn. No extra run, no extra cost.
+- **Long wait:** after the window the tool returns, the run ends, and the session is archived until the answer
+  arrives. Then agent-proxy resumes it with the answer in the resume prompt.
 
-Micronaut MCP 2.1.0, `io.micronaut.mcp:micronaut-mcp-server-java-sdk`. Built for Micronaut 5, based on the
-official MCP Java SDK (2.x, GA). Releases 1.0.0 and later are not pre-releases. HTTP transport, endpoint
-`/mcp` by default.
+Why not keep the call open for hours: Claude Code allows it (the default per-call limit is about 28 h), but the
+Claude process would stay alive and hold a session slot all that time, the session time limit (60 min) would end
+it, and an agent-proxy or pod restart would lose the call and the answer.
+
+### Flow
+
+1. **Claude calls `ask_human(question)`.** agent-proxy records the question and persists it with the session
+   right away (`session-state.json`, so it survives a restart). The session becomes `WAITING`; the process is
+   still alive (`markWaiting`). The call blocks up to the quick-answer window.
+2. **Quick path: the answer arrives in the window.** The tool returns the answer, the session goes back to
+   `RUNNING`, and Claude continues the same turn.
+3. **Long path: the window passes.** The question is marked *deferred*, and the tool returns a fixed text:
+   *"No answer yet. The question stays open. End your turn now without doing more work; you will be resumed
+   with the answer."* Claude ends its turn and the process exits on its own. The finish handler sees a deferred
+   question: it does **not** mark the session `DONE` or write a response; it archives the session, still
+   `WAITING`, and frees the slot.
+4. **The deferred answer arrives** (HTTP now, Pushca later; possibly hours later). agent-proxy resumes the
+   session (`claude -p "<answer prompt>" --resume <sessionId>`) with:
+   *"The human answered your question «Q»: «A». Continue the task and return your final answer as before."*
+
+The tool call always gets a result before the session is archived, so the conversation never holds an
+unanswered tool call, and the answer arrives as an ordinary new user message.
 
 ```java
-@Singleton
-class HumanTools {
-
-    @Tool(description = "Ask the human operator a question and wait for the answer. "
-            + "Use whenever a decision needs a human; nobody else can answer.")
-    String askHuman(String question) {
-        // sessionId from the X-Session-Id header (verify, see below)
-        return humanChannel.ask(sessionId, question, ANSWER_DEADLINE)
-                .orElse("No answer from the operator. Proceed with your best assumption and record it in the report.");
+@Tool(name = "ask_human", description = "Ask the human operator a question ...")
+String askHuman(@ToolArg(name = "question") String question, McpTransportContext context) {
+    ClaudeAgentSession session = caller(context);               // session id + token headers, see "Wiring"
+    PendingQuestion asked = questions.ask(session, question);   // persisted with the session
+    try (var _ = registry.markWaiting(session.getSessionId())) {
+        return asked.awaitAnswer(quickAnswerTimeout)
+                .orElseGet(() -> {
+                    asked.defer();                              // atomic: an answer can't slip in between
+                    return END_TURN_AND_WAIT;
+                });
     }
 }
 ```
 
+### Edge cases
+
+- **Answer just after the window**, while Claude is still ending its turn: store it, and resume as soon as the
+  process has exited. "Answer arrived" and "window expired" must be decided atomically (one compare-and-set on
+  the question), so an answer is neither lost nor delivered twice.
+- **Claude ignores the instruction and finishes anyway** (e.g. writes a final report): still archive as
+  `WAITING` and resume when the answer arrives; the answer may change the report.
+- **Several questions in one turn:** the tool description asks for one question, then stop. A session with
+  several deferred questions is resumed once all of them are answered, with every answer in one prompt.
+- **Restart during the quick window:** the Claude process dies with agent-proxy. The question is already
+  persisted, so a later answer can still resume the session from disk.
+- **No answer ever:** waiting sessions expire after `agent-question.answer-ttl` (e.g. 7 days) and are cleaned
+  up (see `spec/known_gaps.md`, gap 1).
+
+### Session state
+
+- `WAITING` covers both phases from the caller's point of view ("waiting for a human"); whether the process is
+  alive or archived is internal. `/agent-status` reports `WAITING` and the pending questions.
+- `ARCHIVED` stays what it is: a session archived on request.
+- Already implemented and reused: `markWaiting` (quick phase), `archive` / `resume` (long phase; `resume` needs
+  a variant taking the answer prompt instead of the agent's `resumePrompt`). Archiving a silent `WAITING` session
+  after the idle timeout becomes a safety net: with a quick window shorter than the idle timeout it never fires.
+
+### Answers
+
+- `GET /agent-question/{agentName}/{sessionId}`: the session's unanswered questions.
+- `POST /agent-question/{agentName}/{sessionId}/{questionId}` with `{"answer": "..."}`: one endpoint for both
+  phases. A question whose tool call is still waiting gets the answer handed to it; a deferred one records the
+  answer and triggers the resume. Pushca delivers answers through the same service later (section 3).
+
+### Library
+
+Micronaut MCP 2.1.0, `io.micronaut.mcp:micronaut-mcp-server-java-sdk`, managed by the Micronaut platform BOM
+(5.2.5), on the official MCP Java SDK 2.0.1. HTTP transport, endpoint `/mcp`:
+
+```properties
+micronaut.mcp.server.transport=HTTP
+micronaut.mcp.server.info.name=agent-proxy
+micronaut.mcp.server.info.version=${AGENT_PROXY_VERSION:0.1}
+```
+
+Checked in the library sources:
+
+- **Blocking is safe.** HTTP without `micronaut.mcp.server.reactive` uses the SDK's stateless sync server, which
+  runs synchronous tools with `immediateExecution = false`, i.e. `subscribeOn(Schedulers.boundedElastic())`: off
+  the Netty event loop, so a tool may block for the quick-answer window.
+- **Request headers.** The default `McpTransportContextExtractor<HttpRequest<?>>` keeps only standard MCP
+  headers (protocol version, `Mcp-Session-Id`, `Last-Event-Id`, host, locale, principal). agent-proxy provides its
+  own `@Primary` extractor (the SDK interface is public) that also copies the session headers below; the tool
+  method takes an `McpTransportContext` parameter and reads them with `context.get(...)`.
+- **No server-to-client messages over HTTP** (guide: "Server to Client communication via an SSE stream is not
+  yet supported"), so no progress notifications during the wait.
+
 ### Wiring per run
 
-agent-proxy adds its server on the command line, so agent repos don't need to know about it:
+agent-proxy adds its server on the command line, next to whatever MCP servers the agent itself configures:
 
 ```json
 {"mcpServers": {"agentproxy": {
   "type": "http",
   "url": "http://127.0.0.1:8080/mcp",
-  "headers": {"X-Session-Id": "<sessionId>", "Authorization": "Bearer <per-session secret>"},
-  "timeout": 3600000
+  "headers": {"X-Agent-Session-Id": "<sessionId>", "X-Agent-Session-Token": "<per-session secret>"},
+  "timeout": 300000
 }}}
 ```
 
-- `--allowedTools "mcp__agentproxy__ask_human"`: in headless mode an MCP tool must be pre-allowed.
-- `--disallowedTools "AskUserQuestion"`: removes Claude Code's built-in question tool, which nobody can
-  answer in a headless run, so Claude uses `ask_human` instead.
-- The kick-off prompt tells Claude to use `ask_human` for decisions.
-- **verify** that `--mcp-config` accepts the inline JSON string (docs: "JSON files or strings", no example).
-- **verify** that a `@Tool` method can read the request's `X-Session-Id` header.
+- `--mcp-config` takes this as an inline string (CLI help: "Load MCP servers from JSON files or strings").
+- `--allowedTools` gets `mcp__agentproxy__ask_human` appended to the agent's own `allowedTools`: in headless
+  mode an MCP tool must be pre-allowed.
+- `--disallowedTools AskUserQuestion` (already passed) keeps Claude on `ask_human`.
+- The token is random per run; the tool accepts a call only if it matches the running session (constant-time
+  comparison).
 
-### Waiting a long time
+### Timeouts
 
-| Limit | Default | Setting |
+| Limit | Value | Why |
 |---|---|---|
-| Wall-clock limit per tool call | ~28 h | per-server `"timeout"` in ms (above: 1 h), or `MCP_TOOL_TIMEOUT` |
-| No response and no progress (HTTP) | 5 min | `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT=0` disables it |
-| Moving slow calls to the background | off in `-p` | leave `CLAUDE_AUTO_BACKGROUND_TASKS` unset |
+| `agent-question.quick-answer-timeout` | e.g. 3 min | how long a tool call waits before the long path |
+| Claude Code: HTTP MCP call without response or progress | aborted after 5 min | the quick window must stay below it (no progress can be sent) |
+| per-server `"timeout"` in `--mcp-config` | quick window + margin, e.g. 5 min | hard limit per call; at least 1000 ms also floors the idle check |
+| `claude.session.idle-timeout` | 10 min | longer than the quick window, so a quick wait never trips it |
+| `agent-question.answer-ttl` | e.g. 7 days | when an unanswered, archived session is cleaned up |
 
-Micronaut MCP can't send progress notifications ("Server to Client communication via an SSE stream is not
-yet supported"), so the 5-minute idle check would abort any wait longer than 5 minutes:
-`CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT=0` is required on the process. A per-server `timeout` of at least
-1000 ms also acts as a floor for the idle check.
+### Cost
 
-agent-proxy's own answer deadline should be shorter than the per-server `timeout`, so the tool returns the
-"no answer" text instead of Claude Code aborting the call.
-
-agent-proxy's own idle timeout (`claude.session.idle-timeout`, 10 min by default) kills and deletes a session that
-prints nothing for that long, and a session waiting in `ask_human` or `approve` prints nothing. The watchdog must
-treat a pending human question as activity (e.g. pause the idle timer while `HumanChannel.ask`/`approve` waits),
-or a slow admin gets the session deleted.
-
-### Session state
-
-While `ask_human` waits, the session state is `WAITING_FOR_HUMAN`; the status endpoint returns the
-pending question.
+A quick answer costs nothing extra. A long wait costs a resume: the whole conversation is sent to the API again.
+Within minutes prompt caching makes that cheap; after hours the cache has expired and the full context is paid
+again. Fine for review-sized sessions, but worth knowing for very long ones.
 
 ## 5. The admin approves actions: `--permission-prompt-tool`
 
@@ -252,8 +341,9 @@ claude -p "<instruction>" --resume <sessionId> --output-format stream-json --ver
 
 ## 7. Security
 
-- `/mcp` is served on the public HTTP port: require the per-session secret in `Authorization` and check it
-  matches `X-Session-Id`, so outsiders can't inject questions, answers, or approvals.
+- `/mcp` is served on the public HTTP port: the tools accept a call only with the per-session secret
+  (`X-Agent-Session-Token`) of the session in `X-Agent-Session-Id`, so outsiders can't inject questions or
+  approvals. The answer endpoint needs its own protection (Pushca, or authentication) before it is exposed.
 - The admin side of Pushca must be authenticated.
 - Cloned repositories are untrusted input (prompt injection). The agent's `deny` rules (which apply
   immediately, even in untrusted folders) are the guardrail; never run with `--dangerously-skip-permissions`.
@@ -265,21 +355,24 @@ claude -p "<instruction>" --resume <sessionId> --output-format stream-json --ver
 
 ## 8. Implementation order
 
-1. `ClaudeRunner`: process start, working directory, `--session-id`, time limit, concurrency cap,
-   transcript file, status endpoint, 202 from `start`.
-2. Stream-json summaries into the logs.
+1. Done (`ClaudeAgentSessionRegistry`): process start, working directory, `--session-id`, time limit, idle
+   timeout, concurrency cap, transcript file, status and response endpoints, 202 from `start`, archive and resume.
+2. Done: stream-json summaries into the logs.
 3. `HumanChannel` interface with an in-memory fake; `publish` wired to the runner.
-4. MCP server with `ask_human` (Micronaut MCP), per-run `--mcp-config`, idle/timeout settings.
+4. MCP server with `ask_human` (Micronaut MCP), per-run `--mcp-config`, quick-answer window, deferred
+   questions with archive and resume-with-answer, answer endpoint, answer TTL.
 5. `PushcaHumanChannel`.
 6. `approve` tool and `--permission-prompt-tool`.
 7. Messages endpoint with queue/interrupt via `--resume`.
 
-Prototype the **verify** items before steps 4–6:
+Verify items:
 
-- `allow` rules from `--settings` apply in an untrusted folder in `-p` mode.
-- `--mcp-config` accepts an inline JSON string.
-- A Micronaut MCP `@Tool` method can read request headers.
-- `--permission-prompt-tool` input/output contract.
+- Resolved: `allow` rules from `--settings` do **not** apply in an untrusted folder in `-p` mode (Claude Code
+  warns "Ignoring … permissions.allow entries"); allowed tools come from the agent's `agent.json` and are passed
+  as `--allowedTools`.
+- Resolved: `--mcp-config` accepts an inline JSON string (CLI help).
+- Resolved: a `@Tool` method reads request headers through a custom `McpTransportContextExtractor` (section 4).
+- Open: `--permission-prompt-tool` input/output contract.
 
 ## Sources
 
