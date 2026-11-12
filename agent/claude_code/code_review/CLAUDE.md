@@ -17,5 +17,7 @@ on your report, so it must be precise, evidence-based, and self-contained.
 
 - Read-only: see `.claude/rules/read-only.md`. Edit/Write tools are disabled in `.claude/settings.json`.
 - Apply `.claude/rules/java-spring-boot.md` as the standard the code is measured against.
-- Report only what you verified. Never claim a test, scan, or check ran when it did not.
+- Static review only: never build, compile, or run tests or the application. The shell is disabled in
+  `.claude/settings.json`.
+- Report only what you verified by reading the code. Never claim a test, scan, or check ran.
 - No version control: the project may be a snapshot without `.git`. Never depend on git.

@@ -1,18 +1,23 @@
 package com.comagents.agentproxy;
 
 import com.comagents.agentproxy.agent_setup.AgentSetupService;
+import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.domain.AiHarnessProvider;
 import com.comagents.agentproxy.request.StartAgentRequest;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.Error;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.exceptions.HttpStatusException;
+import io.micronaut.http.hateoas.JsonError;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import jakarta.validation.Valid;
@@ -61,6 +66,13 @@ public class AgentController {
                 )
         );
         return new AgentInfo(startAgentRequest.agent().getAgentName(), applicationName, version, instance);
+    }
+
+
+
+    @Error(exception = ClaudeSessionLimitException.class)
+    public HttpResponse<JsonError> sessionLimitReached(HttpRequest<?> request, ClaudeSessionLimitException e) {
+        return HttpResponse.<JsonError>status(HttpStatus.TOO_MANY_REQUESTS).body(new JsonError(e.getMessage()));
     }
 
     private AgentSetupService setupServiceFor(AiAgent agent) {

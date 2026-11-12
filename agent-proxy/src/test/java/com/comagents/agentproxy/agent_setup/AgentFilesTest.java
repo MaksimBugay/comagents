@@ -86,6 +86,24 @@ class AgentFilesTest {
     }
 
     @Test
+    void failsWhenAgentHasNoReadme() throws IOException {
+        Files.delete(comAgentsSources.resolve("agent/claude_code/code_review/README.md"));
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> AgentFiles.copyInto(workingDirectory, comAgentsSources, AiAgent.CODE_REVIEW, ENTRIES));
+        assertTrue(e.getMessage().contains("README.md"));
+    }
+
+    @Test
+    void copyingReadmeCreatesAgentFolder() {
+        Path agentFolder = workingDirectory.resolve("session/code_review");
+
+        AgentFiles.copyInto(agentFolder, comAgentsSources, AiAgent.CODE_REVIEW, List.of(AgentFiles.README));
+
+        assertTrue(Files.isRegularFile(agentFolder.resolve("README.md")));
+    }
+
+    @Test
     void failsWhenAgentHasNoFiles() {
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> AgentFiles.copyInto(workingDirectory, comAgentsSources, AiAgent.IMAGE_GENERATOR, ENTRIES));

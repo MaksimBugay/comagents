@@ -1,0 +1,128 @@
+package com.comagents.agentproxy.agent_setup.claude;
+
+import io.micronaut.json.tree.JsonNode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+/**
+ * Reads Claude Code's {@code --output-format stream-json} events. Summaries are for logs: they name the tool
+ * and its main argument but never include tool results, which can hold whole files or secrets the agent read.
+ */
+final class ClaudeStreamEvents {
+
+    static final int MAX_SUMMARY_LENGTH = 300;
+
+    // the input field that best identifies what a tool call works on, in order of preference
+    private static final List<String> TOOL_TARGET_FIELDS = List.of("file_path", "path", "command", "pattern", "url", "query", "description");
+
+    private ClaudeStreamEvents() {
+    }
+
+    /** One-line summary of an event, or empty for events not worth logging (tool results). */
+    static Optional<String> summarize(JsonNode event) {
+        String type = text(event, "type");
+        return switch (type == null ? "" : type) {
+            case "system" -> Optional.of(summarizeSystem(event));
+            case "assistant" -> summarizeAssistant(event);
+            case "user" -> Optional.empty();
+            case "result" -> Optional.of(summarizeResult(event));
+            default -> Optional.of("event: " + (type == null ? "unknown" : type));
+        };
+    }
+
+    static boolean isResult(JsonNode event) {
+        return "result".equals(text(event, "type"));
+    }
+
+    /** The final answer of a {@code result} event. */
+    static Optional<String> resultText(JsonNode event) {
+        return Optional.ofNullable(text(event, "result"));
+    }
+
+    static boolean isSuccessfulResult(JsonNode event) {
+        JsonNode isError = event.get("is_error");
+        return "success".equals(text(event, "subtype")) && (isError == null || !isError.getBooleanValue());
+    }
+
+    static String truncate(String text) {
+        String singleLine = text.replaceAll("\\s+", " ").strip();
+        return singleLine.length() <= MAX_SUMMARY_LENGTH ? singleLine : singleLine.substring(0, MAX_SUMMARY_LENGTH) + "…";
+    }
+
+    private static String summarizeSystem(JsonNode event) {
+        String subtype = text(event, "subtype");
+        if (!"init".equals(subtype)) {
+            return "system: " + subtype;
+        }
+        JsonNode tools = event.get("tools");
+        return "init: model=" + text(event, "model")
+                + ", tools=" + (tools == null ? 0 : tools.size())
+                + ", mcp=" + mcpServerNames(event.get("mcp_servers"));
+    }
+
+    private static Optional<String> summarizeAssistant(JsonNode event) {
+        JsonNode message = event.get("message");
+        JsonNode content = message == null ? null : message.get("content");
+        if (content == null || !content.isArray()) {
+            return Optional.empty();
+        }
+        List<String> parts = new ArrayList<>();
+        for (JsonNode block : content.values()) {
+            String blockType = text(block, "type");
+            if ("text".equals(blockType)) {
+                parts.add("text: " + truncate(String.valueOf(text(block, "text"))));
+            } else if ("tool_use".equals(blockType)) {
+                parts.add("tool: " + text(block, "name") + toolTarget(block.get("input")));
+            }
+        }
+        return parts.isEmpty() ? Optional.empty() : Optional.of(truncate(String.join(" | ", parts)));
+    }
+
+    private static String summarizeResult(JsonNode event) {
+        StringBuilder summary = new StringBuilder("done: ").append(text(event, "subtype"));
+        JsonNode turns = event.get("num_turns");
+        if (turns != null && turns.isNumber()) {
+            summary.append(", ").append(turns.getIntValue()).append(" turns");
+        }
+        JsonNode cost = event.get("total_cost_usd");
+        if (cost != null && cost.isNumber()) {
+            summary.append(String.format(Locale.ROOT, ", $%.4f", cost.getDoubleValue()));
+        }
+        JsonNode duration = event.get("duration_ms");
+        if (duration != null && duration.isNumber()) {
+            summary.append(String.format(Locale.ROOT, ", %.1fs", duration.getLongValue() / 1000.0));
+        }
+        return summary.toString();
+    }
+
+    private static String toolTarget(JsonNode input) {
+        if (input == null || !input.isObject()) {
+            return "";
+        }
+        for (String field : TOOL_TARGET_FIELDS) {
+            String value = text(input, field);
+            if (value != null) {
+                return " " + truncate(value);
+            }
+        }
+        return "";
+    }
+
+    private static List<String> mcpServerNames(JsonNode servers) {
+        List<String> names = new ArrayList<>();
+        if (servers != null && servers.isArray()) {
+            for (JsonNode server : servers.values()) {
+                names.add(server.isObject() ? String.valueOf(text(server, "name")) : server.coerceStringValue());
+            }
+        }
+        return names;
+    }
+
+    private static String text(JsonNode node, String field) {
+        JsonNode value = node == null || !node.isObject() ? null : node.get(field);
+        return value == null || value.isNull() ? null : value.coerceStringValue();
+    }
+}

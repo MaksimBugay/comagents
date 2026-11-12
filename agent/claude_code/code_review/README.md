@@ -6,12 +6,12 @@ Read-only Java 25 / Spring Boot code reviewer, built from `agent/claude_code/tem
 code_review/
 ├── CLAUDE.md                                  # role, workflow, hard constraints
 └── .claude/
-    ├── settings.json                          # build allowed; Edit/Write, rm/mv and mutating git denied
+    ├── settings.json                          # static review: shell (Bash), Edit and Write denied
     ├── rules/
     │   ├── read-only.md                       # never change the code
     │   └── java-spring-boot.md                # the standard code is reviewed against
     └── skills/java-code-review/
-        ├── SKILL.md                           # scope → prepare → verify → severity-ordered report
+        ├── SKILL.md                           # scope → prepare → severity-ordered report
         └── references/review-checklist.md     # what to check and the coverage/conclusion rules
 ```
 

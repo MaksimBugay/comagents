@@ -102,8 +102,8 @@ how to review against it.
   callers have the same contract.
 - Verify dependencies are necessary, correctly scoped, and exactly versioned or BOM-managed. Flag
   bundled JARs, version ranges, snapshots, and prereleases.
-- For dependency changes, verify the latest compatible stable release on Maven Central, inspect the
-  resolved tree, and check vulnerabilities in **more than one** source — the publisher's GitHub
+- For dependency changes, verify the latest compatible stable release on Maven Central, read the
+  declared and BOM-managed versions in the build file, and check vulnerabilities in **more than one** source — the publisher's GitHub
   security advisories plus OSV or NVD, since each can lag the others. State the check date, the fixed
   version, and any verification that was unavailable.
 - Inspect real trust boundaries for injection (SQL/JPQL, command, log, SpEL), path traversal, SSRF,
@@ -117,7 +117,7 @@ how to review against it.
   wiring, Testcontainers where database behaviour matters.
 - For concurrency, assess controlled interleavings, visible worker failures, bounded waits, cleanup,
   and invariants; sleep-based coordination is weak evidence.
-- Report only commands that actually ran, with results and material gaps.
+- Review tests by reading them; never run them. Report material gaps in what they cover.
 
 ## Report content
 

@@ -2,13 +2,15 @@
 name: java-code-review
 description: Review Java 25 / Spring Boot code — a whole project, selected files or folders, or a patch file — for actionable correctness, security, performance, concurrency, design, dependency, and test issues, and produce a severity-ordered report. Works without git. Use when a code review is requested; not for implementation work.
 argument-hint: "[path... | file.patch]"
-allowed-tools: Read Grep Glob Bash(./mvnw *) Bash(mvn *) Bash(./gradlew *)
+allowed-tools: Read Grep Glob
 ---
 
 # Java code review
 
 Act as a senior Java 25 / Spring Boot reviewer. Produce a rigorous, defect-first review whose every
 finding the author can verify and act on without further questions.
+
+The review is static: read the code, never build, compile, or run tests or the application.
 
 Review target: $ARGUMENTS
 
@@ -43,18 +45,7 @@ configuration (`CLAUDE.md`, `.claude/`) unless explicitly targeted.
    establish impact; the patch alone is not evidence.
 5. Stay read-only (`.claude/rules/read-only.md`).
 
-## 3. Verify
-
-Run the narrowest meaningful checks and record each command with its result:
-
-- focused tests for the reviewed classes (`./mvnw -B -q test -Dtest=<TestClass>`); the full suite
-  (`./mvnw -B verify`) for a whole-project review or for shared code, build, or dependency changes when
-  feasible;
-- `./mvnw -B -q dependency:tree` for a whole-project review or when dependencies changed.
-
-If a command cannot run (missing toolchain, network, resources), say so; never report it as passed.
-
-## 4. Report
+## 3. Report
 
 Assign exactly one severity to every finding:
 
@@ -88,13 +79,10 @@ Use this structure:
 |------|--------|-------|
 | ... | checked / issue found / not applicable / unverified | ... |
 
-### Verification
-- `<command>` → <result>
-
 ### Open questions
 - <only questions that materially limit the conclusion>
 ```
 
 The coverage areas, the mandatory performance and threading statements, and the rules for
 optional improvements are defined in the checklist. If there are no findings, say so explicitly and
-still report coverage and verification.
+still report coverage.
