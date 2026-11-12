@@ -12,8 +12,9 @@ COPY src src
 ENV NATIVE_IMAGE_OPTIONS="--static-nolibc"
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q package -Dpackaging=native-image -DskipTests
 
-# ---- runtime: distroless (glibc only, no shell), non-root ----
-FROM gcr.io/distroless/base-debian13:nonroot
+# ---- runtime: distroless with a busybox shell (debug variant, for `docker exec ... sh`), non-root ----
+# switch back to base-debian13:nonroot for a shell-free production image
+FROM gcr.io/distroless/base-debian13:debug-nonroot
 COPY --from=build /workspace/target/application /app/application
 EXPOSE 8080
 USER 65532:65532

@@ -1,6 +1,8 @@
 package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.agentproxy.request.StartAgentRequest;
+import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -9,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,11 +28,9 @@ class AgentFilesTest {
     @TempDir
     Path workingDirectory;
 
-    private Path agentSource;
-
     @BeforeEach
     void createAgent() throws IOException {
-        agentSource = comAgentsSources.resolve("agent/claude_code/code_review");
+        Path agentSource = comAgentsSources.resolve("agent/claude_code/code_review");
         Files.createDirectories(agentSource.resolve(".claude/skills/java-code-review"));
         Files.writeString(agentSource.resolve("CLAUDE.md"), "role");
         Files.writeString(agentSource.resolve(".claude/skills/java-code-review/SKILL.md"), "skill");
@@ -89,5 +90,21 @@ class AgentFilesTest {
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> AgentFiles.copyInto(workingDirectory, comAgentsSources, AiAgent.IMAGE_GENERATOR, ENTRIES));
         assertTrue(e.getMessage().contains("image_generator"));
+    }
+
+    @Test
+    void requestSample() throws IOException {
+        var request = new StartAgentRequest(
+                UUID.randomUUID(),
+                AiAgent.CODE_REVIEW,
+                "https://github.com/MaksimBugay/dynamic-captcha.git"
+        );
+        ObjectMapper objectMapper = ObjectMapper.getDefault();
+
+        String json = objectMapper.writeValueAsString(request);
+        System.out.println(json);
+
+        // the printed body is what POST /{agentName}/start accepts
+        assertEquals(request, objectMapper.readValue(json, StartAgentRequest.class));
     }
 }

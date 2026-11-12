@@ -13,6 +13,8 @@ import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.exceptions.HttpStatusException;
+import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
@@ -46,7 +48,9 @@ public class AgentController {
         return new AgentInfo(agentName, applicationName, version, instance);
     }
 
-    @Post("/info")
+    // setup downloads and copies files (blocking I/O), which must not run on the Netty event loop
+    @Post("/start")
+    @ExecuteOn(TaskExecutors.BLOCKING)
     public AgentInfo start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentRequest startAgentRequest) {
         requireSameAgent(agentName, startAgentRequest.agent());
         setupServiceFor(startAgentRequest.agent()).setup(

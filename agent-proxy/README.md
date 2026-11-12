@@ -7,6 +7,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 | Method | Path                  | Description                     |
 |--------|-----------------------|---------------------------------|
 | GET    | `/{agentName}/info`   | Info about the given agent      |
+| POST   | `/{agentName}/start`  | Set up an agent session (clone repo, copy agent files) |
 | GET    | `/health/liveness`    | Kubernetes liveness probe       |
 | GET    | `/health/readiness`   | Kubernetes readiness probe      |
 

@@ -5,22 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="service backbone">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentFiles.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/AiAgentAttributes.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/AiHarnessProvider.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/resources/application-test.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build-image.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/AgentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/AgentController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentSetupService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentSetupService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/AiAgent.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/AiAgent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/github/VcsGithubService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsGithubService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../agent/claude_code/code_review/.claude/settings.json" beforeDir="false" afterPath="$PROJECT_DIR$/../agent/claude_code/code_review/.claude/settings.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../agent/claude_code/code_review/.claude/skills/java-code-review/SKILL.md" beforeDir="false" afterPath="$PROJECT_DIR$/../agent/claude_code/code_review/.claude/skills/java-code-review/SKILL.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../agent/claude_code/code_review/CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/../agent/claude_code/code_review/CLAUDE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../agent/claude_code/code_review/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../agent/claude_code/code_review/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentFilesTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentFilesTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,62 +52,65 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.25513526142249E-30" />
-      <entry key="MS500" value="1.0464972854416303E-6" />
-      <entry key="S2" value="0.03198413825254718" />
-      <entry key="S5" value="0.2537548838135644" />
-      <entry key="S10" value="0.5902563019993453" />
-      <entry key="S30" value="2.6157562293351506" />
-      <entry key="S60" value="5.594901938016011" />
-      <entry key="M2" value="10.212599051749393" />
-      <entry key="M5" value="18.825131814419777" />
-      <entry key="M10" value="27.595115896072272" />
-      <entry key="M15" value="34.17181766510685" />
-      <entry key="M30" value="49.222008115731896" />
-      <entry key="H1" value="66.91298991644253" />
-      <entry key="H2" value="82.06892531942047" />
-      <entry key="H4" value="92.30569548879345" />
-      <entry key="D1" value="102.68541226998516" />
-      <entry key="W1" value="104.6640520737388" />
+      <entry key="MS100" value="1.009635482759358" />
+      <entry key="MS500" value="1.50643446791881" />
+      <entry key="S2" value="2.370527224954257" />
+      <entry key="S5" value="2.7144343428132585" />
+      <entry key="S10" value="2.87521394974429" />
+      <entry key="S30" value="4.00362123396231" />
+      <entry key="S60" value="5.847876545146771" />
+      <entry key="M2" value="7.769377506000308" />
+      <entry key="M5" value="9.502789240582425" />
+      <entry key="M10" value="10.21220995400836" />
+      <entry key="M15" value="10.465681893494208" />
+      <entry key="M30" value="10.728169551061661" />
+      <entry key="H1" value="10.863254034674464" />
+      <entry key="H2" value="11.120982615941907" />
+      <entry key="H4" value="15.4049229439672" />
+      <entry key="D1" value="72.91815938651523" />
+      <entry key="W1" value="108.36777750075669" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="1.0000112477832248" />
-      <entry key="MS500" value="1.1072752882250803" />
-      <entry key="S2" value="2.0269450978374053" />
-      <entry key="S5" value="3.2363392451552713" />
-      <entry key="S10" value="4.31031649820363" />
-      <entry key="S30" value="6.600539274173356" />
-      <entry key="S60" value="9.695683172243404" />
-      <entry key="M2" value="14.932880854712264" />
-      <entry key="M5" value="25.481750850082726" />
-      <entry key="M10" value="36.752684986554684" />
-      <entry key="M15" value="44.809869780435626" />
-      <entry key="M30" value="61.15622001350479" />
-      <entry key="H1" value="77.98927305513334" />
-      <entry key="H2" value="91.24775431280455" />
-      <entry key="H4" value="99.78371534764192" />
-      <entry key="D1" value="108.16444400940263" />
-      <entry key="W1" value="109.73428841881655" />
+      <entry key="MS100" value="3.184954572096973E-177" />
+      <entry key="MS500" value="5.01903990421661E-36" />
+      <entry key="S2" value="1.5042297261340597E-9" />
+      <entry key="S5" value="3.4697904516469406E-4" />
+      <entry key="S10" value="0.02838971537946753" />
+      <entry key="S30" value="0.7077430200358104" />
+      <entry key="S60" value="1.6636560781780598" />
+      <entry key="M2" value="2.572293594287775" />
+      <entry key="M5" value="3.350157373823325" />
+      <entry key="M10" value="3.6602665292765995" />
+      <entry key="M15" value="3.7700812921008153" />
+      <entry key="M30" value="3.883289852911002" />
+      <entry key="H1" value="3.941617633911317" />
+      <entry key="H2" value="4.1815542548915206" />
+      <entry key="H4" value="8.784294010450676" />
+      <entry key="D1" value="69.22555461793097" />
+      <entry key="W1" value="106.08507115416762" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.0016886852695374428" />
-      <entry key="MS500" value="0.3229262123807583" />
-      <entry key="S2" value="1.5504594299209755" />
-      <entry key="S5" value="3.097611122113881" />
-      <entry key="S10" value="4.5846123662206315" />
-      <entry key="S30" value="8.975169383030384" />
-      <entry key="S60" value="15.065793733082884" />
-      <entry key="M2" value="24.937839681255998" />
-      <entry key="M5" value="44.14826803095462" />
-      <entry key="M10" value="64.23108845586694" />
-      <entry key="M15" value="78.88593929288601" />
-      <entry key="M30" value="110.31141488270343" />
-      <entry key="H1" value="144.85880873354097" />
-      <entry key="H2" value="173.29094843813485" />
-      <entry key="H4" value="192.07525003868187" />
-      <entry key="D1" value="210.84728363944186" />
-      <entry key="W1" value="214.3979672785436" />
+      <entry key="MS100" value="0.9526560380882257" />
+      <entry key="MS500" value="1.131559140765934" />
+      <entry key="S2" value="1.9883761446532433" />
+      <entry key="S5" value="2.5042348734280386" />
+      <entry key="S10" value="2.777088288032015" />
+      <entry key="S30" value="4.593025507415237" />
+      <entry key="S60" value="7.400724010648453" />
+      <entry key="M2" value="10.261807007402892" />
+      <entry key="M5" value="12.812626034953164" />
+      <entry key="M10" value="13.850646124377318" />
+      <entry key="M15" value="14.220815264739521" />
+      <entry key="M30" value="14.603782151395782" />
+      <entry key="H1" value="14.800980808988522" />
+      <entry key="H2" value="15.300518888037368" />
+      <entry key="H4" value="24.187553355334465" />
+      <entry key="D1" value="142.14199836966847" />
+      <entry key="W1" value="214.4524779843261" />
     </decayedShown>
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo"><![CDATA[{
   "associatedIndex": 1,
@@ -130,6 +124,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "JUnit.AgentControllerTest.executor": "Run",
+    "JUnit.AgentFilesTest.requestSample.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
@@ -152,7 +147,7 @@
       <recent name="com.comagents.agentproxy.source" />
     </key>
   </component>
-  <component name="RunManager" selected="JUnit.AgentControllerTest">
+  <component name="RunManager" selected="JUnit.AgentFilesTest.requestSample">
     <configuration name="AgentControllerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="agent-proxy" />
       <extension name="coverage">
@@ -164,6 +159,22 @@
       <option name="PACKAGE_NAME" value="com.comagents.agentproxy" />
       <option name="MAIN_CLASS_NAME" value="com.comagents.agentproxy.AgentControllerTest" />
       <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="AgentFilesTest.requestSample" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="agent-proxy" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.comagents.agentproxy.agent_setup.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.comagents.agentproxy.agent_setup" />
+      <option name="MAIN_CLASS_NAME" value="com.comagents.agentproxy.agent_setup.AgentFilesTest" />
+      <option name="METHOD_NAME" value="requestSample" />
+      <option name="TEST_OBJECT" value="method" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -183,6 +194,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.AgentFilesTest.requestSample" />
         <item itemvalue="JUnit.AgentControllerTest" />
       </list>
     </recent_temporary>

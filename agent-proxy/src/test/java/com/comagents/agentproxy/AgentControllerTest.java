@@ -37,28 +37,28 @@ class AgentControllerTest {
 
     @Test
     void startRejectsUnknownAgentInPath() {
-        assertEquals(HttpStatus.NOT_FOUND, startStatus("/unknown_agent/info", Map.of("agent", "CODE_REVIEW")));
+        assertEquals(HttpStatus.NOT_FOUND, startStatus("/unknown_agent/start", Map.of("agent", "CODE_REVIEW")));
     }
 
     @Test
     void startRejectsMissingAgentInRequest() {
-        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/info", Map.of()));
+        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start", Map.of()));
     }
 
     @Test
     void startRejectsUnknownAgentInRequest() {
-        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/info", Map.of("agent", "UNKNOWN_AGENT")));
+        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start", Map.of("agent", "UNKNOWN_AGENT")));
     }
 
     @Test
     void startRejectsDifferentAgentsInPathAndRequest() {
-        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/info", Map.of("agent", "IMAGE_GENERATOR")));
+        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start", Map.of("agent", "IMAGE_GENERATOR")));
     }
 
     @Test
     void startReportsAgentWithoutSetupService() {
         // IMAGE_GENERATOR runs on CODEX, which has no AgentSetupService yet
-        assertEquals(HttpStatus.NOT_IMPLEMENTED, startStatus("/image_generator/info", Map.of("agent", "IMAGE_GENERATOR")));
+        assertEquals(HttpStatus.NOT_IMPLEMENTED, startStatus("/image_generator/start", Map.of("agent", "IMAGE_GENERATOR")));
     }
 
     private HttpStatus startStatus(String uri, Map<String, Object> body) {
