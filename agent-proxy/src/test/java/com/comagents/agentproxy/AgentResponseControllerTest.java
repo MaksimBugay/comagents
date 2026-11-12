@@ -46,6 +46,9 @@ class AgentResponseControllerTest {
     @Inject
     ClaudeAgentSessionRegistry registry;
 
+    @Inject
+    SessionFolders sessionFolders;
+
     @AfterEach
     void deleteSessionFolder() {
         registry.cleanAllSessionData(sessionId);
@@ -67,13 +70,13 @@ class AgentResponseControllerTest {
         assertArrayEquals(response.body(), client.toBlocking().retrieve(uri(), AgentResponse.class).body());
 
         await("session files deleted after the cleanup delay").atMost(Duration.ofSeconds(10))
-                .until(() -> !Files.exists(SessionFolders.of(sessionId)));
+                .until(() -> !Files.exists(sessionFolders.of(sessionId)));
         assertEquals(HttpStatus.NOT_FOUND, statusOf(uri()));
     }
 
     @Test
     void notFoundWithoutStateForUnknownSession() throws IOException {
-        Files.createDirectories(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
+        Files.createDirectories(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
 
         HttpClientResponseException e = assertThrows(HttpClientResponseException.class, () -> client.toBlocking().retrieve(uri()));
 
@@ -81,12 +84,12 @@ class AgentResponseControllerTest {
         AgentResponseUnavailable body = e.getResponse().getBody(AgentResponseUnavailable.class).orElseThrow();
         assertNull(body.state());
         assertTrue(body.message().contains("session not found"));
-        assertTrue(Files.exists(SessionFolders.of(sessionId)), "nothing is cleaned up without a response");
+        assertTrue(Files.exists(sessionFolders.of(sessionId)), "nothing is cleaned up without a response");
     }
 
     @Test
     void notFoundWithSessionStateWhenAgentGaveNoResponse() throws Exception {
-        Path agentFolder = SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
+        Path agentFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
         Files.createDirectories(agentFolder);
         Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
                 {"kickOffPrompt": "Review it"}""");
@@ -102,7 +105,7 @@ class AgentResponseControllerTest {
 
     @Test
     void archivedSessionKeepsItsFilesAfterResponseFetch() throws Exception {
-        Path agentFolder = SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
+        Path agentFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
         Files.createDirectories(agentFolder);
         Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
                 {"kickOffPrompt": "Review it"}""");
@@ -114,7 +117,7 @@ class AgentResponseControllerTest {
 
         // the cleanup delay (1 s) passes several times; the archived session's files stay
         await().during(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(5))
-                .until(() -> Files.exists(SessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW)));
+                .until(() -> Files.exists(sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW)));
     }
 
     @Test
@@ -132,7 +135,7 @@ class AgentResponseControllerTest {
     }
 
     private Path writeAllGoodResponse() throws IOException {
-        Path responseFile = SessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW);
+        Path responseFile = sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW);
         Files.createDirectories(responseFile.getParent());
         return Files.writeString(responseFile, "# Report\n\nAll good");
     }

@@ -37,14 +37,16 @@ public class AgentResponseService {
     private static final Logger LOG = LoggerFactory.getLogger(AgentResponseService.class);
 
     private final AgentSetupServices agentSetupServices;
+    private final SessionFolders sessionFolders;
     private final TaskScheduler taskScheduler;
     private final Duration cleanupDelay;
     private final Set<UUID> scheduledCleanups = ConcurrentHashMap.newKeySet();
 
-    public AgentResponseService(AgentSetupServices agentSetupServices,
+    public AgentResponseService(AgentSetupServices agentSetupServices, SessionFolders sessionFolders,
                                 @Named(TaskExecutors.SCHEDULED) TaskScheduler taskScheduler,
                                 @Value("${agent-response.cleanup-delay:5m}") Duration cleanupDelay) {
         this.agentSetupServices = agentSetupServices;
+        this.sessionFolders = sessionFolders;
         this.taskScheduler = taskScheduler;
         this.cleanupDelay = cleanupDelay;
     }
@@ -58,8 +60,8 @@ public class AgentResponseService {
         return response;
     }
 
-    private static Optional<AgentResponse> readResponse(AiAgent agent, UUID sessionId) {
-        Path responseFile = SessionFolders.agentResponseFile(sessionId, agent);
+    private Optional<AgentResponse> readResponse(AiAgent agent, UUID sessionId) {
+        Path responseFile = sessionFolders.agentResponseFile(sessionId, agent);
         try {
             long createdAt = Files.readAttributes(responseFile, BasicFileAttributes.class).creationTime().toMillis();
             return Optional.of(new AgentResponse(agent, sessionId, Files.readAllBytes(responseFile), createdAt));

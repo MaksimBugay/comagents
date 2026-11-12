@@ -63,6 +63,7 @@ public class ClaudeAgentSessionRegistry {
     private final int maxConcurrentSessions;
     private final Duration sessionTimeout;
     private final Duration idleTimeout;
+    private final SessionFolders sessionFolders;
     private final Semaphore sessionSlots;
     private final Map<UUID, ClaudeAgentSession> sessions = new ConcurrentHashMap<>();
     // reserved, not yet started: a session id is either here or in sessions, never both
@@ -72,7 +73,9 @@ public class ClaudeAgentSessionRegistry {
                                       @Value("${claude.executable:claude}") String claudeExecutable,
                                       @Value("${claude.session.max-concurrent:2}") int maxConcurrentSessions,
                                       @Value("${claude.session.timeout:60m}") Duration sessionTimeout,
-                                      @Value("${claude.session.idle-timeout:10m}") Duration idleTimeout) {
+                                      @Value("${claude.session.idle-timeout:10m}") Duration idleTimeout,
+                                      SessionFolders sessionFolders) {
+        this.sessionFolders = sessionFolders;
         this.jsonMapper = jsonMapper;
         this.claudeExecutable = claudeExecutable;
         this.maxConcurrentSessions = maxConcurrentSessions;
@@ -161,11 +164,11 @@ public class ClaudeAgentSessionRegistry {
     }
 
     private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory, boolean resume) {
-        Path agentFolder = SessionFolders.agentFolder(sessionId, agent);
+        Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
         List<String> command = command(readConfig(agent, agentFolder), sessionId, resume);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
-                agentFolder.resolve("claude-stream.jsonl"), SessionFolders.agentResponseFile(sessionId, agent), resume);
+                agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume);
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
@@ -247,7 +250,7 @@ public class ClaudeAgentSessionRegistry {
             awaitFinished(session);
             sessions.remove(sessionId);
         }
-        FileTrees.deleteIfExists(SessionFolders.of(sessionId));
+        FileTrees.deleteIfExists(sessionFolders.of(sessionId));
         LOG.info("[{}] session data deleted", sessionId);
     }
 
@@ -265,7 +268,7 @@ public class ClaudeAgentSessionRegistry {
         if (session == null) {
             throw new IllegalStateException("Claude session " + sessionId + " is unknown");
         }
-        Path agentFolder = SessionFolders.agentFolder(sessionId, session.getAgent());
+        Path agentFolder = sessionFolders.agentFolder(sessionId, session.getAgent());
         saveState(session, agentFolder);
         AgentSessionState previous = session.archive();
         if (!previous.isFinished()) {
@@ -315,8 +318,8 @@ public class ClaudeAgentSessionRegistry {
     }
 
     // session-state.json in one of the session's agent folders
-    private static Optional<Path> findArchive(UUID sessionId) {
-        Path sessionFolder = SessionFolders.of(sessionId);
+    private Optional<Path> findArchive(UUID sessionId) {
+        Path sessionFolder = sessionFolders.of(sessionId);
         if (!Files.isDirectory(sessionFolder)) {
             return Optional.empty();
         }

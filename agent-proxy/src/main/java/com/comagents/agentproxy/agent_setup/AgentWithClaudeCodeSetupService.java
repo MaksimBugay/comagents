@@ -33,9 +33,13 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
 
     private final ClaudeAgentSessionRegistry claudeAgentSessionRegistry;
 
-    public AgentWithClaudeCodeSetupService(VcsService vcsService, ClaudeAgentSessionRegistry claudeAgentSessionRegistry) {
+    private final SessionFolders sessionFolders;
+
+    public AgentWithClaudeCodeSetupService(VcsService vcsService, ClaudeAgentSessionRegistry claudeAgentSessionRegistry,
+                                           SessionFolders sessionFolders) {
         this.vcsService = vcsService;
         this.claudeAgentSessionRegistry = claudeAgentSessionRegistry;
+        this.sessionFolders = sessionFolders;
     }
 
 
@@ -48,7 +52,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         UUID sessionId = attributes.sessionId();
         try (SessionSlot slot = claudeAgentSessionRegistry.reserve(sessionId)) {
             try {
-                Path agentFolder = SessionFolders.agentFolder(sessionId, agent);
+                Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
                 Path workingDirectory = prepareWorkingDirectory(attributes, agentFolder);
                 vcsService.cloneComAgentsSources(comAgentsSources -> {
                     AgentFiles.copyInto(workingDirectory, comAgentsSources, agent, CLAUDE_CODE_FILES);
@@ -57,7 +61,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                 slot.start(agent, workingDirectory);
             } catch (RuntimeException e) {
                 // only reached with the slot reserved, so the folder belongs to this failed setup
-                FileTrees.deleteIfExists(SessionFolders.of(sessionId));
+                FileTrees.deleteIfExists(sessionFolders.of(sessionId));
                 throw e;
             }
         }
@@ -66,7 +70,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     // Claude Code runs in the cloned repository, or in the agent folder when there is nothing to clone
     private Path prepareWorkingDirectory(AiAgentAttributes attributes, Path agentFolder) {
         if (StringUtils.isNotEmpty(attributes.cloneSourceUrl())) {
-            return vcsService.clone(attributes.cloneSourceUrl(), attributes.sessionId());
+            return vcsService.clone(attributes.cloneSourceUrl(), sessionFolders.of(attributes.sessionId()));
         }
         return agentFolder;
     }

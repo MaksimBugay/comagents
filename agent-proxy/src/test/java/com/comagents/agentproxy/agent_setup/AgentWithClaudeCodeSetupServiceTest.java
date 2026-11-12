@@ -6,11 +6,11 @@ import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.vcs.VcsGithubService;
-import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.serde.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,29 +28,34 @@ class AgentWithClaudeCodeSetupServiceTest {
 
     private final UUID sessionId = UUID.randomUUID();
 
-    // one slot, so a freed or held slot is observable with a second reservation
-    private final ClaudeAgentSessionRegistry registry =
-            new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1), Duration.ofMinutes(1));
+    @TempDir
+    Path sessionsRoot;
 
-    private final AgentWithClaudeCodeSetupService setupService = new AgentWithClaudeCodeSetupService(
-            new VcsGithubService(new AgentProxyConf("https://github.com/example/comagents.git", "token", "key"), null),
-            registry);
+    private SessionFolders sessionFolders;
+    private ClaudeAgentSessionRegistry registry;
+    private AgentWithClaudeCodeSetupService setupService;
 
-    @AfterEach
-    void deleteSessionFolder() {
-        FileTrees.deleteIfExists(SessionFolders.of(sessionId));
+    @BeforeEach
+    void createServices() {
+        sessionFolders = new SessionFolders(sessionsRoot.toString());
+        // one slot, so a freed or held slot is observable with a second reservation
+        registry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1),
+                Duration.ofMinutes(1), sessionFolders);
+        setupService = new AgentWithClaudeCodeSetupService(
+                new VcsGithubService(new AgentProxyConf("https://github.com/example/comagents.git", "token", "key"), null),
+                registry, sessionFolders);
     }
 
     @Test
     void failedSetupFreesSlotAndDeletesSessionFolder() throws IOException {
-        Path leftover = Files.createDirectories(SessionFolders.of(sessionId)).resolve("partial-clone.txt");
+        Path leftover = Files.createDirectories(sessionFolders.of(sessionId)).resolve("partial-clone.txt");
         Files.writeString(leftover, "half-prepared");
 
         // not a GitHub URL: the clone step fails after the slot was reserved
         assertThrows(IllegalArgumentException.class,
                 () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://gitlab.com/a/b")));
 
-        assertFalse(Files.exists(SessionFolders.of(sessionId)));
+        assertFalse(Files.exists(sessionFolders.of(sessionId)));
         try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(UUID.randomUUID())) {
             assertNotNull(slot, "the failed setup freed its slot");
         }
@@ -63,12 +68,12 @@ class AgentWithClaudeCodeSetupServiceTest {
                     () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://github.com/example/repo.git")));
         }
 
-        assertFalse(Files.exists(SessionFolders.of(sessionId)), "nothing was downloaded or created");
+        assertFalse(Files.exists(sessionFolders.of(sessionId)), "nothing was downloaded or created");
     }
 
     @Test
     void sessionIdInUseIsRejectedWithoutTouchingItsFolder() throws IOException {
-        Path otherSetupsFile = Files.createDirectories(SessionFolders.of(sessionId)).resolve("in-progress.txt");
+        Path otherSetupsFile = Files.createDirectories(sessionFolders.of(sessionId)).resolve("in-progress.txt");
         Files.writeString(otherSetupsFile, "another setup owns this session id");
 
         try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(sessionId)) {

@@ -38,12 +38,14 @@ admin ◄──── Pushca ────► HumanChannel (agent-proxy)
 One child process per run, started with `ProcessBuilder` (works in the GraalVM native image). No terminal is
 needed: `claude -p` runs without a TTY.
 
-- **Working directory:** the cloned repo `/tmp/<sessionId>/<repo>`, or `/tmp/<sessionId>/<agentName>` when
+- **Session folders** live in `<sessions-dir>` (`agent-proxy.sessions-dir`, default `/var/lib/agent-proxy/sessions`,
+  on a persistent volume).
+- **Working directory:** the cloned repo `<sessions-dir>/<sessionId>/<repo>`, or `<sessions-dir>/<sessionId>/<agentName>` when
   nothing was cloned (same rule as `AgentWithClaudeCodeSetupService`).
 - **Session id:** reuse our `sessionId` as Claude's session id. `--session-id` accepts any valid UUID, so
   agent-proxy never has to read Claude's id back.
 - **Environment:** inherits the container env (`ANTHROPIC_API_KEY`, `DISABLE_AUTOUPDATER=1`), plus:
-  - `CLAUDE_CONFIG_DIR=/tmp/<sessionId>/<agentName>/claude-state`: Claude Code's own state for the session
+  - `CLAUDE_CONFIG_DIR=<sessions-dir>/<sessionId>/<agentName>/claude-state`: Claude Code's own state for the session
     (settings, the conversation `--resume` reads, `.claude.json`), deleted with the session, kept by an archive,
     never shared between sessions;
   - `CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1` on resumed runs: finish the interrupted turn first.
@@ -81,14 +83,15 @@ of `--session-id <sessionId>`, with the agent's `resumePrompt` (or the answer pr
 - So an agent's `.claude/settings.json` holds only `deny` rules, and its allowed tools are in `agent.json`
   (`allowedTools`), which agent-proxy passes as `--allowedTools`. Command-line flags are not subject to the
   trust check. A cloned repository's own `allow` rules are never passed on.
-- File access outside the working directory: `--add-dir /tmp/<sessionId>` per agent if needed.
-- Absolute paths in permission rules use a double slash: `Edit(//tmp/<sessionId>/**)`.
+- File access outside the working directory: `--add-dir <sessions-dir>/<sessionId>` per agent if needed.
+- Absolute paths in permission rules use a double slash: `Edit(//var/lib/agent-proxy/sessions/<sessionId>/**)`.
 
 ### HTTP API
 
 `POST /{agentName}/start` doesn't wait for Claude: a whole-project review can take many minutes.
 
-- `POST /{agentName}/start` sets up the session, starts the run in the background, returns **202 Accepted**.
+- `POST /{agentName}/start` sets up the session, starts the run in the background, returns **202 Accepted**. The
+  request will carry the initiator's id (the Pushca account allowed to answer the session, section 3).
 - `GET /agent-status/{agentName}/{sessionId}`: `state` (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`,
   `KILLED`, `ARCHIVED`), start and finish times, and whether a response is available; 404 for an unknown session.
 - `GET /agent-response/{agentName}/{sessionId}`: the agent's final answer (`body` base64, `createdAt`). Without
@@ -104,8 +107,8 @@ of `--session-id <sessionId>`, with the agent's `resumePrompt` (or the answer pr
 - **Concurrency cap**, `claude.session.max-concurrent` (2): Claude Code's docs recommend 4 GB+ RAM per run. The
   slot is reserved before setup, so a busy service answers **429** before cloning anything.
 - **Kubernetes** (`k8s/deployment.yaml`): one replica (sessions live in the pod), 4 GiB memory limit, read-only
-  root filesystem with `/tmp` as the only writable path (`emptyDir`, session folders including Claude Code's
-  state), API key and GitHub token from the `agent-proxy-secrets` Secret.
+  root filesystem; writable are the sessions dir (a `PersistentVolumeClaim`, `strategy: Recreate`) and `/tmp` for
+  scratch (`emptyDir`); API key and GitHub token from the `agent-proxy-secrets` Secret.
 
 ## 2. Streaming output
 
@@ -121,7 +124,7 @@ of `--session-id <sessionId>`, with the agent's `resumePrompt` (or the answer pr
 A virtual thread per run reads stdout line by line (stderr merged with `redirectErrorStream(true)`).
 Reading continuously also keeps the process from stalling on a full output buffer. For each line:
 
-1. Append it to `/tmp/<sessionId>/<agentName>/claude-stream.jsonl`: the full transcript, for debugging.
+1. Append it to `<sessions-dir>/<sessionId>/<agentName>/claude-stream.jsonl`: the full transcript, for debugging.
 2. Log a one-line summary with the agent name and session id.
 3. Publish the summary to the session's Pushca channel (section 3).
 4. On the `result` event, save the final text as the session's result.
@@ -162,7 +165,32 @@ public interface HumanChannel {
 
 - `PushcaHumanChannel` is the production implementation; tests use an in-memory fake.
 - One Pushca channel per session, addressed by `sessionId`.
-- Pushca must authenticate the admin side: answers and approvals steer the agent.
+
+### Why Pushca, not Slack or Telegram
+
+Pushca is self-hosted, with its own chat UI (e.g. `chat-room.html?channelId=<sessionId>&accountId=<account>`):
+
+- **Data stays in-house.** Agents ask about the code they work on, so questions, answers and progress can contain
+  code, findings or internal details. With Pushca they never pass through a third-party messaging service.
+- **No bot tokens or third-party accounts** that could leak and be used to answer agents or approve their actions.
+- **Fits the session model:** one channel per session (`channelId` = session id), no mapping onto someone else's
+  workspaces or chats.
+- **Own UI:** the waiting view, answers, and later approve/deny can be designed for this flow instead of fitted into
+  chat-bot limits.
+
+### Authentication and authorization
+
+Answers and approvals steer the agent, so both who connects and who may answer matter:
+
+- **Authentication (Pushca):** opening a connection requires an account id **and** its secret; a copied chat link
+  alone is not enough.
+- **Authorization (per session):** `POST /{agentName}/start` will carry the **initiator's id**, the Pushca account
+  that started the session (planned field in `StartAgentRequest`). The session's questions go to that account, and
+  agent-proxy accepts answers and approvals only from it (plus explicitly allowed admin accounts, if needed), not
+  from every account that can connect. The initiator id is part of the session's state and is saved in
+  `session-state.json`, so it still applies after archive and resume.
+- **agent-proxy's own Pushca credentials** (account id and secret) come from the environment, like the GitHub token
+  and the API key: a Kubernetes Secret (`agent-proxy-secrets`), never a file.
 
 ## 4. Claude asks the admin: the `ask_human` MCP tool
 
@@ -344,11 +372,12 @@ claude -p "<instruction>" --resume <sessionId> --output-format stream-json --ver
 - `/mcp` is served on the public HTTP port: the tools accept a call only with the per-session secret
   (`X-Agent-Session-Token`) of the session in `X-Agent-Session-Id`, so outsiders can't inject questions or
   approvals. The answer endpoint needs its own protection (Pushca, or authentication) before it is exposed.
-- The admin side of Pushca must be authenticated.
+- Pushca authenticates every connection (account id and secret), and agent-proxy accepts answers and approvals
+  for a session only from its initiator (section 3).
 - Cloned repositories are untrusted input (prompt injection). The agent's `deny` rules (which apply
   immediately, even in untrusted folders) are the guardrail; never run with `--dangerously-skip-permissions`.
 - All sessions run as the same user in one container. An agent with Bash access could read or change
-  another session's folder. Restrict file tools to the session (`Edit(//tmp/<sessionId>/**)`); for agents
+  another session's folder. Restrict file tools to the session (`Edit(//var/lib/agent-proxy/sessions/<sessionId>/**)`); for agents
   with Bash, consider one container (or Kubernetes Job) per session. Claude Code's Bash sandbox needs
   `enableWeakerNestedSandbox` inside Docker, which the docs say considerably weakens it.
 - Logs and Pushca get summaries only (section 2), never raw tool results.

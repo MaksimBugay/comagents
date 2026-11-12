@@ -1,3 +1,17 @@
+# session folders: repo clones, agent files, Claude Code state, transcripts, responses, archives.
+# Survives pod replacement and node restarts; the default storage class decides where it lives.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agent-proxy-sessions
+  labels:
+    app.kubernetes.io/name: agent-proxy
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,9 +19,13 @@ metadata:
   labels:
     app.kubernetes.io/name: agent-proxy
 spec:
-  # one replica: sessions live in the pod's memory and /tmp, so status and response calls must reach the pod that
+  # one replica: running sessions live in the pod's memory, so status and response calls must reach the pod that
   # runs the session (spec/known_gaps.md, gap 3)
   replicas: 1
+  # the sessions volume is ReadWriteOnce: stop the old pod before starting the new one, or a rolling update waits
+  # for a volume the old pod still holds
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: agent-proxy
@@ -22,6 +40,8 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
+        # makes the mounted sessions volume writable for the non-root user
+        fsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -63,9 +83,11 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
-          # the only writable path: session folders, including each session's Claude Code state
-          # (agent-proxy points CLAUDE_CONFIG_DIR at /tmp/<session id>/<agent name>/claude-state)
+          # the only writable paths: session folders (persistent, including each session's Claude Code state:
+          # CLAUDE_CONFIG_DIR=<sessions dir>/<session id>/<agent name>/claude-state) and /tmp for scratch files
           volumeMounts:
+            - name: sessions
+              mountPath: /var/lib/agent-proxy/sessions
             - name: tmp
               mountPath: /tmp
           startupProbe:
@@ -85,10 +107,13 @@ spec:
               port: http
             periodSeconds: 5
       volumes:
-        # cloned repositories, agent files, responses and Claude Code state; deleted with the pod
+        - name: sessions
+          persistentVolumeClaim:
+            claimName: agent-proxy-sessions
+        # scratch only (downloads being unpacked, Claude Code's temporary files); deleted with the pod
         - name: tmp
           emptyDir:
-            sizeLimit: 5Gi
+            sizeLimit: 2Gi
 ---
 apiVersion: v1
 kind: Service

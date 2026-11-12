@@ -41,6 +41,9 @@ class AgentStatusControllerTest {
     @Inject
     ClaudeAgentSessionRegistry registry;
 
+    @Inject
+    SessionFolders sessionFolders;
+
     @AfterEach
     void cleanUp() {
         registry.cleanAllSessionData(sessionId);
@@ -48,7 +51,7 @@ class AgentStatusControllerTest {
 
     @Test
     void reportsFinishedSessionAndWhetherResponseIsAvailable() throws Exception {
-        Path agentFolder = SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
+        Path agentFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
         Files.createDirectories(agentFolder);
         Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
                 {"kickOffPrompt": "Review it"}""");
@@ -63,7 +66,7 @@ class AgentStatusControllerTest {
         assertNotNull(status.finishedAt());
         assertFalse(status.responseAvailable());
 
-        Files.writeString(SessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW), "# Report");
+        Files.writeString(sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW), "# Report");
         assertTrue(client.toBlocking().retrieve(uri(), AgentStatus.class).responseAvailable());
     }
 

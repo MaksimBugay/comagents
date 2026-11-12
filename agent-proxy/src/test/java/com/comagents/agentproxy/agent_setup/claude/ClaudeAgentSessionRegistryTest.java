@@ -5,6 +5,7 @@ import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -63,8 +64,17 @@ class ClaudeAgentSessionRegistryTest {
     @TempDir
     Path workingDirectory;
 
+    @TempDir
+    Path sessionsRoot;
+
     private final List<UUID> sessionIds = new ArrayList<>();
+    private SessionFolders sessionFolders;
     private ClaudeAgentSessionRegistry registry;
+
+    @BeforeEach
+    void createSessionFolders() {
+        sessionFolders = new SessionFolders(sessionsRoot.toString());
+    }
 
     @AfterEach
     void cleanUp() {
@@ -80,9 +90,9 @@ class ClaudeAgentSessionRegistryTest {
 
         assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
         assertEquals(workingDirectory, session.getWorkingDirectory());
-        assertEquals(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("claude-state").toString(),
+        assertEquals(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("claude-state").toString(),
                 Files.readString(scripts.resolve("config-dir.txt")), "Claude Code's state is kept per session");
-        assertEquals(SessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".md"), session.getResponseFile());
+        assertEquals(sessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".md"), session.getResponseFile());
         assertEquals("# Report\n\nAll good", Files.readString(session.getResponseFile()));
         assertEquals(6, Files.readAllLines(session.getTranscriptFile()).size());
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
@@ -175,7 +185,7 @@ class ClaudeAgentSessionRegistryTest {
 
         assertEquals(Optional.of(AgentSessionState.TIMED_OUT), session.awaitFinished(WAIT));
         await("idle session forgotten and its folder deleted").atMost(WAIT)
-                .until(() -> registry.findSession(sessionId).isEmpty() && !Files.exists(SessionFolders.of(sessionId)));
+                .until(() -> registry.findSession(sessionId).isEmpty() && !Files.exists(sessionFolders.of(sessionId)));
     }
 
     @Test
@@ -206,7 +216,7 @@ class ClaudeAgentSessionRegistryTest {
         assertEquals(AgentSessionState.ARCHIVED, session.getState(), "ending the wait does not revive it");
         assertTrue(registry.findSession(sessionId).isPresent(), "kept, not deleted");
         assertTrue(Files.isDirectory(workingDirectory));
-        ClaudeSessionArchive state = readArchive(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
+        ClaudeSessionArchive state = readArchive(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
         assertEquals(AgentSessionState.WAITING, state.stateBeforeArchive());
     }
 
@@ -314,7 +324,7 @@ class ClaudeAgentSessionRegistryTest {
     void rejectsAgentWithoutConfigFile() throws Exception {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
         UUID sessionId = newSessionId();
-        Files.delete(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeAgentConfig.FILE_NAME));
+        Files.delete(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeAgentConfig.FILE_NAME));
 
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory));
@@ -330,7 +340,7 @@ class ClaudeAgentSessionRegistryTest {
         registry.cleanAllSessionData(sessionId);
 
         assertTrue(registry.findSession(sessionId).isEmpty());
-        assertFalse(Files.exists(SessionFolders.of(sessionId)));
+        assertFalse(Files.exists(sessionFolders.of(sessionId)));
     }
 
     @Test
@@ -393,7 +403,7 @@ class ClaudeAgentSessionRegistryTest {
 
         Path agentFolder = registry.archive(sessionId);
 
-        assertEquals(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW), agentFolder);
+        assertEquals(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW), agentFolder);
         assertEquals(Optional.of(AgentSessionState.ARCHIVED), session.awaitFinished(WAIT));
         ClaudeSessionArchive state = readArchive(agentFolder);
         assertEquals(sessionId, state.sessionId());
@@ -448,12 +458,12 @@ class ClaudeAgentSessionRegistryTest {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
         UUID sessionId = newSessionId();
         registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
-        Path claudeState = Files.createDirectories(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("claude-state/projects/p"));
+        Path claudeState = Files.createDirectories(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("claude-state/projects/p"));
         Files.writeString(claudeState.resolve(sessionId + ".jsonl"), "{}");
 
         registry.cleanAllSessionData(sessionId);
 
-        assertFalse(Files.exists(SessionFolders.of(sessionId)));
+        assertFalse(Files.exists(sessionFolders.of(sessionId)));
     }
 
     private static ClaudeSessionArchive readArchive(Path agentFolder) throws IOException {
@@ -525,7 +535,7 @@ class ClaudeAgentSessionRegistryTest {
         assertThrows(IllegalStateException.class, () -> registry.resume(UUID.randomUUID()), "unknown");
 
         // a stale archive file does not make a running session resumable
-        Files.writeString(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeSessionArchive.STATE_FILE),
+        Files.writeString(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeSessionArchive.STATE_FILE),
                 "{\"sessionId\":\"" + sessionId + "\",\"agent\":\"CODE_REVIEW\",\"workingDirectory\":\"" + workingDirectory
                         + "\",\"stateBeforeArchive\":\"RUNNING\",\"startedAt\":\"2026-11-12T10:00:00Z\","
                         + "\"lastOutputAt\":\"2026-11-12T10:00:00Z\",\"archivedAt\":\"2026-11-12T10:00:00Z\"}");
@@ -579,14 +589,14 @@ class ClaudeAgentSessionRegistryTest {
     private UUID newSessionId() throws IOException {
         UUID sessionId = UUID.randomUUID();
         sessionIds.add(sessionId);
-        Files.createDirectories(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
+        Files.createDirectories(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
         writeAgentConfig(sessionId, """
                 {"model": "test-model", "effort": "high", "kickOffPrompt": "%s"}""".formatted(KICK_OFF_PROMPT));
         return sessionId;
     }
 
-    private static void writeAgentConfig(UUID sessionId, String json) throws IOException {
-        Files.writeString(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeAgentConfig.FILE_NAME), json);
+    private void writeAgentConfig(UUID sessionId, String json) throws IOException {
+        Files.writeString(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeAgentConfig.FILE_NAME), json);
     }
 
     private Path fakeClaude(String body) throws IOException {
@@ -604,11 +614,12 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     // idle timeout well above any test's run time, so only the idle tests below exercise it
-    private static ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout) {
+    private ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout) {
         return registry(claude, maxConcurrent, timeout, Duration.ofMinutes(10));
     }
 
-    private static ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
-        return new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), maxConcurrent, timeout, idleTimeout);
+    private ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
+        return new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), maxConcurrent, timeout, idleTimeout,
+                sessionFolders);
     }
 }

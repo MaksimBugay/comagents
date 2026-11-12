@@ -8,7 +8,7 @@ kick-off prompt), scoped web access, and stream-json logging. The gaps below are
 
 **Problem.** Cleanup is scheduled only by the first *successful* `GET /agent-response/...`
 (`AgentResponseService`). A session that ends `FAILED`, `TIMED_OUT` or `KILLED` has no response to fetch, and a
-client may never fetch a successful one. Their session folder (`/tmp/<session id>`: cloned repository, agent
+client may never fetch a successful one. Their session folder (`<sessions-dir>/<session id>`: cloned repository, agent
 files, transcript) stays on disk and their `ClaudeAgentSession` stays in the registry's memory for ever.
 
 **Impact.** Disk and memory grow with every unfetched session; over time the container fills up.
@@ -28,23 +28,27 @@ or not the response was fetched: from `ClaudeAgentSessionRegistry.onSessionFinis
 
 ## 3. Single instance only: multiple replicas and restarts
 
-**Problem.** Sessions live in one pod's memory (`ClaudeAgentSessionRegistry`) and local `/tmp`; pending
-cleanups live in `AgentResponseService`'s memory. `k8s/deployment.yaml` therefore runs `replicas: 1`.
+**Problem.** Session folders are on persistent storage (`agent-proxy.sessions-dir`: a Docker named volume, or a
+`PersistentVolumeClaim` in Kubernetes), but running sessions live in one pod's memory (`ClaudeAgentSessionRegistry`)
+and pending cleanups in `AgentResponseService`'s memory. `k8s/deployment.yaml` therefore runs `replicas: 1`.
 
 **Impact.**
 - Can't scale out: with more replicas, `GET /agent-status` or `/agent-response` can reach a pod that doesn't run
   the session and return 404.
-- A restart loses running sessions (Claude processes die with the pod), their state, and scheduled cleanups;
-  their folders are left in `/tmp` until the pod's filesystem is discarded.
+- A restart loses running sessions (Claude processes die with the pod) and scheduled cleanups. Archived sessions
+  and responses survive (`resume` and `/agent-response` read them from disk), but `/agent-status` only knows
+  sessions in memory, and the folders of sessions that were running stay on the volume. With persistent storage
+  nothing deletes them any more, which makes gap 1 more important.
 
 **Fix.** Session affinity on the session id would allow more replicas without other changes. Long term: one Kubernetes Job (or container) per session with shared storage for responses, and the session
-state in a store instead of memory. A startup sweep that deletes leftover `/tmp/<uuid>` folders covers restarts
-in the meantime.
+state in a store instead of memory. Meanwhile: archive running sessions on shutdown instead of killing them (a
+normal stop only), fall back to `session-state.json` for `/agent-status`, and delete leftover session folders by
+age.
 
 ## 4. No isolation between sessions
 
 **Problem.** All Claude Code runs are child processes of agent-proxy, running as the same user (`nonroot`) in
-the same container, sharing `/tmp` (each session's Claude Code state is in its own session folder).
+the same container, sharing the sessions dir (each session's Claude Code state is in its own session folder).
 
 **Impact.** Fine for the read-only `code_review` agent (shell denied, edits denied). An agent allowed to run
 shell commands or edit files could read or change another session's folder.
@@ -52,7 +56,8 @@ Claude Code's own Bash sandbox needs `enableWeakerNestedSandbox` inside Docker, 
 weakens it.
 
 **Fix.** Before adding agents that run commands or write files: one container (or Kubernetes Job) per session.
-Restricting edits with `Edit(//tmp/<session id>/**)` covers the file tools but not shell commands.
+Restricting edits with `Edit(//var/lib/agent-proxy/sessions/<session id>/**)` covers the file tools but not shell
+commands.
 
 ## 5. Remote Q&A not implemented
 

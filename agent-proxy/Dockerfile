@@ -19,8 +19,13 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
  && apt-get install -y --no-install-recommends bash ca-certificates curl \
  && rm -rf /var/lib/apt/lists/* \
- && useradd --uid 65532 --user-group --create-home --shell /bin/bash nonroot
+ && useradd --uid 65532 --user-group --create-home --shell /bin/bash nonroot \
+ && mkdir -p /var/lib/agent-proxy/sessions \
+ && chown -R 65532:65532 /var/lib/agent-proxy
 USER 65532:65532
+# session folders (agent-proxy.sessions-dir); mount a volume here so they survive container replacement.
+# A new Docker named volume copies this folder's ownership, so nonroot can write to it.
+VOLUME /var/lib/agent-proxy/sessions
 # the native installer is per-user (~/.local/bin); the image is immutable, so no self-updates
 ENV PATH="/home/nonroot/.local/bin:${PATH}" \
     DISABLE_AUTOUPDATER=1

@@ -17,8 +17,11 @@ public class AgentStatusService {
 
     private final AgentSetupServices agentSetupServices;
 
-    public AgentStatusService(AgentSetupServices agentSetupServices) {
+    private final SessionFolders sessionFolders;
+
+    public AgentStatusService(AgentSetupServices agentSetupServices, SessionFolders sessionFolders) {
         this.agentSetupServices = agentSetupServices;
+        this.sessionFolders = sessionFolders;
     }
 
     /** Empty when the session is unknown: never started, or already cleaned up. */
@@ -28,6 +31,6 @@ public class AgentStatusService {
                 .map(status -> new AgentStatus(agent, sessionId, status.state(),
                         status.startedAt().toEpochMilli(),
                         status.finishedAt().map(Instant::toEpochMilli).orElse(null),
-                        Files.isRegularFile(SessionFolders.agentResponseFile(sessionId, agent))));
+                        Files.isRegularFile(sessionFolders.agentResponseFile(sessionId, agent))));
     }
 }

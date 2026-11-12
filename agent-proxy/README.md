@@ -25,7 +25,8 @@ $ curl localhost:8080/code_review/info
 ./mvnw package && java -jar target/agent-proxy-0.1.jar   # JVM
 
 docker build -t agent-proxy:0.1 .    # native image (no local GraalVM needed)
-docker run --rm -p 8080:8080 \
+docker run -d --name agent-proxy -p 8080:8080 \
+  -v agent-proxy-sessions:/var/lib/agent-proxy/sessions \
   -e CLONE_COMAGENTS_SOURCES_URL=https://github.com/<org>/<repo>.git \
   -e SOURCES_REPO_ACCESS_TOKEN \
   -e ANTHROPIC_API_KEY \
@@ -34,7 +35,7 @@ docker run --rm -p 8080:8080 \
 kubectl create secret generic agent-proxy-secrets \
   --from-literal=sources-repo-access-token="$SOURCES_REPO_ACCESS_TOKEN" \
   --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY"
-kubectl apply -f k8s/deployment.yaml   # one replica; /tmp and Claude Code's state on emptyDir volumes
+kubectl apply -f k8s/deployment.yaml   # one replica; sessions on a PersistentVolumeClaim, /tmp on emptyDir
 ```
 
 The Docker image is a mostly-static native binary (starts in ~10 ms, ~20 MiB RSS) on `debian:trixie-slim`,
@@ -51,3 +52,4 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`) |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |
 | `ANTHROPIC_API_KEY`           | — (required) | Claude API key for headless Claude Code (`anthropic.api-key`) |
+| `AGENT_PROXY_SESSIONS_DIR`    | `/var/lib/agent-proxy/sessions` | One folder per session (`agent-proxy.sessions-dir`); put it on a persistent volume |
