@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -56,6 +57,26 @@ class FileTreesTest {
 
             assertFalse(Files.exists(folder));
         }
+    }
+
+    @Test
+    void copiesFolderWithContents() throws IOException {
+        Path source = tempDir.resolve("source");
+        Files.createDirectories(source.resolve("a/b"));
+        Files.writeString(source.resolve("a/b/file.txt"), "content");
+
+        FileTrees.copy(source, tempDir.resolve("target/copy"));
+
+        assertEquals("content", Files.readString(tempDir.resolve("target/copy/a/b/file.txt")));
+    }
+
+    @Test
+    void copiesSingleFile() throws IOException {
+        Path file = Files.writeString(tempDir.resolve("one.txt"), "x");
+
+        FileTrees.copy(file, tempDir.resolve("nested/one.txt"));
+
+        assertTrue(Files.exists(tempDir.resolve("nested/one.txt")));
     }
 
     @Test

@@ -114,6 +114,11 @@ public final class ClaudeAgentSession {
         return state.compareAndSet(expected, next);
     }
 
+    /** Marks the session {@code ARCHIVED} whatever its state; returns the state it had before. */
+    AgentSessionState archive() {
+        return state.getAndSet(AgentSessionState.ARCHIVED);
+    }
+
     /** Moves from {@code RUNNING} or {@code WAITING} to the final state {@code next}; false if already finished. */
     boolean finish(AgentSessionState next) {
         return transition(AgentSessionState.RUNNING, next) || transition(AgentSessionState.WAITING, next);

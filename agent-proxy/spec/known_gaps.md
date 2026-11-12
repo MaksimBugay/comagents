@@ -44,30 +44,17 @@ in the meantime.
 ## 4. No isolation between sessions
 
 **Problem.** All Claude Code runs are child processes of agent-proxy, running as the same user (`nonroot`) in
-the same container, sharing `/tmp` and `~/.claude`.
+the same container, sharing `/tmp` (each session's Claude Code state is in its own session folder).
 
 **Impact.** Fine for the read-only `code_review` agent (shell denied, edits denied). An agent allowed to run
-shell commands or edit files could read or change another session's folder or Claude Code's shared state.
+shell commands or edit files could read or change another session's folder.
 Claude Code's own Bash sandbox needs `enableWeakerNestedSandbox` inside Docker, which its docs say considerably
 weakens it.
 
 **Fix.** Before adding agents that run commands or write files: one container (or Kubernetes Job) per session.
 Restricting edits with `Edit(//tmp/<session id>/**)` covers the file tools but not shell commands.
 
-## 5. Shared Claude Code home folder
-
-**Problem.** All runs share one Claude Code config dir: `~/.claude` and `~/.claude.json` in Docker,
-`CLAUDE_CONFIG_DIR=/claude-config` in Kubernetes. Not verified that concurrent headless runs never clash on these
-files.
-
-**Impact.** Possible, unconfirmed interference between parallel sessions. (`cleanAllSessionData` deletes
-Claude's copy of the conversation at `<config dir>/projects/*/<session id>.jsonl`; the docs confirm that layout.)
-
-**Fix.** A per-session `CLAUDE_CONFIG_DIR` inside the session folder: full isolation, and cleanup becomes a
-single folder delete. Requires passing `ANTHROPIC_API_KEY` (already from the environment) and checking that
-nothing else is needed in the config dir.
-
-## 6. Remote Q&A not implemented
+## 5. Remote Q&A not implemented
 
 **Problem.** `spec/claude_q_and_a.md` (Pushca `HumanChannel`, `ask_human` MCP tool, `--permission-prompt-tool`,
 `--resume` follow-ups) is designed but not built. Headless runs can't ask anyone; the kick-off prompt tells
@@ -81,7 +68,7 @@ from `--settings` is resolved: they don't apply in headless runs, so allowed too
 (`--allowedTools`). That spec's command line and "Permissions in headless mode" section should be updated
 accordingly.
 
-## 7. Smaller items
+## 6. Smaller items
 
 - **Exposed GitHub token.** The token once committed in `application.properties` (as a comment) must be rotated
   if it hasn't been.

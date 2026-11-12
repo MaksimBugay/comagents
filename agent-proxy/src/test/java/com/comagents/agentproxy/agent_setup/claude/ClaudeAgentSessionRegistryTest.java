@@ -35,6 +35,7 @@ class ClaudeAgentSessionRegistryTest {
 
     private static final String SUCCESSFUL_RUN = """
             printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
+            printf '%s' "$CLAUDE_CONFIG_DIR" > "$(dirname "$0")/config-dir.txt"
             # stdin must be empty, not an open pipe: this would block otherwise
             cat > "$(dirname "$0")/stdin.txt"
             # printf, not echo: sh's echo would turn the \\n escapes inside the JSON into real line breaks
@@ -69,6 +70,8 @@ class ClaudeAgentSessionRegistryTest {
 
         assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
         assertEquals(workingDirectory, session.getWorkingDirectory());
+        assertEquals(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("claude-state").toString(),
+                Files.readString(scripts.resolve("config-dir.txt")), "Claude Code's state is kept per session");
         assertEquals(SessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".md"), session.getResponseFile());
         assertEquals("# Report\n\nAll good", Files.readString(session.getResponseFile()));
         assertEquals(6, Files.readAllLines(session.getTranscriptFile()).size());
@@ -357,6 +360,82 @@ class ClaudeAgentSessionRegistryTest {
         registry.killSession(sessionId);
         session.awaitFinished(WAIT);
         assertReservable(UUID.randomUUID());
+    }
+
+    @Test
+    void archiveSavesStateStopsSessionAndKeepsFiles() throws Exception {
+        registry = registry(fakeClaude("printf '%s\\n' 'working'; exec sleep 60"), 1, WAIT.multipliedBy(10));
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        Path agentFolder = registry.archive(sessionId);
+
+        assertEquals(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW), agentFolder);
+        assertEquals(Optional.of(AgentSessionState.ARCHIVED), session.awaitFinished(WAIT));
+        ClaudeSessionArchive state = readArchive(agentFolder);
+        assertEquals(sessionId, state.sessionId());
+        assertEquals(AiAgent.CODE_REVIEW, state.agent());
+        assertEquals(workingDirectory.toString(), state.workingDirectory());
+        assertEquals(AgentSessionState.RUNNING, state.stateBeforeArchive(), "state saved before the stop");
+        assertEquals(session.getStartedAt(), state.startedAt());
+        assertNotNull(state.archivedAt());
+
+        assertTrue(Files.isDirectory(workingDirectory), "session files are kept");
+        assertTrue(Files.exists(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME)));
+        assertTrue(registry.findSession(sessionId).isPresent(), "an archived session stays known");
+        assertReservable(UUID.randomUUID());
+    }
+
+    @Test
+    void archiveOfFinishedSessionKeepsItsResult() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        session.awaitFinished(WAIT);
+
+        ClaudeSessionArchive state = readArchive(registry.archive(sessionId));
+
+        assertEquals(AgentSessionState.ARCHIVED, session.getState());
+        assertEquals(AgentSessionState.DONE, state.stateBeforeArchive());
+        assertEquals("# Report\n\nAll good", state.resultText());
+        assertTrue(Files.exists(session.getResponseFile()));
+    }
+
+    @Test
+    void archivedSessionIgnoresKill() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+        registry.archive(sessionId);
+
+        registry.killSession(sessionId);
+
+        assertEquals(AgentSessionState.ARCHIVED, registry.findSession(sessionId).orElseThrow().getState());
+    }
+
+    @Test
+    void archiveOfUnknownSessionFails() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+
+        assertThrows(IllegalStateException.class, () -> registry.archive(UUID.randomUUID()));
+    }
+
+    @Test
+    void cleanAllSessionDataDeletesClaudeState() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+        Path claudeState = Files.createDirectories(SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("claude-state/projects/p"));
+        Files.writeString(claudeState.resolve(sessionId + ".jsonl"), "{}");
+
+        registry.cleanAllSessionData(sessionId);
+
+        assertFalse(Files.exists(SessionFolders.of(sessionId)));
+    }
+
+    private static ClaudeSessionArchive readArchive(Path agentFolder) throws IOException {
+        return ObjectMapper.getDefault()
+                .readValue(Files.readAllBytes(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE)), ClaudeSessionArchive.class);
     }
 
     @Test

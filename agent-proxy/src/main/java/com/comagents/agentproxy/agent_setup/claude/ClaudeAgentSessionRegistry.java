@@ -32,7 +32,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 /**
  * Runs Claude Code headless ({@code claude -p}), one child process per session, and keeps track of the runs.
@@ -50,6 +49,9 @@ public class ClaudeAgentSessionRegistry {
 
     // how long a stopped process gets to exit before it is killed forcibly
     private static final Duration STOP_GRACE_PERIOD = Duration.ofSeconds(10);
+
+    /** Claude Code's config dir ({@code CLAUDE_CONFIG_DIR}) inside each session's agent folder. */
+    public static final String CLAUDE_STATE_FOLDER = "claude-state";
 
     // how often the watchdog checks the time limit and the idle timeout
     private static final Duration WATCHDOG_INTERVAL = Duration.ofSeconds(1);
@@ -158,8 +160,12 @@ public class ClaudeAgentSessionRegistry {
         List<String> command = command(readConfig(agent, agentFolder), sessionId);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), SessionFolders.agentResponseFile(sessionId, agent));
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
+        // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
+        processBuilder.environment().put("CLAUDE_CONFIG_DIR", agentFolder.resolve(CLAUDE_STATE_FOLDER).toString());
         try {
-            session.attach(new ProcessBuilder(command)
+            session.attach(processBuilder
                     .directory(workingDirectory.toFile())
                     // nothing is piped in: without this, claude -p waits 3 s for stdin data on every run
                     .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")))
@@ -220,8 +226,8 @@ public class ClaudeAgentSessionRegistry {
     }
 
     /**
-     * Stops the session if it is running, forgets it, and deletes its session folder (cloned repository, agent
-     * files, transcript, response) and Claude Code's own record of the conversation, so it can't be resumed.
+     * Stops the session if it is running, forgets it, and deletes its session folder: cloned repository, agent
+     * files, transcript, response, and Claude Code's own state for it, so it can't be resumed.
      */
     public void cleanAllSessionData(UUID sessionId) {
         killSession(sessionId);
@@ -231,8 +237,44 @@ public class ClaudeAgentSessionRegistry {
             sessions.remove(sessionId);
         }
         FileTrees.deleteIfExists(SessionFolders.of(sessionId));
-        deleteClaudeConversation(sessionId);
         LOG.info("[{}] session data deleted", sessionId);
+    }
+
+    /**
+     * Keeps the session for a later resume: writes the registry's state ({@link ClaudeSessionArchive}) into
+     * {@code <session folder>/<agent name>/}, marks the session {@code ARCHIVED} (so automatic cleanups leave its
+     * folder alone), and then stops it if it was still running or waiting. Claude Code's own state for the session is
+     * already in that folder ({@value #CLAUDE_STATE_FOLDER}). Nothing is copied or deleted.
+     *
+     * @return the preserved agent folder
+     * @throws IllegalStateException when the session is unknown
+     */
+    public Path archive(UUID sessionId) {
+        ClaudeAgentSession session = sessions.get(sessionId);
+        if (session == null) {
+            throw new IllegalStateException("Claude session " + sessionId + " is unknown");
+        }
+        Path agentFolder = SessionFolders.agentFolder(sessionId, session.getAgent());
+        saveState(session, agentFolder);
+        AgentSessionState previous = session.archive();
+        if (!previous.isFinished()) {
+            LOG.info("[{} {}] archived, stopping", session.getAgent().getAgentName(), sessionId);
+            stop(session.process());
+        } else {
+            LOG.info("[{} {}] archived ({})", session.getAgent().getAgentName(), sessionId, previous);
+        }
+        return agentFolder;
+    }
+
+    private void saveState(ClaudeAgentSession session, Path agentFolder) {
+        ClaudeSessionArchive archive = new ClaudeSessionArchive(session.getSessionId(), session.getAgent(),
+                session.getWorkingDirectory().toString(), session.getState(), session.getStartedAt(),
+                session.getLastOutputAt(), Instant.now(), session.resultText().orElse(null));
+        try {
+            Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), jsonMapper.writeValueAsBytes(archive));
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to save the state of session " + session.getSessionId(), e);
+        }
     }
 
     @PreDestroy
@@ -421,27 +463,6 @@ public class ClaudeAgentSessionRegistry {
             session.awaitFinished(STOP_GRACE_PERIOD.multipliedBy(3));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * Claude Code keeps each conversation (what {@code --resume} reads) as {@code <session id>.jsonl}, plus an
-     * optional {@code <session id>/} folder, in a per-project folder under {@code <config dir>/projects}.
-     * Matching by file name avoids depending on how project folders are named. Best effort.
-     */
-    private static void deleteClaudeConversation(UUID sessionId) {
-        String configDir = System.getenv("CLAUDE_CONFIG_DIR");
-        Path projects = (configDir != null ? Path.of(configDir) : Path.of(System.getProperty("user.home"), ".claude")).resolve("projects");
-        if (!Files.isDirectory(projects)) {
-            return;
-        }
-        try (Stream<Path> projectFolders = Files.list(projects)) {
-            projectFolders.filter(Files::isDirectory).forEach(project -> {
-                FileTrees.deleteIfExists(project.resolve(sessionId + ".jsonl"));
-                FileTrees.deleteIfExists(project.resolve(sessionId.toString()));
-            });
-        } catch (IOException | UncheckedIOException e) {
-            LOG.warn("[{}] deleting Claude Code's conversation files failed", sessionId, e);
         }
     }
 }

@@ -101,6 +101,23 @@ class AgentResponseControllerTest {
     }
 
     @Test
+    void archivedSessionKeepsItsFilesAfterResponseFetch() throws Exception {
+        Path agentFolder = SessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
+        Files.createDirectories(agentFolder);
+        Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
+                {"kickOffPrompt": "Review it"}""");
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, agentFolder).awaitFinished(Duration.ofSeconds(20));
+        writeAllGoodResponse();
+        registry.archive(sessionId);
+
+        client.toBlocking().retrieve(uri(), AgentResponse.class);
+
+        // the cleanup delay (1 s) passes several times; the archived session's files stay
+        await().during(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(5))
+                .until(() -> Files.exists(SessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW)));
+    }
+
+    @Test
     void notFoundForUnknownAgent() {
         assertEquals(HttpStatus.NOT_FOUND, statusOf("/agent-response/unknown_agent/" + sessionId));
     }

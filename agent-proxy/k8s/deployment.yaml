@@ -49,10 +49,6 @@ spec:
                 secretKeyRef:
                   name: agent-proxy-secrets
                   key: anthropic-api-key
-            # Claude Code keeps settings, session transcripts and .claude.json here instead of the home folder,
-            # which holds the installed binary and is read-only
-            - name: CLAUDE_CONFIG_DIR
-              value: /claude-config
             # memory below is sized for this many parallel Claude Code runs
             - name: CLAUDE_SESSION_MAX_CONCURRENT
               value: "2"
@@ -67,12 +63,11 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
-          # the only writable paths: session folders (/tmp) and Claude Code's state
+          # the only writable path: session folders, including each session's Claude Code state
+          # (agent-proxy points CLAUDE_CONFIG_DIR at /tmp/<session id>/<agent name>/claude-state)
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            - name: claude-config
-              mountPath: /claude-config
           startupProbe:
             httpGet:
               path: /health/liveness
@@ -90,13 +85,10 @@ spec:
               port: http
             periodSeconds: 5
       volumes:
-        # cloned repositories, agent files and responses; deleted with the pod
+        # cloned repositories, agent files, responses and Claude Code state; deleted with the pod
         - name: tmp
           emptyDir:
             sizeLimit: 5Gi
-        - name: claude-config
-          emptyDir:
-            sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service

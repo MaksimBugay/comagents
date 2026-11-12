@@ -3,12 +3,9 @@ package com.comagents.agentproxy.agent_setup;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.FileTrees;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Copies an agent's configuration from the comagents sources, laid out as
@@ -32,17 +29,13 @@ final class AgentFiles {
      */
     static void copyInto(Path workingDirectory, Path comAgentsSources, AiAgent agent, List<String> entries) {
         Path source = agentFolder(comAgentsSources, agent);
-        try {
-            for (String entry : entries) {
-                Path from = source.resolve(entry);
-                if (Files.exists(from)) {
-                    Path to = workingDirectory.resolve(entry);
-                    FileTrees.deleteIfExists(to);
-                    copy(from, to);
-                }
+        for (String entry : entries) {
+            Path from = source.resolve(entry);
+            if (Files.exists(from)) {
+                Path to = workingDirectory.resolve(entry);
+                FileTrees.deleteIfExists(to);
+                FileTrees.copy(from, to);
             }
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to copy files of agent " + agent.getAgentName() + " into " + workingDirectory, e);
         }
     }
 
@@ -57,20 +50,5 @@ final class AgentFiles {
             throw new IllegalStateException("Agent " + agent.getAgentName() + " has no " + README + " in " + folder);
         }
         return folder;
-    }
-
-    // Files.walk visits a directory before its contents, so parents always exist when files are copied
-    private static void copy(Path source, Path target) throws IOException {
-        try (Stream<Path> paths = Files.walk(source)) {
-            for (Path path : (Iterable<Path>) paths::iterator) {
-                Path destination = target.resolve(source.relativize(path).toString());
-                if (Files.isDirectory(path)) {
-                    Files.createDirectories(destination);
-                } else {
-                    Files.createDirectories(destination.getParent());
-                    Files.copy(path, destination);
-                }
-            }
-        }
     }
 }

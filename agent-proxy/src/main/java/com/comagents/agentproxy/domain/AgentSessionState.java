@@ -12,7 +12,9 @@ public enum AgentSessionState {
     /** Stopped because it ran longer than the session time limit. */
     TIMED_OUT,
     /** Stopped on request ({@code killSession}). */
-    KILLED;
+    KILLED,
+    /** Kept for a later resume ({@code archive}): stopped if it was running, state saved, never cleaned up automatically. */
+    ARCHIVED;
 
     /** Neither running nor waiting: the agent process has ended. */
     public boolean isFinished() {

@@ -1,6 +1,8 @@
 package com.comagents.agentproxy.agent_response;
 
+import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
+import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.response.AgentResponse;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -76,11 +78,19 @@ public class AgentResponseService {
         }
     }
 
+    // an archived session is kept for a later resume, so its files stay
     private void cleanUp(AiAgent agent, UUID sessionId) {
         try {
-            agentSetupServices.forAgent(agent)
-                    .orElseThrow(() -> new IllegalStateException("No setup service for harness provider " + agent.getAiHarnessProvider()))
-                    .cleanUp(sessionId);
+            AgentSetupService setupService = agentSetupServices.forAgent(agent)
+                    .orElseThrow(() -> new IllegalStateException("No setup service for harness provider " + agent.getAiHarnessProvider()));
+            boolean archived = setupService.status(sessionId)
+                    .map(status -> status.state() == AgentSessionState.ARCHIVED)
+                    .orElse(false);
+            if (archived) {
+                LOG.info("[{} {}] archived, keeping session files", agent.getAgentName(), sessionId);
+            } else {
+                setupService.cleanUp(sessionId);
+            }
         } catch (RuntimeException e) {
             LOG.error("[{} {}] deleting session files failed", agent.getAgentName(), sessionId, e);
         } finally {

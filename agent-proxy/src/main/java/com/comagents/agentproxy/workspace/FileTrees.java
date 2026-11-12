@@ -10,10 +10,33 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.stream.Stream;
 
 public final class FileTrees {
 
     private FileTrees() {
+    }
+
+    /**
+     * Copies a file, or a folder with everything in it, to {@code target}, creating missing parent folders.
+     * Fails if a file already exists at a destination.
+     */
+    public static void copy(Path source, Path target) {
+        // Files.walk visits a directory before its contents, so parents always exist when files are copied
+        try (Stream<Path> paths = Files.walk(source)) {
+            for (Path path : (Iterable<Path>) paths::iterator) {
+                Path destination = target.resolve(source.relativize(path).toString());
+                if (Files.isDirectory(path)) {
+                    Files.createDirectories(destination);
+                } else {
+                    Files.createDirectories(destination.getParent());
+                    Files.copy(path, destination);
+                }
+            }
+        } catch (IOException | UncheckedIOException e) {
+            throw new UncheckedIOException("Failed to copy " + source + " to " + target,
+                    e instanceof UncheckedIOException u ? u.getCause() : (IOException) e);
+        }
     }
 
     /**
