@@ -26,13 +26,15 @@ docker build -t agent-proxy:0.1 .    # native image (no local GraalVM needed)
 docker run --rm -p 8080:8080 \
   -e CLONE_COMAGENTS_SOURCES_URL=https://github.com/<org>/<repo>.git \
   -e SOURCES_REPO_ACCESS_TOKEN \
-  agent-proxy:0.1                    # token taken from the host env, not the command line
+  -e ANTHROPIC_API_KEY \
+  agent-proxy:0.1                    # token and key taken from the host env, not the command line
 
 kubectl apply -f k8s/deployment.yaml
 ```
 
-The Docker image is a mostly-static native binary on `distroless/base-debian13:nonroot`
-(starts in ~10 ms, ~20 MiB RSS), running as non-root with a read-only root filesystem.
+The Docker image is a mostly-static native binary (starts in ~10 ms, ~20 MiB RSS) on `debian:trixie-slim`,
+running as non-root, with the latest [Claude Code](https://code.claude.com/docs) CLI installed for headless
+use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Code release on every build.
 
 ## Configuration
 
@@ -43,3 +45,4 @@ The Docker image is a mostly-static native binary on `distroless/base-debian13:n
 | `HOSTNAME`               | `local` | Reported `instance` (pod name in Kubernetes) |
 | `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`) |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |
+| `ANTHROPIC_API_KEY`           | — (required) | Claude API key for headless Claude Code (`anthropic.api-key`) |

@@ -4,14 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="service backbone">
-      <change afterPath="$PROJECT_DIR$/build-image.sh" afterDir="false" />
+    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="agent setup">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/AgentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/AgentController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentFilesTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentFilesTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build-image.sh" beforeDir="false" afterPath="$PROJECT_DIR$/build-image.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/conf/AgentProxyConf.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/conf/AgentProxyConf.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/application-test.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/application-test.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,61 +52,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.009635482759358" />
-      <entry key="MS500" value="1.50643446791881" />
-      <entry key="S2" value="2.370527224954257" />
-      <entry key="S5" value="2.7144343428132585" />
-      <entry key="S10" value="2.87521394974429" />
-      <entry key="S30" value="4.00362123396231" />
-      <entry key="S60" value="5.847876545146771" />
-      <entry key="M2" value="7.769377506000308" />
-      <entry key="M5" value="9.502789240582425" />
-      <entry key="M10" value="10.21220995400836" />
-      <entry key="M15" value="10.465681893494208" />
-      <entry key="M30" value="10.728169551061661" />
-      <entry key="H1" value="10.863254034674464" />
-      <entry key="H2" value="11.120982615941907" />
-      <entry key="H4" value="15.4049229439672" />
-      <entry key="D1" value="72.91815938651523" />
-      <entry key="W1" value="108.36777750075669" />
+      <entry key="MS100" value="1.0006811098498145" />
+      <entry key="MS500" value="1.454865116253674" />
+      <entry key="S2" value="2.829932197938057" />
+      <entry key="S5" value="3.4566470420118462" />
+      <entry key="S10" value="3.713799241114871" />
+      <entry key="S30" value="3.901163067172432" />
+      <entry key="S60" value="3.9501381454840656" />
+      <entry key="M2" value="3.974957219828725" />
+      <entry key="M5" value="3.995302160492454" />
+      <entry key="M10" value="4.237199294256892" />
+      <entry key="M15" value="4.860623373303414" />
+      <entry key="M30" value="7.080748759286665" />
+      <entry key="H1" value="9.822116165376913" />
+      <entry key="H2" value="12.141651947883972" />
+      <entry key="H4" value="17.181003943101754" />
+      <entry key="D1" value="75.04793532781316" />
+      <entry key="W1" value="111.96628133974755" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="3.184954572096973E-177" />
-      <entry key="MS500" value="5.01903990421661E-36" />
-      <entry key="S2" value="1.5042297261340597E-9" />
-      <entry key="S5" value="3.4697904516469406E-4" />
-      <entry key="S10" value="0.02838971537946753" />
-      <entry key="S30" value="0.7077430200358104" />
-      <entry key="S60" value="1.6636560781780598" />
-      <entry key="M2" value="2.572293594287775" />
-      <entry key="M5" value="3.350157373823325" />
-      <entry key="M10" value="3.6602665292765995" />
-      <entry key="M15" value="3.7700812921008153" />
-      <entry key="M30" value="3.883289852911002" />
-      <entry key="H1" value="3.941617633911317" />
-      <entry key="H2" value="4.1815542548915206" />
-      <entry key="H4" value="8.784294010450676" />
-      <entry key="D1" value="69.22555461793097" />
-      <entry key="W1" value="106.08507115416762" />
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="3.5677809491556877E-199" />
+      <entry key="S10" value="9.103502290851356E-100" />
+      <entry key="S30" value="2.2484923657344246E-33" />
+      <entry key="S60" value="9.377162935223585E-17" />
+      <entry key="M2" value="1.931187722890328E-8" />
+      <entry key="M5" value="0.0018848065865184921" />
+      <entry key="M10" value="0.08681874460039403" />
+      <entry key="M15" value="0.3112322378847537" />
+      <entry key="M30" value="1.1157495961930461" />
+      <entry key="H1" value="2.1127979041778127" />
+      <entry key="H2" value="3.061466197565029" />
+      <entry key="H4" value="7.516276178928377" />
+      <entry key="D1" value="67.45007262256645" />
+      <entry key="W1" value="105.69203717023298" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9526560380882257" />
-      <entry key="MS500" value="1.131559140765934" />
-      <entry key="S2" value="1.9883761446532433" />
-      <entry key="S5" value="2.5042348734280386" />
-      <entry key="S10" value="2.777088288032015" />
-      <entry key="S30" value="4.593025507415237" />
-      <entry key="S60" value="7.400724010648453" />
-      <entry key="M2" value="10.261807007402892" />
-      <entry key="M5" value="12.812626034953164" />
-      <entry key="M10" value="13.850646124377318" />
-      <entry key="M15" value="14.220815264739521" />
-      <entry key="M30" value="14.603782151395782" />
-      <entry key="H1" value="14.800980808988522" />
-      <entry key="H2" value="15.300518888037368" />
-      <entry key="H4" value="24.187553355334465" />
-      <entry key="D1" value="142.14199836966847" />
-      <entry key="W1" value="214.4524779843261" />
+      <entry key="MS100" value="0.9868151699612453" />
+      <entry key="MS500" value="1.4231296823397086" />
+      <entry key="S2" value="2.7998199272306863" />
+      <entry key="S5" value="3.440760367309993" />
+      <entry key="S10" value="3.7050835480863684" />
+      <entry key="S30" value="3.8980720282859647" />
+      <entry key="S60" value="3.9485684605545006" />
+      <entry key="M2" value="3.9741662821325567" />
+      <entry key="M5" value="3.996846423334527" />
+      <entry key="M10" value="4.323341062757984" />
+      <entry key="M15" value="5.170515440007783" />
+      <entry key="M30" value="8.194239408029961" />
+      <entry key="H1" value="11.932801915360233" />
+      <entry key="H2" value="15.201627424094855" />
+      <entry key="H4" value="24.695850022188832" />
+      <entry key="D1" value="142.49633521073204" />
+      <entry key="W1" value="217.6579490545194" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -222,6 +222,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="service backbone" />
-    <option name="LAST_COMMIT_MESSAGE" value="service backbone" />
+    <MESSAGE value="agent setup" />
+    <option name="LAST_COMMIT_MESSAGE" value="agent setup" />
   </component>
 </project>

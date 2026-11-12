@@ -8,11 +8,14 @@ public class AgentProxyConf {
 
     private final String sourcesUrl;
     private final String sourcesRepoAccessToken;
+    private final String anthropicApiKey;
 
     public AgentProxyConf(@Value("${clone.comagents.sources.url}") String sourcesUrl,
-                          @Value("${sources.repo.access-token}") String sourcesRepoAccessToken) {
+                          @Value("${sources.repo.access-token}") String sourcesRepoAccessToken,
+                          @Value("${anthropic.api-key}") String anthropicApiKey) {
         this.sourcesUrl = sourcesUrl;
         this.sourcesRepoAccessToken = sourcesRepoAccessToken;
+        this.anthropicApiKey = anthropicApiKey;
     }
 
     public String getComAgentsSourcesUrl() {
@@ -21,5 +24,9 @@ public class AgentProxyConf {
 
     public String getSourcesRepoAccessToken() {
         return sourcesRepoAccessToken;
+    }
+
+    public String getAnthropicApiKey() {
+        return anthropicApiKey;
     }
 }

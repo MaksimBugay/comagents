@@ -45,8 +45,9 @@ else
 fi
 
 echo "Building ${IMAGE}"
-docker build -t "$IMAGE" .
+# a new build id on every run forces a fresh install of the latest Claude Code (see Dockerfile)
+docker build --build-arg CLAUDE_CODE_BUILD_ID="$(date +%s)" -t "$IMAGE" .
 
 echo
 echo "Built ${IMAGE}. Run it with:"
-echo "  docker run --rm -p 8080:8080 -e CLONE_COMAGENTS_SOURCES_URL=... -e SOURCES_REPO_ACCESS_TOKEN ${IMAGE}"
+echo "  docker run --rm -p 8080:8080 -e CLONE_COMAGENTS_SOURCES_URL=... -e SOURCES_REPO_ACCESS_TOKEN -e ANTHROPIC_API_KEY ${IMAGE}"
