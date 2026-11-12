@@ -41,6 +41,24 @@ class FileTreesTest {
     }
 
     @Test
+    void concurrentDeletesOfTheSameTreeDoNotFail() throws Exception {
+        for (int round = 0; round < 20; round++) {
+            Path folder = tempDir.resolve("session-" + round);
+            for (int i = 0; i < 50; i++) {
+                Files.createDirectories(folder.resolve("dir" + i % 5));
+                Files.writeString(folder.resolve("dir" + i % 5).resolve("file" + i), "x");
+            }
+            // e.g. the idle cleanup and the scheduled cleanup after a response fetch, at the same moment
+            java.util.concurrent.CompletableFuture<Void> other =
+                    java.util.concurrent.CompletableFuture.runAsync(() -> FileTrees.deleteIfExists(folder));
+            FileTrees.deleteIfExists(folder);
+            other.get();
+
+            assertFalse(Files.exists(folder));
+        }
+    }
+
+    @Test
     void ignoresMissingPath() {
         assertDoesNotThrow(() -> FileTrees.deleteIfExists(tempDir.resolve("missing")));
     }

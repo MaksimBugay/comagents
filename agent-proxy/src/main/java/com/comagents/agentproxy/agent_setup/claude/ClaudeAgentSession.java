@@ -31,6 +31,9 @@ public final class ClaudeAgentSession {
     private volatile String resultText;
     private volatile boolean resultSuccessful;
     private volatile Instant finishedAt;
+    private volatile Instant lastOutputAt = startedAt;
+    // overlapping waits keep the session WAITING until the last one ends; guarded by this
+    private int pendingWaits;
 
     ClaudeAgentSession(UUID sessionId, AiAgent agent, Path workingDirectory, Path transcriptFile, Path responseFile) {
         this.sessionId = sessionId;
@@ -66,6 +69,11 @@ public final class ClaudeAgentSession {
         return startedAt;
     }
 
+    /** When Claude Code last printed anything (an event or a stderr line); the start time before that. */
+    public Instant getLastOutputAt() {
+        return lastOutputAt;
+    }
+
     public Optional<Instant> getFinishedAt() {
         return Optional.ofNullable(finishedAt);
     }
@@ -93,6 +101,10 @@ public final class ClaudeAgentSession {
         return process;
     }
 
+    void recordOutput() {
+        lastOutputAt = Instant.now();
+    }
+
     void attach(Process process) {
         this.process = process;
     }
@@ -100,6 +112,24 @@ public final class ClaudeAgentSession {
     /** Moves from {@code expected} to {@code next}; false if the state was already something else. */
     boolean transition(AgentSessionState expected, AgentSessionState next) {
         return state.compareAndSet(expected, next);
+    }
+
+    /** Moves from {@code RUNNING} or {@code WAITING} to the final state {@code next}; false if already finished. */
+    boolean finish(AgentSessionState next) {
+        return transition(AgentSessionState.RUNNING, next) || transition(AgentSessionState.WAITING, next);
+    }
+
+    synchronized void startWaiting() {
+        if (pendingWaits++ == 0) {
+            transition(AgentSessionState.RUNNING, AgentSessionState.WAITING);
+        }
+    }
+
+    synchronized void stopWaiting() {
+        if (--pendingWaits == 0 && transition(AgentSessionState.WAITING, AgentSessionState.RUNNING)) {
+            // the idle timer starts over: the wait was not idleness
+            recordOutput();
+        }
     }
 
     void recordResult(String text, boolean successful) {

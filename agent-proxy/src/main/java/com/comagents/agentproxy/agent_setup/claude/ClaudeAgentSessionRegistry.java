@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,10 +51,14 @@ public class ClaudeAgentSessionRegistry {
     // how long a stopped process gets to exit before it is killed forcibly
     private static final Duration STOP_GRACE_PERIOD = Duration.ofSeconds(10);
 
+    // how often the watchdog checks the time limit and the idle timeout
+    private static final Duration WATCHDOG_INTERVAL = Duration.ofSeconds(1);
+
     private final JsonMapper jsonMapper;
     private final String claudeExecutable;
     private final int maxConcurrentSessions;
     private final Duration sessionTimeout;
+    private final Duration idleTimeout;
     private final Semaphore sessionSlots;
     private final Map<UUID, ClaudeAgentSession> sessions = new ConcurrentHashMap<>();
     // reserved, not yet started: a session id is either here or in sessions, never both
@@ -62,11 +67,13 @@ public class ClaudeAgentSessionRegistry {
     public ClaudeAgentSessionRegistry(JsonMapper jsonMapper,
                                       @Value("${claude.executable:claude}") String claudeExecutable,
                                       @Value("${claude.session.max-concurrent:2}") int maxConcurrentSessions,
-                                      @Value("${claude.session.timeout:60m}") Duration sessionTimeout) {
+                                      @Value("${claude.session.timeout:60m}") Duration sessionTimeout,
+                                      @Value("${claude.session.idle-timeout:10m}") Duration idleTimeout) {
         this.jsonMapper = jsonMapper;
         this.claudeExecutable = claudeExecutable;
         this.maxConcurrentSessions = maxConcurrentSessions;
         this.sessionTimeout = sessionTimeout;
+        this.idleTimeout = idleTimeout;
         this.sessionSlots = new Semaphore(maxConcurrentSessions);
     }
 
@@ -130,7 +137,7 @@ public class ClaudeAgentSessionRegistry {
             started = true;
             LOG.info("[{} {}] started in {}", agent.getAgentName(), sessionId, workingDirectory);
             Thread.ofVirtual().name("claude-output-" + sessionId).start(() -> streamOutput(session));
-            Thread.ofVirtual().name("claude-watchdog-" + sessionId).start(() -> enforceTimeout(session));
+            Thread.ofVirtual().name("claude-watchdog-" + sessionId).start(() -> watch(session));
             return session;
         }
 
@@ -168,10 +175,45 @@ public class ClaudeAgentSessionRegistry {
         return Optional.ofNullable(sessions.get(sessionId));
     }
 
-    /** Stops a running session; does nothing if it is unknown or already finished. */
+    /**
+     * Marks the session {@code WAITING} until the returned handle is closed, so the idle timeout
+     * leaves it alone; closing it returns the session to {@code RUNNING} and restarts the idle timer. Use with
+     * try-with-resources around the wait. Kill, the session time limit and process exit still apply while waiting.
+     *
+     * @throws IllegalStateException when the session is unknown or no longer running
+     */
+    public Waiting markWaiting(UUID sessionId) {
+        ClaudeAgentSession session = sessions.get(sessionId);
+        if (session == null || session.getState().isFinished()) {
+            throw new IllegalStateException("Claude session " + sessionId + " is not running");
+        }
+        session.startWaiting();
+        return new Waiting(session);
+    }
+
+    /** See {@link #markWaiting}. */
+    public static final class Waiting implements AutoCloseable {
+
+        private final ClaudeAgentSession session;
+        private boolean closed;
+
+        private Waiting(ClaudeAgentSession session) {
+            this.session = session;
+        }
+
+        @Override
+        public void close() {
+            if (!closed) {
+                closed = true;
+                session.stopWaiting();
+            }
+        }
+    }
+
+    /** Stops a running or waiting session; does nothing if it is unknown or already finished. */
     public void killSession(UUID sessionId) {
         ClaudeAgentSession session = sessions.get(sessionId);
-        if (session != null && session.transition(AgentSessionState.RUNNING, AgentSessionState.KILLED)) {
+        if (session != null && session.finish(AgentSessionState.KILLED)) {
             LOG.info("[{} {}] killing", session.getAgent().getAgentName(), sessionId);
             stop(session.process());
         }
@@ -248,6 +290,7 @@ public class ClaudeAgentSessionRegistry {
                 transcript.write(line);
                 transcript.newLine();
                 transcript.flush();
+                session.recordOutput();
                 handleOutputLine(session, line);
             }
         } catch (IOException | RuntimeException e) {
@@ -282,11 +325,37 @@ public class ClaudeAgentSessionRegistry {
         }
     }
 
-    private void enforceTimeout(ClaudeAgentSession session) {
-        if (!waitForExit(session.process(), sessionTimeout)
-                && session.transition(AgentSessionState.RUNNING, AgentSessionState.TIMED_OUT)) {
-            LOG.warn("[{} {}] still running after {}, stopping", session.getAgent().getAgentName(), session.getSessionId(), sessionTimeout);
-            stop(session.process());
+    /**
+     * Enforces two limits until the process exits:
+     * <ul>
+     *   <li>{@code claude.session.timeout}: running too long, waiting included, stops the session
+     *       ({@code TIMED_OUT}); its files stay for {@code /agent-status} and {@code /agent-response}.</li>
+     *   <li>{@code claude.session.idle-timeout}: a {@code RUNNING} session without output for that long is stuck, so
+     *       it is stopped ({@code TIMED_OUT}) and all its data deleted, as with {@link #cleanAllSessionData}.
+     *       A {@code WAITING} session is silent on purpose and exempt.</li>
+     * </ul>
+     */
+    private void watch(ClaudeAgentSession session) {
+        String agentName = session.getAgent().getAgentName();
+        UUID sessionId = session.getSessionId();
+        Instant deadline = session.getStartedAt().plus(sessionTimeout);
+        while (!waitForExit(session.process(), WATCHDOG_INTERVAL)) {
+            Instant now = Instant.now();
+            if (now.isAfter(deadline)) {
+                if (session.finish(AgentSessionState.TIMED_OUT)) {
+                    LOG.warn("[{} {}] still running after {}, stopping", agentName, sessionId, sessionTimeout);
+                    stop(session.process());
+                }
+                return;
+            }
+            // the compare-and-set fails for a WAITING session, which is then left alone
+            if (now.isAfter(session.getLastOutputAt().plus(idleTimeout))
+                    && session.transition(AgentSessionState.RUNNING, AgentSessionState.TIMED_OUT)) {
+                LOG.warn("[{} {}] no output for {}, stopping and deleting the session", agentName, sessionId, idleTimeout);
+                stop(session.process());
+                cleanAllSessionData(sessionId);
+                return;
+            }
         }
     }
 
@@ -299,7 +368,7 @@ public class ClaudeAgentSessionRegistry {
         Process process = session.process();
         int exitCode = waitForExit(process, STOP_GRACE_PERIOD) ? process.exitValue() : forceStop(process);
         boolean succeeded = exitCode == 0 && session.isResultSuccessful();
-        session.transition(AgentSessionState.RUNNING, succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
+        session.finish(succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
         session.resultText().ifPresent(text -> writeResponse(session, text));
         sessionSlots.release();
         session.markFinished();

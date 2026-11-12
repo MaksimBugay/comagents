@@ -73,7 +73,8 @@ nothing else is needed in the config dir.
 `--resume` follow-ups) is designed but not built. Headless runs can't ask anyone; the kick-off prompt tells
 Claude to assume and record open questions.
 
-**Impact.** Not a defect; the next feature.
+**Impact.** Not a defect; the next feature. When it's built, a session waiting for a human answer prints nothing,
+so the idle timeout (`claude.session.idle-timeout`) must not count that wait (see `spec/claude_q_and_a.md`).
 
 **Fix.** The implementation order in `spec/claude_q_and_a.md`, section 8. Its **verify** item about `allow` rules
 from `--settings` is resolved: they don't apply in headless runs, so allowed tools now come from `agent.json`

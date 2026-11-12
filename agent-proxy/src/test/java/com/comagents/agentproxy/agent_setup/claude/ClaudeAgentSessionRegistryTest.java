@@ -18,8 +18,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,6 +68,7 @@ class ClaudeAgentSessionRegistryTest {
         ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
 
         assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
+        assertEquals(workingDirectory, session.getWorkingDirectory());
         assertEquals(SessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".md"), session.getResponseFile());
         assertEquals("# Report\n\nAll good", Files.readString(session.getResponseFile()));
         assertEquals(6, Files.readAllLines(session.getTranscriptFile()).size());
@@ -151,6 +154,101 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
+    void silentSessionIsStoppedAndDeleted() throws Exception {
+        registry = registry(fakeClaude("exec sleep 60"), 2, WAIT.multipliedBy(10), Duration.ofMillis(500));
+        UUID sessionId = newSessionId();
+
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        assertEquals(Optional.of(AgentSessionState.TIMED_OUT), session.awaitFinished(WAIT));
+        await("idle session forgotten and its folder deleted").atMost(WAIT)
+                .until(() -> registry.findSession(sessionId).isEmpty() && !Files.exists(SessionFolders.of(sessionId)));
+    }
+
+    @Test
+    void outputKeepsSessionAlive() throws Exception {
+        registry = registry(fakeClaude("""
+                for i in 1 2 3 4 5 6 7 8 9 10; do printf '%s\\n' "still working $i"; sleep 0.2; done
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"done"}'
+                """), 2, WAIT, Duration.ofSeconds(1));
+        UUID sessionId = newSessionId();
+
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        // 2 s of output, never 1 s apart: not idle, although longer than the idle timeout
+        assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
+        assertTrue(Files.exists(session.getResponseFile()));
+    }
+
+    @Test
+    void waitingSessionIsNotKilledWhenSilent() throws Exception {
+        registry = registry(fakeClaude("exec sleep 60"), 2, WAIT.multipliedBy(10), Duration.ofMillis(500));
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        try (ClaudeAgentSessionRegistry.Waiting _ = registry.markWaiting(sessionId)) {
+            assertEquals(AgentSessionState.WAITING, session.getState());
+            Thread.sleep(2500);    // five idle timeouts of silence
+            assertEquals(AgentSessionState.WAITING, session.getState());
+            assertTrue(registry.findSession(sessionId).isPresent());
+        }
+
+        // back to RUNNING with a fresh idle timer, then silent again: stopped and deleted as usual
+        assertEquals(Optional.of(AgentSessionState.TIMED_OUT), session.awaitFinished(WAIT));
+        await("idle session deleted after the wait ended").atMost(WAIT).until(() -> registry.findSession(sessionId).isEmpty());
+    }
+
+    @Test
+    void overlappingWaitsKeepSessionWaitingUntilTheLastEnds() throws Exception {
+        registry = registry(fakeClaude("exec sleep 60"), 2, WAIT.multipliedBy(10));
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        try (ClaudeAgentSessionRegistry.Waiting _ = registry.markWaiting(sessionId)) {
+            try (ClaudeAgentSessionRegistry.Waiting _ = registry.markWaiting(sessionId)) {
+                assertEquals(AgentSessionState.WAITING, session.getState());
+            }
+            assertEquals(AgentSessionState.WAITING, session.getState(), "the outer wait is still open");
+        }
+        assertEquals(AgentSessionState.RUNNING, session.getState());
+        registry.killSession(sessionId);
+    }
+
+    @Test
+    void waitingSessionCanBeKilled() throws Exception {
+        registry = registry(fakeClaude("exec sleep 60"), 2, WAIT.multipliedBy(10));
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        try (ClaudeAgentSessionRegistry.Waiting _ = registry.markWaiting(sessionId)) {
+            registry.killSession(sessionId);
+            assertEquals(Optional.of(AgentSessionState.KILLED), session.awaitFinished(WAIT));
+        }
+        assertEquals(AgentSessionState.KILLED, session.getState(), "ending the wait does not revive a killed session");
+    }
+
+    @Test
+    void sessionThatExitsWhileWaitingStillFinishes() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN.replace("printf '%s\\n' '{\"type\":\"result\"", "sleep 1; printf '%s\\n' '{\"type\":\"result\"")), 2, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        try (ClaudeAgentSessionRegistry.Waiting _ = registry.markWaiting(sessionId)) {
+            assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
+        }
+    }
+
+    @Test
+    void cannotWaitOnUnknownOrFinishedSession() throws Exception {
+        registry = registry(fakeClaude("exit 1"), 2, WAIT);
+        UUID sessionId = newSessionId();
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        assertThrows(IllegalStateException.class, () -> registry.markWaiting(sessionId));
+        assertThrows(IllegalStateException.class, () -> registry.markWaiting(UUID.randomUUID()));
+    }
+
+    @Test
     void rejectsSessionsAboveLimitAndFreesSlotWhenFinished() throws Exception {
         registry = registry(fakeClaude("exec sleep 60"), 1, WAIT.multipliedBy(10));
         UUID first = newSessionId();
@@ -212,12 +310,11 @@ class ClaudeAgentSessionRegistryTest {
     @Test
     void reservationRejectsSessionsAboveLimit() throws Exception {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 1, WAIT);
-        ClaudeAgentSessionRegistry.SessionSlot held = registry.reserve(UUID.randomUUID());
+        try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(UUID.randomUUID())) {
+            assertThrows(ClaudeSessionLimitException.class, () -> registry.reserve(UUID.randomUUID()));
+        }
 
-        assertThrows(ClaudeSessionLimitException.class, () -> registry.reserve(UUID.randomUUID()));
-
-        held.close();
-        registry.reserve(UUID.randomUUID()).close();
+        assertReservable(UUID.randomUUID());
     }
 
     @Test
@@ -229,7 +326,7 @@ class ClaudeAgentSessionRegistryTest {
             assertThrows(IllegalStateException.class, () -> registry.reserve(sessionId), "id is claimed while reserved");
         }
 
-        registry.reserve(sessionId).close();
+        assertReservable(sessionId);
         assertTrue(registry.findSession(sessionId).isEmpty());
     }
 
@@ -243,7 +340,7 @@ class ClaudeAgentSessionRegistryTest {
             assertThrows(ClaudeSessionLimitException.class, () -> registry.reserve(UUID.randomUUID()));
         }
 
-        registry.reserve(UUID.randomUUID()).close();
+        assertReservable(UUID.randomUUID());
     }
 
     @Test
@@ -259,7 +356,7 @@ class ClaudeAgentSessionRegistryTest {
 
         registry.killSession(sessionId);
         session.awaitFinished(WAIT);
-        registry.reserve(UUID.randomUUID()).close();
+        assertReservable(UUID.randomUUID());
     }
 
     @Test
@@ -295,7 +392,19 @@ class ClaudeAgentSessionRegistryTest {
         return script;
     }
 
+    // a slot is free (and the id unclaimed): reserving succeeds; the reservation is released right away
+    private void assertReservable(UUID sessionId) {
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
+            assertNotNull(slot);
+        }
+    }
+
+    // idle timeout well above any test's run time, so only the idle tests below exercise it
     private static ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout) {
-        return new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), maxConcurrent, timeout);
+        return registry(claude, maxConcurrent, timeout, Duration.ofMinutes(10));
+    }
+
+    private static ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
+        return new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), maxConcurrent, timeout, idleTimeout);
     }
 }

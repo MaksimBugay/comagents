@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,7 +30,7 @@ class AgentWithClaudeCodeSetupServiceTest {
 
     // one slot, so a freed or held slot is observable with a second reservation
     private final ClaudeAgentSessionRegistry registry =
-            new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1));
+            new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1), Duration.ofMinutes(1));
 
     private final AgentWithClaudeCodeSetupService setupService = new AgentWithClaudeCodeSetupService(
             new VcsGithubService(new AgentProxyConf("https://github.com/example/comagents.git", "token", "key"), null),
@@ -50,7 +51,9 @@ class AgentWithClaudeCodeSetupServiceTest {
                 () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://gitlab.com/a/b")));
 
         assertFalse(Files.exists(SessionFolders.of(sessionId)));
-        registry.reserve(UUID.randomUUID()).close();
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(UUID.randomUUID())) {
+            assertNotNull(slot, "the failed setup freed its slot");
+        }
     }
 
     @Test

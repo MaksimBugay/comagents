@@ -22,12 +22,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.UUID;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,7 +53,7 @@ class AgentResponseControllerTest {
 
     @Test
     void returnsResponseAndDeletesSessionFilesAfterDelay() throws Exception {
-        Path responseFile = writeResponse("# Report\n\nAll good");
+        Path responseFile = writeAllGoodResponse();
         long createdAt = Files.readAttributes(responseFile, java.nio.file.attribute.BasicFileAttributes.class).creationTime().toMillis();
 
         AgentResponse response = client.toBlocking().retrieve(uri(), AgentResponse.class);
@@ -67,7 +66,8 @@ class AgentResponseControllerTest {
         // a second fetch within the delay still works and does not schedule another cleanup
         assertArrayEquals(response.body(), client.toBlocking().retrieve(uri(), AgentResponse.class).body());
 
-        awaitDeleted(SessionFolders.of(sessionId), Duration.ofSeconds(10));
+        await("session files deleted after the cleanup delay").atMost(Duration.ofSeconds(10))
+                .until(() -> !Files.exists(SessionFolders.of(sessionId)));
         assertEquals(HttpStatus.NOT_FOUND, statusOf(uri()));
     }
 
@@ -114,21 +114,13 @@ class AgentResponseControllerTest {
         return "/agent-response/code_review/" + sessionId;
     }
 
-    private Path writeResponse(String text) throws IOException {
+    private Path writeAllGoodResponse() throws IOException {
         Path responseFile = SessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW);
         Files.createDirectories(responseFile.getParent());
-        return Files.writeString(responseFile, text);
+        return Files.writeString(responseFile, "# Report\n\nAll good");
     }
 
     private HttpStatus statusOf(String uri) {
         return assertThrows(HttpClientResponseException.class, () -> client.toBlocking().retrieve(uri)).getStatus();
-    }
-
-    private static void awaitDeleted(Path path, Duration timeout) throws InterruptedException {
-        Instant deadline = Instant.now().plus(timeout);
-        while (Files.exists(path) && Instant.now().isBefore(deadline)) {
-            Thread.sleep(100);
-        }
-        assertFalse(Files.exists(path), path + " was not deleted within " + timeout);
     }
 }

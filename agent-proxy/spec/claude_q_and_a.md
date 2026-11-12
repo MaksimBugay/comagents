@@ -202,6 +202,11 @@ yet supported"), so the 5-minute idle check would abort any wait longer than 5 m
 agent-proxy's own answer deadline should be shorter than the per-server `timeout`, so the tool returns the
 "no answer" text instead of Claude Code aborting the call.
 
+agent-proxy's own idle timeout (`claude.session.idle-timeout`, 10 min by default) kills and deletes a session that
+prints nothing for that long, and a session waiting in `ask_human` or `approve` prints nothing. The watchdog must
+treat a pending human question as activity (e.g. pause the idle timer while `HumanChannel.ask`/`approve` waits),
+or a slow admin gets the session deleted.
+
 ### Session state
 
 While `ask_human` waits, the session state is `WAITING_FOR_HUMAN`; the status endpoint returns the

@@ -3,6 +3,8 @@ package com.comagents.agentproxy.domain;
 /** Lifecycle of an agent run, whatever harness runs it. */
 public enum AgentSessionState {
     RUNNING,
+    /** Paused while waiting for something outside the agent; silence is expected, so the idle timeout does not apply. */
+    WAITING,
     /** The agent exited normally and reported a successful result. */
     DONE,
     /** The agent exited with an error, or without a successful result. */
@@ -12,7 +14,8 @@ public enum AgentSessionState {
     /** Stopped on request ({@code killSession}). */
     KILLED;
 
+    /** Neither running nor waiting: the agent process has ended. */
     public boolean isFinished() {
-        return this != RUNNING;
+        return this != RUNNING && this != WAITING;
     }
 }
