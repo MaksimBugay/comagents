@@ -535,9 +535,19 @@ public class ClaudeAgentSessionRegistry {
                 handleOutputLine(session, line);
             }
         } catch (IOException | RuntimeException e) {
-            LOG.error("[{} {}] reading Claude Code output failed", session.getAgent().getAgentName(), session.getSessionId(), e);
+            reportReadFailure(session, e);
         } finally {
             onSessionFinishedHandler(session.getSessionId());
+        }
+    }
+
+    // stopping a session (archive, kill) closes its output, possibly under the reading thread: the expected end
+    private static void reportReadFailure(ClaudeAgentSession session, Exception e) {
+        AgentSessionState state = session.getState();
+        if (state == AgentSessionState.ARCHIVED || state == AgentSessionState.KILLED) {
+            LOG.debug("[{} {}] output closed on stop ({})", session.getAgent().getAgentName(), session.getSessionId(), state, e);
+        } else {
+            LOG.error("[{} {}] reading Claude Code output failed", session.getAgent().getAgentName(), session.getSessionId(), e);
         }
     }
 
