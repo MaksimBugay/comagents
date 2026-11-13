@@ -1,0 +1,235 @@
+{
+  "reflection": [
+    {
+      "type": "bmv.org.pushca.client.model.Binary",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.BinaryObjectData",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.BinaryWithHeader",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.ClientFilter",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.Datagram",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.GetChannelsResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.OpenConnectionRequest",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.OpenConnectionResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.PClient",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.RefreshTokenWsResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.UploadBinaryAppeal",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.WebSocketState",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.ChannelEvent",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.ChannelEvent$EventType",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.ChannelHistoryPage",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.ChannelMessage",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.ChannelWithInfo",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.Command",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.GetChannelHistoryWsResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.GetChannelMembersWsResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.GetChannelsWsResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.GetImpressionStatWsResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.ImpressionCounter",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.PChannel",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.PImpression",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.PushcaMessageFactory$CommandWithId",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.PushcaMessageFactory$MessageType",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.ResourceImpressionCounters",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.ResourceType",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.SendMessageToChannelResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.SendMessageToChannelWsResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.SimpleWsResponse",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.core.gateway.GatewayRequestHeader",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "bmv.org.pushca.client.model.ClientFilter[]"
+    },
+    {
+      "type": "tools.jackson.databind.deser.Deserializers[]"
+    },
+    {
+      "type": "tools.jackson.databind.deser.KeyDeserializers[]"
+    },
+    {
+      "type": "tools.jackson.databind.deser.ValueInstantiators[]"
+    },
+    {
+      "type": "tools.jackson.databind.ser.Serializers[]"
+    },
+    {
+      "type": "sun.net.www.protocol.http.Handler",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.net.www.protocol.https.Handler",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    }
+  ]
+}
