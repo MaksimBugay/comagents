@@ -4,27 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="Q&amp;A solution">
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/workspace/SessionFoldersTest.java" afterDir="false" />
+    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="proper root folder instead of tmp">
+      <change afterPath="$PROJECT_DIR$/remove-running-instances.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build-image.sh" beforeDir="false" afterPath="$PROJECT_DIR$/build-image.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/k8s/deployment.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/k8s/deployment.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spec/claude_q_and_a.md" beforeDir="false" afterPath="$PROJECT_DIR$/spec/claude_q_and_a.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spec/known_gaps.md" beforeDir="false" afterPath="$PROJECT_DIR$/spec/known_gaps.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_response/AgentResponseService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_response/AgentResponseService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_status/AgentStatusService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_status/AgentStatusService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/workspace/SessionFolders.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/workspace/SessionFolders.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentResponseControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentResponseControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentStatusControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentStatusControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupServiceTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistryTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/application-test.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/application-test.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../agent/claude_code/code_review/agent.json" beforeDir="false" afterPath="$PROJECT_DIR$/../agent/claude_code/code_review/agent.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -65,61 +48,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0000345728832774" />
-      <entry key="MS500" value="1.1350024241411056" />
-      <entry key="S2" value="2.025787057216724" />
-      <entry key="S5" value="2.87907831546803" />
-      <entry key="S10" value="3.358417396789325" />
-      <entry key="S30" value="3.7646312732193943" />
-      <entry key="S60" value="3.879373072961981" />
-      <entry key="M2" value="3.9394508348970536" />
-      <entry key="M5" value="4.102507674116881" />
-      <entry key="M10" value="4.923531272089644" />
-      <entry key="M15" value="5.8878773945068446" />
-      <entry key="M30" value="8.372170915372198" />
-      <entry key="H1" value="13.76343095071873" />
-      <entry key="H2" value="25.51927579011807" />
-      <entry key="H4" value="42.5025811400426" />
-      <entry key="D1" value="118.37434608857602" />
-      <entry key="W1" value="167.79698866004938" />
+      <entry key="MS100" value="1.0110714691456806" />
+      <entry key="MS500" value="1.5919103211752423" />
+      <entry key="S2" value="3.8304075629789542" />
+      <entry key="S5" value="5.973757191487965" />
+      <entry key="S10" value="7.238197247420914" />
+      <entry key="S30" value="8.344695019223945" />
+      <entry key="S60" value="8.662881358622824" />
+      <entry key="M2" value="8.830247636230716" />
+      <entry key="M5" value="9.094710090001723" />
+      <entry key="M10" value="9.948933612103929" />
+      <entry key="M15" value="10.988937976172277" />
+      <entry key="M30" value="13.882575676729871" />
+      <entry key="H1" value="19.517362555530976" />
+      <entry key="H2" value="31.31112457595068" />
+      <entry key="H4" value="48.74241014514095" />
+      <entry key="D1" value="126.05747391890564" />
+      <entry key="W1" value="176.52905451425445" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
-      <entry key="S10" value="4.9E-324" />
-      <entry key="S30" value="2.3609668486369372E-108" />
-      <entry key="S60" value="2.1578943266554782E-54" />
-      <entry key="M2" value="2.0737862636314186E-27" />
-      <entry key="M5" value="3.238557414353378E-11" />
-      <entry key="M10" value="9.102146997590583E-6" />
-      <entry key="M15" value="7.004186651139554E-4" />
-      <entry key="M30" value="0.07159031838870379" />
-      <entry key="H1" value="0.8884988490872301" />
-      <entry key="H2" value="3.4800080170992818" />
-      <entry key="H4" value="8.730182891978773" />
-      <entry key="D1" value="67.7906546346553" />
-      <entry key="W1" value="114.24919577161614" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="2.4173691152286402E-122" />
+      <entry key="S60" value="2.1835176826901214E-61" />
+      <entry key="M2" value="6.596708043036234E-31" />
+      <entry key="M5" value="1.2923403635284183E-12" />
+      <entry key="M10" value="1.8182621529071231E-6" />
+      <entry key="M15" value="2.3934965925204038E-4" />
+      <entry key="M30" value="0.041849651445954886" />
+      <entry key="H1" value="0.6793219463525013" />
+      <entry key="H2" value="3.042913677395122" />
+      <entry key="H4" value="8.163530805485264" />
+      <entry key="D1" value="67.03664590324559" />
+      <entry key="W1" value="114.06678887738784" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9726888087959135" />
-      <entry key="MS500" value="1.128911697345074" />
-      <entry key="S2" value="2.023285713855481" />
-      <entry key="S5" value="2.8776787074732337" />
-      <entry key="S10" value="3.3576027413617" />
-      <entry key="S30" value="3.764326926855008" />
-      <entry key="S60" value="3.8792162437969133" />
-      <entry key="M2" value="3.9393711978744874" />
-      <entry key="M5" value="4.102470379539273" />
-      <entry key="M10" value="4.923480942668432" />
-      <entry key="M15" value="5.888490158283772" />
-      <entry key="M30" value="8.443594219040913" />
-      <entry key="H1" value="14.651405749856462" />
-      <entry key="H2" value="28.998259524246937" />
-      <entry key="H4" value="51.23143869888259" />
-      <entry key="D1" value="186.16334532313712" />
-      <entry key="W1" value="282.0457885031086" />
+      <entry key="MS100" value="0.9902637647023786" />
+      <entry key="MS500" value="1.5849021703344086" />
+      <entry key="S2" value="3.8249002050557834" />
+      <entry key="S5" value="5.970089326060243" />
+      <entry key="S10" value="7.235939256883829" />
+      <entry key="S30" value="8.343819851467956" />
+      <entry key="S60" value="8.662426244930167" />
+      <entry key="M2" value="8.830015484847738" />
+      <entry key="M5" value="9.094614629882084" />
+      <entry key="M10" value="9.948876383236827" />
+      <entry key="M15" value="10.9891158799379" />
+      <entry key="M30" value="13.924311928958398" />
+      <entry key="H1" value="20.19627593872555" />
+      <entry key="H2" value="34.35313867612145" />
+      <entry key="H4" value="56.90469966799196" />
+      <entry key="D1" value="193.09248250550496" />
+      <entry key="W1" value="290.59544804822445" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -242,6 +225,7 @@
     <MESSAGE value="archive session" />
     <MESSAGE value="resume session" />
     <MESSAGE value="Q&amp;A solution" />
-    <option name="LAST_COMMIT_MESSAGE" value="Q&amp;A solution" />
+    <MESSAGE value="proper root folder instead of tmp" />
+    <option name="LAST_COMMIT_MESSAGE" value="proper root folder instead of tmp" />
   </component>
 </project>

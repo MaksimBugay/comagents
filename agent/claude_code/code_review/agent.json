@@ -1,5 +1,5 @@
 {
-  "model": "claude-opus-5-5",
+  "model": "deepseek-flash[1m]",
   "effort": "high",
   "allowedTools": [
     "Skill",
