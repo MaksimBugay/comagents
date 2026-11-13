@@ -4,6 +4,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry.SessionSlot;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
+import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
@@ -68,7 +69,8 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                     AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
                 });
                 agentSessionWsClientRegistry.openConnection(sessionId, agent, attributes.actorAccountId());
-                slot.start(agent, workingDirectory, attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG);
+                slot.start(agent, workingDirectory, new ClaudeSessionOptions(
+                        attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG, attributes.actorAccountId()));
             } catch (RuntimeException e) {
                 // the folder did not exist before and the slot holds the id, so it belongs to this failed setup
                 FileTrees.deleteIfExists(sessionFolders.of(sessionId));

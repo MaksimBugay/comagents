@@ -35,12 +35,18 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
     private static final Logger LOG = LoggerFactory.getLogger(AgentSessionWsClientRegistry.class);
 
     private final PushcaConnector connector;
+    private final AgentSessionChatListener chatListener;
     private final String chatPageUrl;
     private final Map<UUID, AgentSessionWsClient> clients = new ConcurrentHashMap<>();
 
-    /** @param chatPageUrl the chat page ({@code pushca.chat-url}), for the join link logged with each new chat */
-    public AgentSessionWsClientRegistry(PushcaConnector connector, @Value("${pushca.chat-url}") String chatPageUrl) {
+    /**
+     * @param chatListener receives what people write in session chats
+     * @param chatPageUrl  the chat page ({@code pushca.chat-url}), for the join link logged with each chat
+     */
+    public AgentSessionWsClientRegistry(PushcaConnector connector, AgentSessionChatListener chatListener,
+                                        @Value("${pushca.chat-url}") String chatPageUrl) {
         this.connector = connector;
+        this.chatListener = chatListener;
         this.chatPageUrl = chatPageUrl;
     }
 
@@ -57,12 +63,32 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
     public boolean openConnection(UUID sessionId, AiAgent agent, @Nullable String actorAccountId) {
         try {
             clients.computeIfAbsent(sessionId, _ -> newClient(sessionId, agent, actorAccountId))
-                    .connect(connector);
+                    .connect(connector, false);
             return true;
         } catch (RuntimeException e) {
             LOG.warn("[{} {}] Pushca unavailable, the session runs without a chat: {}", agent.getAgentName(), sessionId,
                     e.getMessage());
             removeConnection(sessionId);
+            return false;
+        }
+    }
+
+    /**
+     * {@link #openConnection} for a session whose chat was created before, e.g. an archived session after a restart:
+     * the existing chat is used, never created again, so its history and members stay. When Pushca can't be
+     * reached, the client is dropped and the chat is left as it is.
+     *
+     * @return whether the session's chat is connected again
+     */
+    public boolean reopenConnection(UUID sessionId, AiAgent agent, @Nullable String actorAccountId) {
+        try {
+            clients.computeIfAbsent(sessionId, _ -> newClient(sessionId, agent, actorAccountId))
+                    .connect(connector, true);
+            return true;
+        } catch (RuntimeException e) {
+            LOG.warn("[{} {}] Pushca unavailable, the chat is not reopened: {}", agent.getAgentName(), sessionId,
+                    e.getMessage());
+            Optional.ofNullable(clients.remove(sessionId)).ifPresent(AgentSessionWsClient::shutdown);
             return false;
         }
     }
@@ -93,7 +119,8 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
         removeConnection(sessionId);
     }
 
-    // the chats stay: sessions archived for a resume keep their files, and so their chats
+    // the chats stay: sessions archived for a resume keep their files, and so their chats; ArchivedSessionChats
+    // reopens them after the restart
     @PreDestroy
     void closeAllConnections() {
         clients.values().forEach(AgentSessionWsClient::close);
@@ -119,7 +146,7 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
         ClientFilter actor = StringUtils.isEmpty(actorAccountId) ? null
                 : new ClientFilter(WORKSPACE_ID, actorAccountId, null, APPLICATION_ID);
         String channelName = agent.getAgentName() + "_session_" + sessionId;
-        return new AgentSessionWsClient(sessionId, client, channelName, actor,
-                joinUrl(chatPageUrl, channelName, actorAccountId));
+        return new AgentSessionWsClient(sessionId, agent, client, channelName, actor,
+                joinUrl(chatPageUrl, channelName, actorAccountId), chatListener);
     }
 }

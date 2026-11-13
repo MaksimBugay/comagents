@@ -2,10 +2,12 @@ package com.comagents.agentproxy.agent_setup;
 
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
+import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 /** Records what would have been sent to Pushca; no test reaches a real server. */
 final class FakePushcaConnector implements PushcaConnector {
@@ -17,11 +19,11 @@ final class FakePushcaConnector implements PushcaConnector {
     volatile RuntimeException addMembersFailure;
 
     @Override
-    public PushcaConnection connect(PClient client) {
+    public PushcaConnection connect(PClient client, Consumer<ChannelMessage> channelMessages) {
         if (connectFailure != null) {
             throw connectFailure;
         }
-        FakeConnection connection = new FakeConnection(client, addMembersFailure);
+        FakeConnection connection = new FakeConnection(client, addMembersFailure, channelMessages);
         connections.add(connection);
         return connection;
     }
@@ -35,10 +37,22 @@ final class FakePushcaConnector implements PushcaConnector {
         final List<PChannel> removedChannels = new CopyOnWriteArrayList<>();
         volatile boolean closed;
         private final RuntimeException addMembersFailure;
+        private final Consumer<ChannelMessage> channelMessages;
 
-        private FakeConnection(PClient client, RuntimeException addMembersFailure) {
+        private FakeConnection(PClient client, RuntimeException addMembersFailure,
+                               Consumer<ChannelMessage> channelMessages) {
             this.client = client;
             this.addMembersFailure = addMembersFailure;
+            this.channelMessages = channelMessages;
+        }
+
+        /** A message Pushca delivers to this connection: someone wrote {@code body} in channel {@code channelId}. */
+        void receive(String channelId, String senderAccountId, String body) {
+            ChannelMessage message = new ChannelMessage();
+            message.channelId = channelId;
+            message.sender = new PClient("comagents-secure-chat", senderAccountId, "device-1", "CHAT_ROOM");
+            message.body = body;
+            channelMessages.accept(message);
         }
 
         @Override

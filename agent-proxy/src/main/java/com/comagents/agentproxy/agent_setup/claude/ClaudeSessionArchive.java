@@ -18,11 +18,17 @@ import java.util.UUID;
  *                           state if the run had already ended
  * @param resultText         the agent's final answer, if it gave one before being archived
  * @param verboseOutput      whether the session shows thinking; a resumed run keeps showing it
+ * @param actorAccountId     the Pushca account that started the session: its chat is reopened for it after a restart
  */
 @Serdeable
 public record ClaudeSessionArchive(UUID sessionId, AiAgent agent, String workingDirectory,
                                    AgentSessionState stateBeforeArchive, Instant startedAt, Instant lastOutputAt,
-                                   Instant archivedAt, @Nullable String resultText, boolean verboseOutput) {
+                                   Instant archivedAt, @Nullable String resultText, boolean verboseOutput,
+                                   @Nullable String actorAccountId) {
 
     public static final String STATE_FILE = "session-state.json";
+
+    public ClaudeSessionOptions options() {
+        return new ClaudeSessionOptions(verboseOutput, actorAccountId);
+    }
 }

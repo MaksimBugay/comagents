@@ -373,7 +373,7 @@ class ClaudeAgentSessionRegistryTest {
 
         ClaudeAgentSession session;
         try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
-            session = slot.start(AiAgent.CODE_REVIEW, workingDirectory, true);
+            session = slot.start(AiAgent.CODE_REVIEW, workingDirectory, new ClaudeSessionOptions(true, null));
         }
         session.awaitFinished(WAIT);
 
@@ -562,6 +562,37 @@ class ClaudeAgentSessionRegistryTest {
         String transcript = Files.readString(resumed.getTranscriptFile());
         assertTrue(transcript.contains("first run") && transcript.contains("resumed answer"), "transcript covers both runs");
         assertFalse(Files.exists(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE)), "no longer archived");
+    }
+
+    @Test
+    void archiveKeepsSessionOptionsForResumeAndIsListed() throws Exception {
+        registry = registry(fakeClaude(INTERRUPTED_THEN_RESUMED), 2, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeSessionOptions options = new ClaudeSessionOptions(true, "MBugai");
+        ClaudeAgentSession first;
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
+            first = slot.start(AiAgent.CODE_REVIEW, workingDirectory, options);
+        }
+        await("first run produced output").atMost(WAIT)
+                .until(() -> Files.exists(first.getTranscriptFile()) && Files.readString(first.getTranscriptFile()).contains("first run"));
+
+        ClaudeSessionArchive state = readArchive(registry.archive(sessionId));
+
+        assertEquals("MBugai", state.actorAccountId());
+        assertTrue(state.verboseOutput());
+        assertEquals(List.of(sessionId), registry.findArchives().stream().map(ClaudeSessionArchive::sessionId).toList());
+        assertEquals(options, registry.resume(sessionId).getOptions());
+    }
+
+    @Test
+    void findArchivesSkipsWhatIsNotAReadableArchive() throws Exception {
+        registry = registry(fakeClaude("exit 0"), 2, WAIT);
+        Path unreadable = Files.createDirectories(sessionFolders.agentFolder(newSessionId(), AiAgent.CODE_REVIEW));
+        Files.writeString(unreadable.resolve(ClaudeSessionArchive.STATE_FILE), "not json");
+        Files.createDirectories(sessionFolders.root().resolve("not-a-session-id/code_review"));
+        Files.createDirectories(sessionFolders.agentFolder(newSessionId(), AiAgent.CODE_REVIEW));
+
+        assertTrue(registry.findArchives().isEmpty());
     }
 
     @Test

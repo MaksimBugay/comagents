@@ -23,7 +23,7 @@ public final class ClaudeAgentSession {
     private final Path transcriptFile;
     private final Path responseFile;
     private final boolean resumed;
-    private final boolean verboseOutput;
+    private final ClaudeSessionOptions options;
     // the last line reported for this session; written and read by the output thread only
     private String lastReportedOutput;
     private final Instant startedAt = Instant.now();
@@ -40,9 +40,9 @@ public final class ClaudeAgentSession {
     private int pendingWaits;
 
     ClaudeAgentSession(UUID sessionId, AiAgent agent, Path workingDirectory, Path transcriptFile, Path responseFile,
-                       boolean resumed, boolean verboseOutput) {
+                       boolean resumed, ClaudeSessionOptions options) {
         this.resumed = resumed;
-        this.verboseOutput = verboseOutput;
+        this.options = options;
         this.sessionId = sessionId;
         this.agent = agent;
         this.workingDirectory = workingDirectory;
@@ -79,7 +79,11 @@ public final class ClaudeAgentSession {
 
     /** Whether thinking and thinking-token progress are shown (logged at INFO and reported), not only logged at DEBUG. */
     public boolean isVerboseOutput() {
-        return verboseOutput;
+        return options.verboseOutput();
+    }
+
+    public ClaudeSessionOptions getOptions() {
+        return options;
     }
 
     /** Remembers {@code output} as the session's last reported line; returns whether it repeats the one before. */

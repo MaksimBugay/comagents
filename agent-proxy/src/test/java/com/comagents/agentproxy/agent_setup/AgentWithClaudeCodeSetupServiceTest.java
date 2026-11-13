@@ -41,6 +41,7 @@ class AgentWithClaudeCodeSetupServiceTest {
         sessionFolders = new SessionFolders(sessionsRoot.toString());
         // one slot, so a freed or held slot is observable with a second reservation
         AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(new FakePushcaConnector(),
+                new RecordingChatListener(),
                 "https://chat.example/chat-room.html");
         registry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, wsClientRegistry);

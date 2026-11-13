@@ -138,22 +138,19 @@ public class ClaudeAgentSessionRegistry {
          *                               stays reserved until {@link #close}
          */
         public ClaudeAgentSession start(AiAgent agent, Path workingDirectory) {
-            return start(agent, workingDirectory, false);
+            return start(agent, workingDirectory, ClaudeSessionOptions.DEFAULT);
         }
 
-        /**
-         * {@link #start(AiAgent, Path)}, showing thinking and thinking-token progress too when {@code verboseOutput}
-         * (see {@link ClaudeAgentSession#isVerboseOutput}).
-         */
-        public ClaudeAgentSession start(AiAgent agent, Path workingDirectory, boolean verboseOutput) {
-            return startRun(agent, workingDirectory, false, verboseOutput);
+        /** {@link #start(AiAgent, Path)} with the session's options, which its archive keeps for a resume. */
+        public ClaudeAgentSession start(AiAgent agent, Path workingDirectory, ClaudeSessionOptions options) {
+            return startRun(agent, workingDirectory, false, options);
         }
 
-        private ClaudeAgentSession startRun(AiAgent agent, Path workingDirectory, boolean resume, boolean verboseOutput) {
+        private ClaudeAgentSession startRun(AiAgent agent, Path workingDirectory, boolean resume, ClaudeSessionOptions options) {
             if (started || closed) {
                 throw new IllegalStateException("Slot for session " + sessionId + " was already " + (started ? "started" : "closed"));
             }
-            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume, verboseOutput);
+            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume, options);
             sessions.put(sessionId, session);
             reservedSessionIds.remove(sessionId);
             started = true;
@@ -175,13 +172,13 @@ public class ClaudeAgentSessionRegistry {
     }
 
     private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory, boolean resume,
-                                      boolean verboseOutput) {
+                                      ClaudeSessionOptions options) {
         Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
         List<String> command = command(readConfig(agent, agentFolder), sessionId, resume);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume,
-                verboseOutput);
+                options);
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
@@ -321,7 +318,7 @@ public class ClaudeAgentSessionRegistry {
         }
         try (SessionSlot slot = reserve(sessionId)) {
             ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true,
-                    archive.verboseOutput());
+                    archive.options());
             deleteArchive(stateFile, sessionId);
             return resumed;
         } catch (RuntimeException e) {
@@ -329,6 +326,37 @@ public class ClaudeAgentSessionRegistry {
                 sessions.putIfAbsent(sessionId, archived);
             }
             throw e;
+        }
+    }
+
+    /**
+     * The archives of all archived sessions on disk ({@code session-state.json}), also those this registry does not
+     * know, e.g. after a restart. An unreadable archive is skipped with a warning.
+     */
+    public List<ClaudeSessionArchive> findArchives() {
+        List<ClaudeSessionArchive> archives = new ArrayList<>();
+        try (Stream<Path> sessionFolderStream = Files.list(sessionFolders.root())) {
+            for (Path sessionFolder : sessionFolderStream.filter(Files::isDirectory).toList()) {
+                sessionIdOf(sessionFolder).flatMap(this::findArchive).ifPresent(stateFile -> {
+                    try {
+                        archives.add(readArchive(stateFile));
+                    } catch (IllegalStateException e) {
+                        LOG.warn("Skipping {}: {}", stateFile, e.getMessage());
+                    }
+                });
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to list " + sessionFolders.root(), e);
+        }
+        return archives;
+    }
+
+    // empty for folders in the sessions dir that are not named after a session id
+    private static Optional<UUID> sessionIdOf(Path sessionFolder) {
+        try {
+            return Optional.of(UUID.fromString(sessionFolder.getFileName().toString()));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
         }
     }
 
@@ -366,7 +394,8 @@ public class ClaudeAgentSessionRegistry {
     private void saveState(ClaudeAgentSession session, Path agentFolder) {
         ClaudeSessionArchive archive = new ClaudeSessionArchive(session.getSessionId(), session.getAgent(),
                 session.getWorkingDirectory().toString(), session.getState(), session.getStartedAt(),
-                session.getLastOutputAt(), Instant.now(), session.resultText().orElse(null), session.isVerboseOutput());
+                session.getLastOutputAt(), Instant.now(), session.resultText().orElse(null), session.isVerboseOutput(),
+                session.getOptions().actorAccountId());
         try {
             Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), jsonMapper.writeValueAsBytes(archive));
         } catch (IOException e) {

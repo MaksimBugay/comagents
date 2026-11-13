@@ -21,7 +21,8 @@ class AgentSessionWsClientRegistryTest {
 
     private final UUID sessionId = UUID.randomUUID();
     private final FakePushcaConnector connector = new FakePushcaConnector();
-    private final AgentSessionWsClientRegistry registry = new AgentSessionWsClientRegistry(connector,
+    private final RecordingChatListener chatListener = new RecordingChatListener();
+    private final AgentSessionWsClientRegistry registry = new AgentSessionWsClientRegistry(connector, chatListener,
             "https://secure.fileshare.ovh/chat-room.html");
 
     @Test
@@ -82,6 +83,47 @@ class AgentSessionWsClientRegistryTest {
 
         await().atMost(WAIT).until(() -> onlyConnection().messages.size() == 3);
         assertEquals("# Code review\n\nAll good", onlyConnection().messages.getLast());
+    }
+
+    @Test
+    void messagesPeopleWriteInTheChatReachTheListener() {
+        registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai");
+        String chat = "code_review_session_" + sessionId;
+
+        onlyConnection().receive(chat, "MBugai", "Use Java 25, not 21");
+        onlyConnection().receive(chat, "code_review@comagents.com", "the agent's own message");
+        onlyConnection().receive("another_chat", "MBugai", "elsewhere");
+
+        assertEquals(List.of(new RecordingChatListener.ChatMessage(sessionId, AiAgent.CODE_REVIEW, "MBugai",
+                "Use Java 25, not 21")), chatListener.messages);
+    }
+
+    @Test
+    void reopenedChatIsUsedNotCreatedAgain() {
+        assertTrue(registry.reopenConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai"));
+        String chat = "code_review_session_" + sessionId;
+
+        registry.onOutput(sessionId, "after restart");
+        onlyConnection().receive(chat, "MBugai", "the answer");
+
+        FakeConnection connection = onlyConnection();
+        assertTrue(connection.createdChannels.isEmpty(), "the chat exists already");
+        assertTrue(connection.members.isEmpty(), "the actor is a member already");
+        await().atMost(WAIT).until(() -> connection.messages.equals(List.of("after restart")));
+        assertEquals(List.of(new RecordingChatListener.ChatMessage(sessionId, AiAgent.CODE_REVIEW, "MBugai",
+                "the answer")), chatListener.messages);
+    }
+
+    @Test
+    void failedReopenLeavesTheChatAndDropsTheClient() {
+        connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+
+        assertFalse(registry.reopenConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai"));
+
+        connector.connectFailure = null;
+        assertTrue(registry.reopenConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai"));
+        assertTrue(onlyConnection().createdChannels.isEmpty());
+        assertTrue(onlyConnection().removedChannels.isEmpty());
     }
 
     @Test

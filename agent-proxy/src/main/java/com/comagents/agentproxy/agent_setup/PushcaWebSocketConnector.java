@@ -4,6 +4,7 @@ import bmv.org.pushca.client.PushcaWebSocket;
 import bmv.org.pushca.client.PushcaWebSocketBuilder;
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
+import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import io.micronaut.context.annotation.Value;
@@ -12,6 +13,7 @@ import jakarta.inject.Singleton;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /** Connections to the Pushca server ({@code pushca.api-url}) with the organization's API key ({@code pushca.api-key}). */
 @Singleton
@@ -30,7 +32,7 @@ public class PushcaWebSocketConnector implements PushcaConnector {
     }
 
     @Override
-    public PushcaConnection connect(PClient client) {
+    public PushcaConnection connect(PClient client, Consumer<ChannelMessage> channelMessages) {
         CountDownLatch ready = new CountDownLatch(1);
         PushcaWebSocket webSocket = new PushcaWebSocketBuilder(conf.getPushcaApiUrl(), conf.getPushcaApiKey(), client, null)
                 .withConnectTimeoutMs(connectTimeoutMs)
@@ -39,6 +41,7 @@ public class PushcaWebSocketConnector implements PushcaConnector {
                         ready.countDown();
                     }
                 })
+                .withChannelMessageConsumer((_, message) -> channelMessages.accept(message))
                 .build();
         // no pusher instance: the sign-in itself failed (wrong API key, server unreachable)
         if (webSocket.getPusherInstanceId() == null) {
