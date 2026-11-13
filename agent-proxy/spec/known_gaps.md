@@ -26,6 +26,13 @@ or not the response was fetched: from `ClaudeAgentSessionRegistry.onSessionFinis
 
 **Fix.** Optional `maxBudgetUsd` in `agent.json` (`ClaudeAgentConfig`), passed as `--max-budget-usd`.
 
+**Caveat: non-Anthropic models.** Claude Code prices every run with its built-in Anthropic price table, also when
+`ANTHROPIC_BASE_URL` points at another provider. Token counts are right, the dollar amount is not: a DeepSeek
+(`deepseek-flash`) review reported `total_cost_usd` $1.39 in its `result` event, while DeepSeek billed about $0.10
+(~14× overstated). `--max-budget-usd` uses the same figure, so a $1 cap would stop a DeepSeek run at about $0.07 of
+real spend. For agents on other providers, either scale the cap by the provider's price ratio, or cap tokens instead
+of dollars (from the `usage` of the stream-json events). Real spend is in the provider's console.
+
 ## 3. Single instance only: multiple replicas and restarts
 
 **Problem.** Session folders are on persistent storage (`agent-proxy.sessions-dir`: a Docker named volume, or a
