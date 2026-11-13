@@ -1,5 +1,7 @@
 package com.comagents.agentproxy;
 
+import com.comagents.agentproxy.workspace.FileTrees;
+import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.client.HttpClient;
@@ -9,10 +11,15 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @MicronautTest
 class AgentControllerTest {
@@ -20,6 +27,9 @@ class AgentControllerTest {
     @Inject
     @Client("/")
     HttpClient client;
+
+    @Inject
+    SessionFolders sessionFolders;
 
     @Test
     void returnsAgentInfo() {
@@ -53,6 +63,20 @@ class AgentControllerTest {
     @Test
     void startRejectsDifferentAgentsInPathAndRequest() {
         assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start", Map.of("agent", "IMAGE_GENERATOR")));
+    }
+
+    @Test
+    void startRejectsSessionIdWithDataOnDisk() throws IOException {
+        UUID sessionId = UUID.randomUUID();
+        Path earlierSessionsFile = Files.createDirectories(sessionFolders.of(sessionId)).resolve("earlier-run.txt");
+        Files.writeString(earlierSessionsFile, "kept");
+        try {
+            assertEquals(HttpStatus.CONFLICT, startStatus("/code_review/start",
+                    Map.of("sessionId", sessionId.toString(), "agent", "CODE_REVIEW")));
+            assertTrue(Files.exists(earlierSessionsFile), "the earlier session's data is not deleted");
+        } finally {
+            FileTrees.deleteIfExists(sessionFolders.of(sessionId));
+        }
     }
 
     @Test

@@ -8,37 +8,16 @@ cd "$(dirname "$0")"
 
 NAME=agent-proxy
 IMAGE="${NAME}:0.1"
+# set by the Dockerfile on every build, so untagged builds left behind by a moved tag are found too
+LABEL="com.comagents.app=${NAME}"
 
-# A container keeps the image name it was created from (Config.Image) even after that tag moves to a
-# newer build, so match on it rather than on `--filter ancestor`, which only sees the current build.
-containers=""
-old_images=""
-for id in $(docker ps -aq); do
-  info=$(docker inspect --format '{{.Config.Image}} {{.Image}}' "$id")
-  config_image=${info%% *}
-  image_id=${info#* }
-  case "$config_image" in
-    "$NAME" | "$NAME":*)
-      containers="$containers $id"
-      old_images="$old_images $image_id"
-      ;;
-  esac
-done
+./remove-running-instances.sh
 
-if [ -n "$containers" ]; then
-  echo "Stopping and removing ${NAME} containers:$containers"
-  # word splitting is intended: one argument per container id
-  docker rm -f $containers >/dev/null
-else
-  echo "No ${NAME} containers to remove"
-fi
-
-# tagged images of this repository plus the untagged builds the removed containers were running;
 # ids are normalised to the 12-character short form so the same image is not removed twice
-old_images="$old_images $(docker images -q "$NAME")"
-images=$(printf '%s\n' $old_images | sed 's/^sha256://' | cut -c1-12 | sort -u)
+images=$(docker images -q --filter "label=${LABEL}" | cut -c1-12 | sort -u)
 if [ -n "$images" ]; then
   echo "Removing old ${NAME} images:" $images
+  # word splitting is intended: one argument per image id
   docker image rm -f $images >/dev/null
 else
   echo "No ${NAME} images to remove"

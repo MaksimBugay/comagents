@@ -2,6 +2,7 @@ package com.comagents.agentproxy;
 
 import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
+import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
@@ -68,6 +69,11 @@ public class AgentController {
     @Error(exception = ClaudeSessionLimitException.class)
     public HttpResponse<JsonError> sessionLimitReached(HttpRequest<?> request, ClaudeSessionLimitException e) {
         return HttpResponse.<JsonError>status(HttpStatus.TOO_MANY_REQUESTS).body(new JsonError(e.getMessage()));
+    }
+
+    @Error(exception = ClaudeSessionExistsException.class)
+    public HttpResponse<JsonError> sessionExists(HttpRequest<?> request, ClaudeSessionExistsException e) {
+        return HttpResponse.<JsonError>status(HttpStatus.CONFLICT).body(new JsonError(e.getMessage()));
     }
 
     private AgentSetupService setupServiceFor(AiAgent agent) {

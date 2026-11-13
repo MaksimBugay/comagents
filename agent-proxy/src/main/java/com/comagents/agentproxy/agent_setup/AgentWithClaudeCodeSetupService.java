@@ -3,6 +3,7 @@ package com.comagents.agentproxy.agent_setup;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry.SessionSlot;
+import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
@@ -13,6 +14,7 @@ import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -44,13 +46,14 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
 
 
     /**
-     * Reserves a session slot first, so a busy service or a session id already in use is rejected before any
-     * download; a failed setup frees the slot and leaves no half-prepared session folder behind.
+     * Reserves a session slot first, so a busy service or a session id already in use (in memory or on disk) is
+     * rejected before any download; a failed setup frees the slot and leaves no half-prepared session folder behind.
      */
     @Override
     public void setup(AiAgent agent, AiAgentAttributes attributes) {
         UUID sessionId = attributes.sessionId();
         try (SessionSlot slot = claudeAgentSessionRegistry.reserve(sessionId)) {
+            requireNoSessionFolder(sessionId);
             try {
                 Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
                 Path workingDirectory = prepareWorkingDirectory(attributes, agentFolder);
@@ -60,10 +63,19 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                 });
                 slot.start(agent, workingDirectory);
             } catch (RuntimeException e) {
-                // only reached with the slot reserved, so the folder belongs to this failed setup
+                // the folder did not exist before and the slot holds the id, so it belongs to this failed setup
                 FileTrees.deleteIfExists(sessionFolders.of(sessionId));
                 throw e;
             }
+        }
+    }
+
+    // the sessions dir is persistent: an earlier session with this id (finished, archived, or from before a restart)
+    // may still be on disk, and it is neither reused nor deleted
+    private void requireNoSessionFolder(UUID sessionId) {
+        Path sessionFolder = sessionFolders.of(sessionId);
+        if (Files.exists(sessionFolder)) {
+            throw new ClaudeSessionExistsException(sessionId, "already has data in " + sessionFolder);
         }
     }
 

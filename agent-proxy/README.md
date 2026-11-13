@@ -7,7 +7,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 | Method | Path                  | Description                     |
 |--------|-----------------------|---------------------------------|
 | GET    | `/{agentName}/info`   | Info about the given agent      |
-| POST   | `/{agentName}/start`  | Set up an agent session (clone repo, copy agent files) and start the agent in the background: **202 Accepted** |
+| POST   | `/{agentName}/start`  | Set up an agent session (clone repo, copy agent files) and start the agent in the background: **202 Accepted**; **409** if the session id is already in use or still has data on disk |
 | GET    | `/agent-status/{agentName}/{sessionId}` | Session state (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`, `KILLED`, `ARCHIVED`), times, and whether a response is available |
 | GET    | `/agent-response/{agentName}/{sessionId}` | The agent's final answer (`body` base64); session files are deleted 5 minutes after the first fetch |
 | GET    | `/health/liveness`    | Kubernetes liveness probe       |

@@ -15,6 +15,8 @@ RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q package -Dpackaging=native-
 # ---- runtime: Debian 13 slim + Claude Code CLI (headless `claude -p`), non-root ----
 # not distroless: Claude Code needs bash (https://code.claude.com/docs/en/setup)
 FROM debian:trixie-slim
+# marks every agent-proxy build, tagged or not, so build-image.sh can remove the old ones
+LABEL com.comagents.app=agent-proxy
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
  && apt-get install -y --no-install-recommends bash ca-certificates curl \

@@ -89,16 +89,16 @@ public class ClaudeAgentSessionRegistry {
      * try-with-resources: the slot is freed again on close unless {@link SessionSlot#start} handed it to a run.
      *
      * @throws ClaudeSessionLimitException when all concurrent session slots are busy
-     * @throws IllegalStateException       when the session id is already reserved or registered
+     * @throws ClaudeSessionExistsException when the session id is already reserved or registered
      */
     public SessionSlot reserve(UUID sessionId) {
         // start() adds to sessions before removing from reservedSessionIds, so one of the two checks always sees it
         if (!reservedSessionIds.add(sessionId)) {
-            throw new IllegalStateException("Claude session " + sessionId + " is already being set up");
+            throw new ClaudeSessionExistsException(sessionId, "is already being set up");
         }
         if (sessions.containsKey(sessionId)) {
             reservedSessionIds.remove(sessionId);
-            throw new IllegalStateException("Claude session " + sessionId + " already exists");
+            throw new ClaudeSessionExistsException(sessionId, "already exists");
         }
         if (!sessionSlots.tryAcquire()) {
             reservedSessionIds.remove(sessionId);
