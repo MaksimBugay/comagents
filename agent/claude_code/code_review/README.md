@@ -33,4 +33,6 @@ claude -p "/java-code-review"                                       # whole proj
 
 To run it by hand, copy `CLAUDE.md` and `.claude/` into the project root the same way.
 
-No MCP servers are configured yet.
+No MCP servers are configured by the agent itself. agent-proxy adds its own MCP server to every run, and `agent.json` allows its
+`mcp__agentproxy__ask_expert` tool: the kick-off prompt first asks the expert in the session chat "What color is your mood?"
+and cancels the review unless the answer is green.

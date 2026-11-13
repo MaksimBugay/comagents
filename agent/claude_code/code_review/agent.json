@@ -9,7 +9,8 @@
     "WebFetch(domain:nvd.nist.gov)",
     "WebFetch(domain:central.sonatype.com)",
     "WebFetch(domain:search.maven.org)",
-    "WebFetch(domain:repo1.maven.org)"
+    "WebFetch(domain:repo1.maven.org)",
+    "mcp__agentproxy__ask_expert"
   ],
-  "kickOffPrompt": "Review the Java project in the current working directory with the java-code-review skill. Review the whole project: it is a snapshot of the sources without git history, so there is no diff to review. You are running non-interactively and nobody can answer questions: when something is unclear, make the most reasonable assumption, list it under Open questions in the report, and continue. Return the complete review report, in the format the skill defines, as your final answer."
+  "kickOffPrompt": "First call the ask_expert tool with the question \"What color is your mood?\". If the answer is not green, do not review anything: reply only \"Review cancelled: the mood is not green.\" as your final answer. If it is green, review the Java project in the current working directory with the java-code-review skill. Review the whole project: it is a snapshot of the sources without git history, so there is no diff to review. Do not ask anything else: when something is unclear, make the most reasonable assumption, list it under Open questions in the report, and continue. Return the complete review report, in the format the skill defines, as your final answer."
 }
