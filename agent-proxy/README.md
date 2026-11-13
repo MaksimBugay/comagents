@@ -54,6 +54,83 @@ the agent is told to go on with its best judgement. One question per session at 
 Only the run itself can call the tool: its `--mcp-config` carries the session id and a random per-run token
 (`X-Agent-Session-Id`, `X-Agent-Session-Token`), and other calls get an error result.
 
+## How sessions run
+
+### Claude Code process
+
+One `claude -p` child process per run, in the session's working directory: the cloned repo
+`<sessions-dir>/<sessionId>/<repo>`, or `<sessions-dir>/<sessionId>/<agentName>` when nothing was cloned. No terminal
+is needed. Model, effort, allowed tools and prompts come from the agent's `agent.json`:
+
+```bash
+claude -p "<kickOffPrompt>" \
+  --session-id <sessionId> \
+  --output-format stream-json --verbose \
+  --disallowedTools AskUserQuestion \
+  --mcp-config '{"mcpServers":{"agentproxy":{"type":"http","url":"…/mcp","headers":{…},"timeout":…}}}' \
+  [--model <model>] [--effort <effort>] \
+  --allowedTools <agent.json allowedTools…> mcp__agentproxy__ask_expert
+```
+
+- **Session id:** our `sessionId` is Claude's session id, so agent-proxy never reads it back. Resumed runs use
+  `--resume <sessionId>` with the agent's `resumePrompt`, or with the expert's answer.
+- **Environment:** the container's, plus `CLAUDE_CONFIG_DIR=<sessions-dir>/<sessionId>/<agentName>/claude-state`
+  (Claude Code's own state for the session: settings, the conversation `--resume` reads; deleted with the session,
+  kept by an archive, never shared), and `CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1` when resuming with the
+  `resumePrompt` (finish the interrupted turn first; not when resuming with an answer).
+- **stdin** is `/dev/null`: with an open pipe, `claude -p` waits 3 s for input on every run.
+
+### Permissions in headless mode
+
+- A tool call that needs approval and isn't pre-allowed is **denied**, not left waiting.
+- Every session starts in a new, never trusted folder, so `permissions.allow` (and `additionalDirectories`) in a
+  project `.claude/settings.json` are ignored (Claude Code warns "Ignoring N permissions.allow entries"); passing
+  the file with `--settings` doesn't help. `deny` rules apply immediately.
+- So an agent's `.claude/settings.json` holds only `deny` rules, and its allowed tools are `allowedTools` in
+  `agent.json`, passed as `--allowedTools` (command-line flags aren't subject to the trust check). A cloned
+  repository's own `allow` rules are never passed on. MCP tools must be pre-allowed too.
+- File access outside the working directory needs `--add-dir`. Absolute paths in permission rules use a double
+  slash: `Edit(//var/lib/agent-proxy/sessions/<sessionId>/**)`.
+
+### Output
+
+`--output-format stream-json --verbose` prints one JSON event per line (`system`/`init`, `assistant` text and tool
+calls, `user` tool results, `result` with the final answer and cost). A virtual thread per run reads it
+continuously (stderr merged), which also keeps the process from stalling on a full pipe. Each line is appended to
+`<sessions-dir>/<sessionId>/<agentName>/claude-stream.jsonl` (full transcript); a one-line summary is logged and
+posted to the session chat; the `result` event's text becomes the session's response.
+
+Summaries, never raw events: tool results can hold whole files or secrets the agent read. A summary names the
+tool and its main argument (path, command, URL), truncates long text and never prints tool results:
+
+```text
+[code_review 3f2b…] init: model=…, tools=24, mcp=[agentproxy]
+[code_review 3f2b…] tool: Read src/main/java/…/OrderService.java
+[code_review 3f2b…] done: success, 42 turns, $0.87, 6m12s
+```
+
+### Limits
+
+- **Time limit** per run, `CLAUDE_SESSION_TIMEOUT` (60 min): the process is stopped, state `TIMED_OUT`, files kept.
+- **Idle timeout**, `CLAUDE_SESSION_IDLE_TIMEOUT` (10 min without output): a `RUNNING` session is stopped and
+  deleted; a `WAITING` one is archived, its timer counted from when the wait started.
+- **Concurrency cap**, `CLAUDE_SESSION_MAX_CONCURRENT` (2; Claude Code recommends 4 GB+ RAM per run). The slot is
+  reserved before setup, so a busy service answers **429** before cloning anything.
+- **Kubernetes** (`k8s/deployment.yaml`): one replica (sessions live in the pod), 4 GiB memory, read-only root
+  filesystem; writable are the sessions dir (a `PersistentVolumeClaim`, `strategy: Recreate`) and `/tmp`.
+
+### Security
+
+- `/mcp` is on the public HTTP port: its tools accept a call only with the run's own token
+  (`X-Agent-Session-Token`) for the session in `X-Agent-Session-Id`.
+- Pushca authenticates every connection; a session's chat is a close private channel whose only member is its
+  actor.
+- Cloned repositories are untrusted input (prompt injection): the agent's `deny` rules are the guardrail; never run
+  with `--dangerously-skip-permissions`.
+- All sessions run as the same user in one container (see `spec/known_gaps.md`, gap 4). Claude Code's Bash sandbox
+  needs `enableWeakerNestedSandbox` inside Docker, which considerably weakens it.
+- Logs and chats get summaries only, never raw tool results.
+
 ## Build & run
 
 ```bash

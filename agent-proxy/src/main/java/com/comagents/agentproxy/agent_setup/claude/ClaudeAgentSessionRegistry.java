@@ -38,7 +38,6 @@ import java.util.stream.Stream;
 
 /**
  * Runs Claude Code headless ({@code claude -p}), one child process per session, and keeps track of the runs.
- * Design: {@code spec/claude_q_and_a.md}.
  * <p>
  * A run is started asynchronously in the session's working directory with the agent's kick-off prompt and our
  * session id as Claude's session id, so later runs can {@code --resume} it. Its stream-json output is written to a

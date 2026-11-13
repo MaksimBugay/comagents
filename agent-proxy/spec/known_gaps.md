@@ -66,19 +66,18 @@ weakens it.
 Restricting edits with `Edit(//var/lib/agent-proxy/sessions/<session id>/**)` covers the file tools but not shell
 commands.
 
-## 5. Remote Q&A not implemented
+## 5. Remote Q&A: what is left
 
-**Problem.** `spec/claude_q_and_a.md` (Pushca `HumanChannel`, `ask_human` MCP tool, `--permission-prompt-tool`,
-`--resume` follow-ups) is designed but not built. Headless runs can't ask anyone; the kick-off prompt tells
-Claude to assume and record open questions.
+**Problem.** `ask_expert` works through the session chat: a quick answer is the tool's result; without one in
+`agent-question.answer-timeout` the session is archived and the next chat message resumes it. Not built: approving
+actions remotely (`--permission-prompt-tool`), sending new instructions to a session (`--resume` follow-ups), an
+expiry for questions nobody answers, and persisting the question before the run is archived (a restart in those
+seconds loses it). A session waiting for an answer reports `ARCHIVED`, not `WAITING`.
 
-**Impact.** Not a defect; the next feature. When it's built, a session waiting for a human answer prints nothing,
-so the idle timeout (`claude.session.idle-timeout`) must not count that wait (see `spec/claude_q_and_a.md`).
+**Impact.** Unanswered sessions stay on disk forever (see gap 1); callers can't tell "waiting for the expert" from
+"archived on request".
 
-**Fix.** The implementation order in `spec/claude_q_and_a.md`, section 8. Its **verify** item about `allow` rules
-from `--settings` is resolved: they don't apply in headless runs, so allowed tools now come from `agent.json`
-(`--allowedTools`). That spec's command line and "Permissions in headless mode" section should be updated
-accordingly.
+**Fix.** Build the remaining pieces when needed; add an answer TTL with the cleanup of gap 1.
 
 ## 6. Smaller items
 
