@@ -105,7 +105,8 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
         if (StringUtils.isNotEmpty(actorAccountId)) {
             url.append("&accountId=").append(encode(actorAccountId));
         }
-        return url.append("&avatar=human-manager").toString();
+        // the page signs in to secure-chat unless told otherwise, and a room only admits members of its own workspace
+        return url.append("&avatar=human-manager&workspaceId=").append(encode(WORKSPACE_ID)).toString();
     }
 
     private static String encode(String value) {

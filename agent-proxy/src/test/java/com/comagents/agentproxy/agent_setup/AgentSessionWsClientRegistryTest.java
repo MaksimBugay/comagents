@@ -43,11 +43,13 @@ class AgentSessionWsClientRegistryTest {
         String channelId = "code_review_session_" + sessionId;
 
         assertEquals("https://secure.fileshare.ovh/chat-room.html?channelId=" + channelId
-                        + "&accountId=MBugai&avatar=human-manager",
+                        + "&accountId=MBugai&avatar=human-manager&workspaceId=comagents-secure-chat",
                 AgentSessionWsClientRegistry.joinUrl("https://secure.fileshare.ovh/chat-room.html", channelId, "MBugai"));
-        assertEquals("https://chat.example/chat-room.html?channelId=" + channelId + "&avatar=human-manager",
+        assertEquals("https://chat.example/chat-room.html?channelId=" + channelId
+                        + "&avatar=human-manager&workspaceId=comagents-secure-chat",
                 AgentSessionWsClientRegistry.joinUrl("https://chat.example/chat-room.html", channelId, null));
-        assertEquals("https://chat.example/chat-room.html?channelId=c&accountId=a+b%40x.com&avatar=human-manager",
+        assertEquals("https://chat.example/chat-room.html?channelId=c&accountId=a+b%40x.com"
+                        + "&avatar=human-manager&workspaceId=comagents-secure-chat",
                 AgentSessionWsClientRegistry.joinUrl("https://chat.example/chat-room.html", "c", "a b@x.com"));
     }
 

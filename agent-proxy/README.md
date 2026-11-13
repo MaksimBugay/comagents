@@ -28,6 +28,13 @@ progress, `DEBUG` shows them too, in the chat and in agent-proxy's log. The chat
 session's files. When the agent gives a final answer, the full answer is the chat's last message. When Pushca
 is unavailable, the session runs without a chat.
 
+When the chat is created, agent-proxy logs its join link, which opens it on the chat page (`PUSHCA_CHAT_URL`) as the
+actor, in the right workspace:
+
+```text
+https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<session id>&accountId=<actor>&avatar=human-manager&workspaceId=comagents-secure-chat
+```
+
 ```json
 {"sessionId": "…", "agent": "CODE_REVIEW", "cloneSourceUrl": "https://github.com/<org>/<repo>.git",
  "actorAccountId": "Maks", "loggingLevel": "INFO"}
