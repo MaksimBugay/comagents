@@ -74,6 +74,36 @@ class ClaudeAgentSessionRegistryTest {
             esac
             """;
 
+    // first run: ends its turn when the test creates "end-turn"; resumed run (--resume): records its arguments and
+    // finishes the task
+    private static final String ENDS_TURN_ON_QUESTION = """
+            case " $* " in
+              *" --resume "*)
+                printf '%s\\n' "$@" > "$(dirname "$0")/resume-args.txt"
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"review done"}' ;;
+              *)
+                while [ ! -f "$(dirname "$0")/end-turn" ]; do sleep 0.05; done
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"waiting for the answer"}' ;;
+            esac
+            """;
+
+    // first run: gets "no answer yet" when the test creates "no-answer", then would go on working; resumed run: records
+    // its environment and arguments, and finishes the task
+    private static final String GETS_NO_ANSWER = """
+            case " $* " in
+              *" --resume "*)
+                printf '%s' "$CLAUDE_CODE_RESUME_INTERRUPTED_TURN" > "$(dirname "$0")/resume-env.txt"
+                printf '%s\\n' "$@" > "$(dirname "$0")/resume-args.txt"
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"review done"}' ;;
+              *)
+                while [ ! -f "$(dirname "$0")/no-answer" ]; do sleep 0.05; done
+                printf '%s\\n' '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","content":[{"type":"text","text":"NO ANSWER YET. End your turn now."}]}]}}'
+                exec sleep 60 ;;
+            esac
+            """;
+
+    private static final String QUESTION = "What color is your mood?";
+
     @TempDir
     Path scripts;
 
@@ -153,6 +183,102 @@ class ClaudeAgentSessionRegistryTest {
         assertTrue(session.acceptsMcpToken(path(server, "headers", "X-Agent-Session-Token").getStringValue()));
         assertFalse(session.acceptsMcpToken("guessed"));
         assertFalse(session.acceptsMcpToken(null));
+    }
+
+    @Test
+    void runEndingItsTurnOnDeferredQuestionIsArchivedNotFinished() throws Exception {
+        registry = registry(fakeClaude(ENDS_TURN_ON_QUESTION), 1, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        registry.deferQuestion(sessionId, QUESTION);
+        Files.createFile(scripts.resolve("end-turn"));
+
+        assertEquals(Optional.of(AgentSessionState.ARCHIVED), session.awaitFinished(WAIT));
+        assertFalse(Files.exists(session.getResponseFile()), "no response: the task is not done");
+        assertTrue(listener.responses.isEmpty());
+        assertEquals(List.of(QUESTION), registry.findArchives().stream().map(ClaudeSessionArchive::deferredQuestion).toList());
+        assertReservable(UUID.randomUUID());
+    }
+
+    @Test
+    void runIsArchivedAsSoonAsItGetsNoAnswerYet() throws Exception {
+        registry = registry(fakeClaude(GETS_NO_ANSWER), 1, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        registry.deferQuestion(sessionId, QUESTION);
+
+        Files.createFile(scripts.resolve("no-answer"));
+
+        assertEquals(Optional.of(AgentSessionState.ARCHIVED), session.awaitFinished(WAIT), "stopped, not left to act on it");
+        assertEquals(List.of(QUESTION), registry.findArchives().stream().map(ClaudeSessionArchive::deferredQuestion).toList());
+        assertTrue(registry.answerDeferredQuestion(sessionId, "green"));
+        assertEquals(Optional.of(AgentSessionState.DONE), registry.findSession(sessionId).orElseThrow().awaitFinished(WAIT));
+        assertEquals(ClaudeAgentSessionRegistry.answerPrompt(QUESTION, "green"),
+                Files.readAllLines(scripts.resolve("resume-args.txt")).get(1));
+        assertEquals("", Files.readString(scripts.resolve("resume-env.txt")), "the interrupted turn is not finished first");
+    }
+
+    @Test
+    void answerResumesTheArchivedSessionWithIt() throws Exception {
+        registry = registry(fakeClaude(ENDS_TURN_ON_QUESTION), 1, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        registry.deferQuestion(sessionId, QUESTION);
+        Files.createFile(scripts.resolve("end-turn"));
+        session.awaitFinished(WAIT);
+
+        assertTrue(registry.answerDeferredQuestion(sessionId, "green"));
+
+        ClaudeAgentSession resumed = registry.findSession(sessionId).orElseThrow();
+        assertEquals(Optional.of(AgentSessionState.DONE), resumed.awaitFinished(WAIT));
+        assertEquals(List.of("-p", ClaudeAgentSessionRegistry.answerPrompt(QUESTION, "green"), "--resume", sessionId.toString()),
+                Files.readAllLines(scripts.resolve("resume-args.txt")).subList(0, 4));
+        assertEquals("review done", Files.readString(resumed.getResponseFile()));
+        assertFalse(registry.answerDeferredQuestion(sessionId, "green again"), "answered: nothing waits any more");
+    }
+
+    @Test
+    void answerWhileTheRunEndsItsTurnResumesTheSessionOnceArchived() throws Exception {
+        registry = registry(fakeClaude(ENDS_TURN_ON_QUESTION), 1, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        registry.deferQuestion(sessionId, QUESTION);
+
+        assertTrue(registry.answerDeferredQuestion(sessionId, "green"), "kept until the run has ended its turn");
+        assertEquals(AgentSessionState.RUNNING, session.getState());
+        Files.createFile(scripts.resolve("end-turn"));
+
+        await().atMost(WAIT).until(() -> Files.exists(scripts.resolve("resume-args.txt")));
+        assertEquals(ClaudeAgentSessionRegistry.answerPrompt(QUESTION, "green"),
+                Files.readAllLines(scripts.resolve("resume-args.txt")).get(1));
+        assertEquals(Optional.of(AgentSessionState.DONE), registry.findSession(sessionId).orElseThrow().awaitFinished(WAIT));
+    }
+
+    @Test
+    void answerWithoutDeferredQuestionResumesNothing() throws Exception {
+        registry = registry(fakeClaude(ENDS_TURN_ON_QUESTION), 1, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        assertFalse(registry.answerDeferredQuestion(sessionId, "green"));
+        assertFalse(registry.answerDeferredQuestion(UUID.randomUUID(), "green"));
+        Files.createFile(scripts.resolve("end-turn"));
+        assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
+    }
+
+    @Test
+    void cancelledDeferredQuestionLetsTheRunFinish() throws Exception {
+        registry = registry(fakeClaude(ENDS_TURN_ON_QUESTION), 1, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        registry.deferQuestion(sessionId, QUESTION);
+
+        registry.cancelDeferredQuestion(sessionId);
+        Files.createFile(scripts.resolve("end-turn"));
+
+        assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
+        assertEquals("waiting for the answer", Files.readString(session.getResponseFile()));
     }
 
     @Test

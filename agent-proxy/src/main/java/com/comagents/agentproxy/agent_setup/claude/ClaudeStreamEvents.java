@@ -57,6 +57,40 @@ final class ClaudeStreamEvents {
         return true;
     }
 
+    /** Whether a {@code user} event holds a tool result whose text starts with {@code prefix}. */
+    static boolean hasToolResultStartingWith(JsonNode event, String prefix) {
+        if (!"user".equals(text(event, "type"))) {
+            return false;
+        }
+        JsonNode content = content(event);
+        if (content == null) {
+            return false;
+        }
+        for (JsonNode block : content.values()) {
+            if ("tool_result".equals(text(block, "type")) && toolResultText(block.get("content")).startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // a tool result's content: a string, or text blocks
+    private static String toolResultText(JsonNode content) {
+        if (content == null) {
+            return "";
+        }
+        if (content.isArray()) {
+            StringBuilder text = new StringBuilder();
+            for (JsonNode block : content.values()) {
+                if ("text".equals(text(block, "type"))) {
+                    text.append(text(block, "text"));
+                }
+            }
+            return text.toString();
+        }
+        return content.isString() ? content.getStringValue() : "";
+    }
+
     static boolean isResult(JsonNode event) {
         return "result".equals(text(event, "type"));
     }

@@ -46,6 +46,11 @@ public final class ClaudeAgentSession {
     private volatile Instant lastOutputAt = startedAt;
     // overlapping waits keep the session WAITING until the last one ends; guarded by this
     private int pendingWaits;
+    // the question the run ends its turn on, an answer that came before the run was archived, and whether it was;
+    // guarded by this
+    private String deferredQuestion;
+    private String earlyAnswer;
+    private boolean archivedForAnswer;
 
     ClaudeAgentSession(UUID sessionId, AiAgent agent, Path workingDirectory, Path transcriptFile, Path responseFile,
                        boolean resumed, ClaudeSessionOptions options) {
@@ -188,6 +193,35 @@ public final class ClaudeAgentSession {
             // the idle timer starts over: the wait was not idleness
             recordOutput();
         }
+    }
+
+    synchronized void deferQuestion(String question) {
+        deferredQuestion = question;
+        earlyAnswer = null;
+    }
+
+    synchronized void cancelDeferredQuestion() {
+        deferredQuestion = null;
+        earlyAnswer = null;
+    }
+
+    synchronized Optional<String> deferredQuestion() {
+        return Optional.ofNullable(deferredQuestion);
+    }
+
+    /** Keeps the answer to the deferred question until the run is archived; false if there is none or it already is. */
+    synchronized boolean keepEarlyAnswer(String answer) {
+        if (deferredQuestion == null || archivedForAnswer) {
+            return false;
+        }
+        earlyAnswer = answer;
+        return true;
+    }
+
+    /** Marks the run archived for the answer: later answers go to the archive; returns one kept before. */
+    synchronized Optional<String> archivedForAnswer() {
+        archivedForAnswer = true;
+        return Optional.ofNullable(earlyAnswer);
     }
 
     void recordResult(String text, boolean successful) {

@@ -5,6 +5,7 @@ import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.json.JsonMapper;
 import io.micronaut.json.tree.JsonNode;
 import jakarta.annotation.PreDestroy;
@@ -146,14 +147,16 @@ public class ClaudeAgentSessionRegistry {
 
         /** {@link #start(AiAgent, Path)} with the session's options, which its archive keeps for a resume. */
         public ClaudeAgentSession start(AiAgent agent, Path workingDirectory, ClaudeSessionOptions options) {
-            return startRun(agent, workingDirectory, false, options);
+            return startRun(agent, workingDirectory, false, null, options);
         }
 
-        private ClaudeAgentSession startRun(AiAgent agent, Path workingDirectory, boolean resume, ClaudeSessionOptions options) {
+        // prompt: null for the agent's own kick-off or resume prompt
+        private ClaudeAgentSession startRun(AiAgent agent, Path workingDirectory, boolean resume, @Nullable String prompt,
+                                            ClaudeSessionOptions options) {
             if (started || closed) {
                 throw new IllegalStateException("Slot for session " + sessionId + " was already " + (started ? "started" : "closed"));
             }
-            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume, options);
+            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume, prompt, options);
             sessions.put(sessionId, session);
             reservedSessionIds.remove(sessionId);
             started = true;
@@ -175,19 +178,20 @@ public class ClaudeAgentSessionRegistry {
     }
 
     private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory, boolean resume,
-                                      ClaudeSessionOptions options) {
+                                      @Nullable String prompt, ClaudeSessionOptions options) {
         Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
         ClaudeAgentConfig config = readConfig(agent, agentFolder);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume,
                 options);
-        ProcessBuilder processBuilder = new ProcessBuilder(command(config, session));
+        ProcessBuilder processBuilder = new ProcessBuilder(command(config, session, prompt));
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
         processBuilder.environment().put("CLAUDE_CONFIG_DIR", agentFolder.resolve(CLAUDE_STATE_FOLDER).toString());
-        if (resume) {
-            // documented by Claude Code: finish the turn that archive() interrupted before following the new prompt
+        if (resume && prompt == null) {
+            // documented by Claude Code: finish the turn that archive() interrupted before following the new prompt.
+            // Not for an answer: the interrupted turn ends on the "no answer yet" result, which must not be acted on
             processBuilder.environment().put("CLAUDE_CODE_RESUME_INTERRUPTED_TURN", "1");
         }
         try {
@@ -306,6 +310,11 @@ public class ClaudeAgentSessionRegistry {
      * @throws ClaudeSessionLimitException when all concurrent session slots are busy; the session stays archived
      */
     public ClaudeAgentSession resume(UUID sessionId) {
+        return resume(sessionId, null);
+    }
+
+    // prompt: null for the agent's resume prompt
+    private ClaudeAgentSession resume(UUID sessionId, @Nullable String prompt) {
         Path stateFile = findArchive(sessionId)
                 .orElseThrow(() -> new IllegalStateException("Claude session " + sessionId + " is not archived"));
         ClaudeSessionArchive archive = readArchive(stateFile);
@@ -320,7 +329,7 @@ public class ClaudeAgentSessionRegistry {
             }
         }
         try (SessionSlot slot = reserve(sessionId)) {
-            ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true,
+            ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true, prompt,
                     archive.options());
             deleteArchive(stateFile, sessionId);
             return resumed;
@@ -330,6 +339,60 @@ public class ClaudeAgentSessionRegistry {
             }
             throw e;
         }
+    }
+
+    /**
+     * Records that the session's run ends its turn on {@code question}, unanswered: when the run has ended, the session
+     * is archived instead of finished, and {@link #answerDeferredQuestion} resumes it with the answer.
+     *
+     * @throws IllegalStateException when the session is unknown or no longer running
+     */
+    public void deferQuestion(UUID sessionId, String question) {
+        ClaudeAgentSession session = sessions.get(sessionId);
+        if (session == null || session.getState().isFinished()) {
+            throw new IllegalStateException("Claude session " + sessionId + " is not running");
+        }
+        session.deferQuestion(question);
+    }
+
+    /** Undoes {@link #deferQuestion}, e.g. when the answer came just in time after all. */
+    public void cancelDeferredQuestion(UUID sessionId) {
+        Optional.ofNullable(sessions.get(sessionId)).ifPresent(ClaudeAgentSession::cancelDeferredQuestion);
+    }
+
+    /**
+     * Answers the question a session ended its turn on ({@link #deferQuestion}): resumes the archived session with
+     * the answer, or, while its run is still ending the turn, keeps the answer and resumes the session once it is
+     * archived. Works from the archive on disk, so also after a restart. When all session slots are busy, the session
+     * stays archived and its chat is told to answer again later.
+     *
+     * @return whether the session was waiting for an answer
+     */
+    public boolean answerDeferredQuestion(UUID sessionId, String answer) {
+        ClaudeAgentSession session = sessions.get(sessionId);
+        if (session != null && session.keepEarlyAnswer(answer)) {
+            LOG.info("[{} {}] answer received, resuming once the run has ended its turn", session.getAgent().getAgentName(), sessionId);
+            return true;
+        }
+        Optional<String> question = findArchive(sessionId).map(this::readArchive).map(ClaudeSessionArchive::deferredQuestion);
+        question.ifPresent(asked -> resumeWithAnswer(sessionId, asked, answer));
+        return question.isPresent();
+    }
+
+    private void resumeWithAnswer(UUID sessionId, String question, String answer) {
+        try {
+            resume(sessionId, answerPrompt(question, answer));
+        } catch (ClaudeSessionLimitException e) {
+            LOG.warn("[{}] the expert answered, but all session slots are busy", sessionId);
+            sessionListener.onOutput(sessionId, "All agent sessions are busy, so this one can't continue now: send your answer again later.");
+        } catch (IllegalStateException e) {
+            LOG.warn("[{}] resuming with the expert's answer failed: {}", sessionId, e.getMessage());
+        }
+    }
+
+    static String answerPrompt(String question, String answer) {
+        return "The expert answered your question \"" + question + "\": \"" + answer + "\". Continue the task and "
+                + "return your final answer as before.";
     }
 
     /**
@@ -398,7 +461,7 @@ public class ClaudeAgentSessionRegistry {
         ClaudeSessionArchive archive = new ClaudeSessionArchive(session.getSessionId(), session.getAgent(),
                 session.getWorkingDirectory().toString(), session.getState(), session.getStartedAt(),
                 session.getLastOutputAt(), Instant.now(), session.resultText().orElse(null), session.isVerboseOutput(),
-                session.getOptions().actorAccountId());
+                session.getOptions().actorAccountId(), session.deferredQuestion().orElse(null));
         try {
             Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), jsonMapper.writeValueAsBytes(archive));
         } catch (IOException e) {
@@ -420,11 +483,11 @@ public class ClaudeAgentSessionRegistry {
     }
 
     // a new run creates Claude Code's session under our id; a resumed run continues it
-    private List<String> command(ClaudeAgentConfig config, ClaudeAgentSession session) {
+    private List<String> command(ClaudeAgentConfig config, ClaudeAgentSession session, @Nullable String prompt) {
         boolean resume = session.isResumed();
         String sessionId = session.getSessionId().toString();
         List<String> command = new ArrayList<>(List.of(
-                claudeExecutable, "-p", resume ? config.resumePrompt() : config.kickOffPrompt(),
+                claudeExecutable, "-p", prompt != null ? prompt : resume ? config.resumePrompt() : config.kickOffPrompt(),
                 resume ? "--resume" : "--session-id", sessionId,
                 "--output-format", "stream-json", "--verbose",
                 // nobody can answer Claude Code's built-in question tool in a headless run: ask_expert does it instead
@@ -490,6 +553,22 @@ public class ClaudeAgentSessionRegistry {
                 .ifPresent(summary -> reportOutput(session, summary, ClaudeStreamEvents.isVerbose(event)));
         if (ClaudeStreamEvents.isResult(event)) {
             session.recordResult(ClaudeStreamEvents.resultText(event).orElse(null), ClaudeStreamEvents.isSuccessfulResult(event));
+        }
+        if (session.deferredQuestion().isPresent()
+                && ClaudeStreamEvents.hasToolResultStartingWith(event, AgentProxyMcpServer.NO_ANSWER_YET)) {
+            archiveOnNoAnswer(session);
+        }
+    }
+
+    // the agent got "no answer yet": stopped right away, so it can't act on it (e.g. take it for a "no")
+    private void archiveOnNoAnswer(ClaudeAgentSession session) {
+        LOG.info("[{} {}] no answer yet, archiving until the expert answers: {}", session.getAgent().getAgentName(),
+                session.getSessionId(), session.deferredQuestion().orElseThrow());
+        try {
+            archive(session.getSessionId());
+        } catch (RuntimeException e) {
+            LOG.error("[{} {}] archiving until the expert answers failed", session.getAgent().getAgentName(),
+                    session.getSessionId(), e);
         }
     }
 
@@ -579,15 +658,39 @@ public class ClaudeAgentSessionRegistry {
         }
         Process process = session.process();
         int exitCode = waitForExit(process, STOP_GRACE_PERIOD) ? process.exitValue() : forceStop(process);
-        boolean succeeded = exitCode == 0 && session.isResultSuccessful();
-        session.finish(succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
-        session.resultText().ifPresent(text -> {
-            writeResponse(session, text);
-            sessionListener.onResponse(sessionId, text);
-        });
+        // archived when "no answer yet" showed up, or now if the run ended its turn before that
+        boolean awaitsAnswer = session.deferredQuestion().isPresent()
+                && (session.getState() == AgentSessionState.ARCHIVED
+                    || !session.getState().isFinished() && archiveUntilAnswered(session));
+        if (!awaitsAnswer) {
+            boolean succeeded = exitCode == 0 && session.isResultSuccessful();
+            session.finish(succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
+            session.resultText().ifPresent(text -> {
+                writeResponse(session, text);
+                sessionListener.onResponse(sessionId, text);
+            });
+        }
         sessionSlots.release();
+        // an answer that came while the run was ending its turn; from here on answers find the archive
+        Optional<String> earlyAnswer = awaitsAnswer ? session.archivedForAnswer() : Optional.empty();
         session.markFinished();
         LOG.info("[{} {}] finished: {}, exit code {}", session.getAgent().getAgentName(), sessionId, session.getState(), exitCode);
+        earlyAnswer.ifPresent(answer -> resumeWithAnswer(sessionId, session.deferredQuestion().orElseThrow(), answer));
+    }
+
+    // the run ended its turn on a deferred question: archived (no response written) until the expert answers
+    private boolean archiveUntilAnswered(ClaudeAgentSession session) {
+        try {
+            saveState(session, sessionFolders.agentFolder(session.getSessionId(), session.getAgent()));
+        } catch (RuntimeException e) {
+            LOG.error("[{} {}] archiving until the expert answers failed", session.getAgent().getAgentName(),
+                    session.getSessionId(), e);
+            return false;
+        }
+        session.archive();
+        LOG.info("[{} {}] archived until the expert answers: {}", session.getAgent().getAgentName(), session.getSessionId(),
+                session.deferredQuestion().orElseThrow());
+        return true;
     }
 
     // written to a temporary file and renamed, so a reader never sees a half-written response

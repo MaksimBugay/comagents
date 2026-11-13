@@ -45,8 +45,11 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
 agent-proxy runs its own MCP server on `/mcp` (stateless HTTP). Every Claude Code run gets it with `--mcp-config`
 (server `agentproxy`) and `mcp__agentproxy__ask_expert` pre-allowed. When the agent calls `ask_expert`, the question
 is posted to the session chat as `Question: …`, the session is `WAITING`, and the next message written in the chat
-is the tool's result. Without an answer within `AGENT_QUESTION_ANSWER_TIMEOUT`, or without a chat, the agent is
-told to go on with its best judgement (later replies answer nothing). One question per session at a time.
+is the tool's result. Without an answer within `AGENT_QUESTION_ANSWER_TIMEOUT`, the tool returns `NO ANSWER YET …`
+(explicitly not an answer). As soon as that result shows up in the run's output, the run is stopped and the session
+archived (`ARCHIVED`, no response written, slot freed), so the agent can't act on it; the chat says so. The next message in the chat resumes it
+(`claude -p "The expert answered your question …" --resume <session id>`), also after a restart. Without a chat,
+the agent is told to go on with its best judgement. One question per session at a time.
 
 Only the run itself can call the tool: its `--mcp-config` carries the session id and a random per-run token
 (`X-Agent-Session-Id`, `X-Agent-Session-Token`), and other calls get an error result.

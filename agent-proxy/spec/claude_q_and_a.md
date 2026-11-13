@@ -2,10 +2,10 @@
 
 Status: running Claude Code headless (sections 1–2), session status and response, archive and resume are
 implemented (`ClaudeAgentSessionRegistry`). The Pushca session chat is implemented (`AgentSessionWsClientRegistry`,
-one close private chat per session instead of `HumanChannel`). Section 4: the quick path only (`AskExpertTool`,
-`ExpertAnswers`; the answer is the next chat message, window `agent-question.answer-timeout`, 4 min); after the
-window the agent is told to go on without an answer: no deferred questions, resume with the answer or answer
-endpoint yet. Sections 5–6 are design only.
+one close private chat per session instead of `HumanChannel`). Section 4: `AskExpertTool`, `ExpertAnswers`; the answer is the next chat message, quick window
+`agent-question.answer-timeout` (4 min); after it the question is deferred and the session archived (`ARCHIVED`,
+not `WAITING`) as soon as the "no answer yet" result shows in the stream (the run is stopped), and resumed with the answer from the chat. Not yet: the answer endpoint,
+persisting the question before the run has ended, answer TTL. Sections 5–6 are design only.
 
 agent-proxy prepares a session folder (`POST /{agentName}/start`: clone repo, copy agent files), then runs
 Claude Code headless in it. While Claude works, a human admin follows its output and answers its questions

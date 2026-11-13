@@ -22,6 +22,11 @@ public class AgentProxyMcpServer {
     /** The server's name in {@code --mcp-config}; Claude Code calls its tools {@code mcp__<name>__<tool>}. */
     public static final String NAME = "agentproxy";
     public static final String ASK_EXPERT_TOOL = "ask_expert";
+    /**
+     * How the {@value #ASK_EXPERT_TOOL} result that is not an answer starts: the run is archived as soon as it shows
+     * up, so the agent never acts on it.
+     */
+    public static final String NO_ANSWER_YET = "NO ANSWER YET.";
     public static final String SESSION_ID_HEADER = "X-Agent-Session-Id";
     public static final String SESSION_TOKEN_HEADER = "X-Agent-Session-Token";
 

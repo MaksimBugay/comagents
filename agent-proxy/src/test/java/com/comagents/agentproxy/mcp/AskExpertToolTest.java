@@ -41,11 +41,19 @@ class AskExpertToolTest {
 
     private static final Duration WAIT = Duration.ofSeconds(20);
 
-    // records its arguments (the --mcp-config with the run's token), then works until stopped
-    private static final String RUNNING_CLAUDE = """
+    // first run: records its arguments (the --mcp-config with the run's token), then works until the test creates
+    // "end-turn"; resumed run (--resume): records its arguments and gives the final answer
+    private static final String CLAUDE = """
             #!/bin/sh
-            printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
-            exec sleep 60
+            case " $* " in
+              *" --resume "*)
+                printf '%s\\n' "$@" > "$(dirname "$0")/resume-args.txt"
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"review done"}' ;;
+              *)
+                printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
+                while [ ! -f "$(dirname "$0")/end-turn" ]; do sleep 0.05; done
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"waiting"}' ;;
+            esac
             """;
 
     @TempDir
@@ -60,7 +68,7 @@ class AskExpertToolTest {
     private final UUID sessionId = UUID.randomUUID();
     private final String chat = "code_review_session_" + sessionId;
     private final FakePushcaConnector connector = new FakePushcaConnector();
-    private final ExpertAnswers answers = new ExpertAnswers();
+    private final ExpertAnswers answers = new ExpertAnswers(() -> this.sessions);
     private AgentSessionWsClientRegistry chats;
     private ClaudeAgentSessionRegistry sessions;
     private ClaudeAgentSession session;
@@ -72,7 +80,7 @@ class AskExpertToolTest {
         Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
                 {"kickOffPrompt": "Review it"}""");
         Path claude = scripts.resolve("claude");
-        Files.writeString(claude, RUNNING_CLAUDE);
+        Files.writeString(claude, CLAUDE);
         Files.setPosixFilePermissions(claude, PosixFilePermissions.fromString("rwx------"));
 
         chats = new AgentSessionWsClientRegistry(connector, answers, "https://chat.example/chat-room.html");
@@ -106,19 +114,28 @@ class AskExpertToolTest {
     }
 
     @Test
-    void goesOnWithoutAnswerAfterTheTimeout() {
+    void withoutAnswerInTimeTheSessionIsArchivedAndTheAnswerResumesIt() throws IOException {
         chats.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks");
 
-        String result = text(tool(Duration.ofMillis(300)).askExpert("Which branch?", runContext()));
+        String result = text(tool(Duration.ofMillis(300)).askExpert("What color is your mood?", runContext()));
 
-        assertTrue(result.startsWith("The expert did not answer within 300 ms."), result);
+        assertEquals(AskExpertTool.END_TURN, result);
         FakePushcaConnector.FakeConnection connection = connector.connections.getFirst();
         await().atMost(WAIT).until(() -> connection.messages.size() == 2);
-        assertEquals("No answer within 300 ms: the agent goes on without it.", connection.messages.getLast());
-        assertEquals(AgentSessionState.RUNNING, session.getState());
-        // a late reply answers nothing: the next question waits for its own answer
-        connection.receive(chat, "Maks", "main");
-        assertFalse(answers.expect(sessionId).isDone());
+        assertEquals("No answer within 300 ms: the session is archived and continues when you answer here.",
+                connection.messages.getLast());
+        // the agent ends its turn as told
+        Files.createFile(scripts.resolve("end-turn"));
+        await().atMost(WAIT).until(() -> session.getState() == AgentSessionState.ARCHIVED);
+        assertFalse(connection.messages.contains("waiting"), "no final answer: the task is not done");
+
+        connection.receive(chat, "Maks", "green");
+
+        await().atMost(WAIT).until(() -> Files.exists(scripts.resolve("resume-args.txt")));
+        List<String> args = Files.readAllLines(scripts.resolve("resume-args.txt"));
+        assertEquals(List.of("-p", "The expert answered your question \"What color is your mood?\": \"green\". "
+                + "Continue the task and return your final answer as before.", "--resume", sessionId.toString()), args.subList(0, 4));
+        await().atMost(WAIT).until(() -> connection.messages.contains("review done"));
     }
 
     @Test

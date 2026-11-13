@@ -76,7 +76,7 @@ class ArchivedSessionChatsTest {
         Path agentFolder = Files.createDirectories(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
         Instant now = Instant.now();
         ClaudeSessionArchive archive = new ClaudeSessionArchive(sessionId, AiAgent.CODE_REVIEW, agentFolder.toString(),
-                AgentSessionState.WAITING, now, now, now, null, false, "MBugai");
+                AgentSessionState.WAITING, now, now, now, null, false, "MBugai", null);
         Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), ObjectMapper.getDefault().writeValueAsBytes(archive));
     }
 }

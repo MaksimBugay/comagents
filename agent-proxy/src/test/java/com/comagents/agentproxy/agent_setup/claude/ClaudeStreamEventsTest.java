@@ -16,6 +16,23 @@ class ClaudeStreamEventsTest {
     private static final ObjectMapper JSON = ObjectMapper.getDefault();
 
     @Test
+    void findsToolResultsByTheirStart() throws IOException {
+        JsonNode textBlocks = parse("""
+                {"type":"user","message":{"content":[{"type":"tool_result","content":[{"type":"text","text":"NO ANSWER YET. End your turn."}]}]}}""");
+        JsonNode plainString = parse("""
+                {"type":"user","message":{"content":[{"type":"tool_result","content":"NO ANSWER YET. End your turn."}]}}""");
+        JsonNode answer = parse("""
+                {"type":"user","message":{"content":[{"type":"tool_result","content":"green"}]}}""");
+        JsonNode assistant = parse("""
+                {"type":"assistant","message":{"content":[{"type":"text","text":"NO ANSWER YET."}]}}""");
+
+        assertTrue(ClaudeStreamEvents.hasToolResultStartingWith(textBlocks, "NO ANSWER YET."));
+        assertTrue(ClaudeStreamEvents.hasToolResultStartingWith(plainString, "NO ANSWER YET."));
+        assertFalse(ClaudeStreamEvents.hasToolResultStartingWith(answer, "NO ANSWER YET."));
+        assertFalse(ClaudeStreamEvents.hasToolResultStartingWith(assistant, "NO ANSWER YET."), "only tool results");
+    }
+
+    @Test
     void summarizesInit() throws IOException {
         JsonNode event = parse("""
                 {"type":"system","subtype":"init","model":"claude-x","tools":["Read","Bash"],"mcp_servers":[{"name":"agentproxy","status":"connected"}]}""");
