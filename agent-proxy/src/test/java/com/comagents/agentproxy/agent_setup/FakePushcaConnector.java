@@ -10,9 +10,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /** Records what would have been sent to Pushca; no test reaches a real server. */
-final class FakePushcaConnector implements PushcaConnector {
+public final class FakePushcaConnector implements PushcaConnector {
 
-    final List<FakeConnection> connections = new CopyOnWriteArrayList<>();
+    public final List<FakeConnection> connections = new CopyOnWriteArrayList<>();
     // set to make the next connects fail, as with a wrong API key or an unreachable server
     volatile RuntimeException connectFailure;
     // set to make adding the actor to a new chat fail, after sign-in and channel creation
@@ -28,12 +28,12 @@ final class FakePushcaConnector implements PushcaConnector {
         return connection;
     }
 
-    static final class FakeConnection implements PushcaConnection {
+    public static final class FakeConnection implements PushcaConnection {
 
         final PClient client;
         final List<PChannel> createdChannels = new CopyOnWriteArrayList<>();
         final List<ClientFilter> members = new CopyOnWriteArrayList<>();
-        final List<String> messages = new CopyOnWriteArrayList<>();
+        public final List<String> messages = new CopyOnWriteArrayList<>();
         final List<PChannel> removedChannels = new CopyOnWriteArrayList<>();
         volatile boolean closed;
         private final RuntimeException addMembersFailure;
@@ -47,7 +47,7 @@ final class FakePushcaConnector implements PushcaConnector {
         }
 
         /** A message Pushca delivers to this connection: someone wrote {@code body} in channel {@code channelId}. */
-        void receive(String channelId, String senderAccountId, String body) {
+        public void receive(String channelId, String senderAccountId, String body) {
             ChannelMessage message = new ChannelMessage();
             message.channelId = channelId;
             message.sender = new PClient("comagents-secure-chat", senderAccountId, "device-1", "CHAT_ROOM");

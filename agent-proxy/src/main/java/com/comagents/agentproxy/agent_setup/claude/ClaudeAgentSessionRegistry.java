@@ -65,6 +65,7 @@ public class ClaudeAgentSessionRegistry {
     private final Duration idleTimeout;
     private final SessionFolders sessionFolders;
     private final ClaudeSessionListener sessionListener;
+    private final AgentProxyMcpServer mcpServer;
     private final Semaphore sessionSlots;
     private final Map<UUID, ClaudeAgentSession> sessions = new ConcurrentHashMap<>();
     // reserved, not yet started: a session id is either here or in sessions, never both
@@ -76,9 +77,11 @@ public class ClaudeAgentSessionRegistry {
                                       @Value("${claude.session.timeout:60m}") Duration sessionTimeout,
                                       @Value("${claude.session.idle-timeout:10m}") Duration idleTimeout,
                                       SessionFolders sessionFolders,
-                                      ClaudeSessionListener sessionListener) {
+                                      ClaudeSessionListener sessionListener,
+                                      AgentProxyMcpServer mcpServer) {
         this.sessionFolders = sessionFolders;
         this.sessionListener = sessionListener;
+        this.mcpServer = mcpServer;
         this.jsonMapper = jsonMapper;
         this.claudeExecutable = claudeExecutable;
         this.maxConcurrentSessions = maxConcurrentSessions;
@@ -175,11 +178,11 @@ public class ClaudeAgentSessionRegistry {
                                       ClaudeSessionOptions options) {
         Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
-        List<String> command = command(readConfig(agent, agentFolder), sessionId, resume);
+        ClaudeAgentConfig config = readConfig(agent, agentFolder);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume,
                 options);
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        ProcessBuilder processBuilder = new ProcessBuilder(command(config, session));
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
         processBuilder.environment().put("CLAUDE_CONFIG_DIR", agentFolder.resolve(CLAUDE_STATE_FOLDER).toString());
@@ -417,23 +420,26 @@ public class ClaudeAgentSessionRegistry {
     }
 
     // a new run creates Claude Code's session under our id; a resumed run continues it
-    private List<String> command(ClaudeAgentConfig config, UUID sessionId, boolean resume) {
+    private List<String> command(ClaudeAgentConfig config, ClaudeAgentSession session) {
+        boolean resume = session.isResumed();
+        String sessionId = session.getSessionId().toString();
         List<String> command = new ArrayList<>(List.of(
                 claudeExecutable, "-p", resume ? config.resumePrompt() : config.kickOffPrompt(),
-                resume ? "--resume" : "--session-id", sessionId.toString(),
+                resume ? "--resume" : "--session-id", sessionId,
                 "--output-format", "stream-json", "--verbose",
-                // nobody can answer Claude Code's built-in question tool in a headless run
-                "--disallowedTools", "AskUserQuestion"));
+                // nobody can answer Claude Code's built-in question tool in a headless run: ask_expert does it instead
+                "--disallowedTools", "AskUserQuestion",
+                "--mcp-config", mcpServer.mcpConfig(session.getSessionId(), session.mcpToken())));
         if (config.model() != null) {
             command.addAll(List.of("--model", config.model()));
         }
         if (config.effort() != null) {
             command.addAll(List.of("--effort", config.effort()));
         }
-        if (!config.allowedTools().isEmpty()) {
-            command.add("--allowedTools");
-            command.addAll(config.allowedTools());
-        }
+        // headless runs can only call pre-allowed MCP tools
+        command.add("--allowedTools");
+        command.addAll(config.allowedTools());
+        command.addAll(mcpServer.allowedTools());
         return command;
     }
 

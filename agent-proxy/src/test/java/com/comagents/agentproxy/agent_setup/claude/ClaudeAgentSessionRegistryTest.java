@@ -3,6 +3,7 @@ package com.comagents.agentproxy.agent_setup.claude;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import io.micronaut.json.tree.JsonNode;
 import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -115,7 +117,9 @@ class ClaudeAgentSessionRegistryTest {
         assertTrue(args.containsAll(List.of("--session-id", sessionId.toString(), "--output-format", "stream-json", "--verbose")));
         assertEquals("test-model", args.get(args.indexOf("--model") + 1));
         assertEquals("high", args.get(args.indexOf("--effort") + 1));
-        assertFalse(args.contains("--allowedTools"), "agent.json lists no allowed tools");
+        int allowedTools = args.indexOf("--allowedTools");
+        assertEquals(List.of("mcp__agentproxy__ask_expert"), args.subList(allowedTools + 1, args.size()),
+                "agent.json lists no allowed tools: only agent-proxy's own MCP tool");
         assertEquals("", Files.readString(scripts.resolve("stdin.txt")));
     }
 
@@ -134,6 +138,24 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
+    void pointsTheRunAtAgentProxysMcpServerWithItsOwnToken() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        session.awaitFinished(WAIT);
+
+        JsonNode server = mcpServer(Files.readAllLines(scripts.resolve("args.txt")));
+        assertEquals("http", path(server, "type").getStringValue());
+        assertEquals("http://127.0.0.1:8080/mcp", path(server, "url").getStringValue());
+        assertEquals(Duration.ofMinutes(5).toMillis(), path(server, "timeout").getLongValue(), "answer timeout + margin");
+        assertEquals(sessionId.toString(), path(server, "headers", "X-Agent-Session-Id").getStringValue());
+        assertTrue(session.acceptsMcpToken(path(server, "headers", "X-Agent-Session-Token").getStringValue()));
+        assertFalse(session.acceptsMcpToken("guessed"));
+        assertFalse(session.acceptsMcpToken(null));
+    }
+
+    @Test
     void ignoresAllowRulesInProjectSettings() throws Exception {
         Files.createDirectories(workingDirectory.resolve(".claude"));
         Files.writeString(workingDirectory.resolve(".claude/settings.json"), """
@@ -143,7 +165,9 @@ class ClaudeAgentSessionRegistryTest {
         registry.createSession(newSessionId(), AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
 
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
-        assertFalse(args.contains("--allowedTools"), "only agent.json grants tools");
+        int allowedTools = args.indexOf("--allowedTools");
+        assertEquals(List.of("mcp__agentproxy__ask_expert"), args.subList(allowedTools + 1, args.size()),
+                "only agent.json (and agent-proxy's own MCP tool) grants tools");
         assertFalse(args.contains("Bash(rm *)"));
     }
 
@@ -698,6 +722,21 @@ class ClaudeAgentSessionRegistryTest {
         Files.writeString(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeAgentConfig.FILE_NAME), json);
     }
 
+    // field.field...: fails the test when one is missing
+    private static JsonNode path(JsonNode node, String... fields) {
+        JsonNode current = node;
+        for (String field : fields) {
+            current = Objects.requireNonNull(current.get(field), field);
+        }
+        return current;
+    }
+
+    // the --mcp-config the fake claude was started with
+    private static JsonNode mcpServer(List<String> args) throws IOException {
+        JsonNode config = ObjectMapper.getDefault().readValue(args.get(args.indexOf("--mcp-config") + 1), JsonNode.class);
+        return path(Objects.requireNonNull(config, "--mcp-config"), "mcpServers", "agentproxy");
+    }
+
     private Path fakeClaude(String body) throws IOException {
         Path script = scripts.resolve("claude");
         Files.writeString(script, "#!/bin/sh\n" + body + "\n");
@@ -719,7 +758,7 @@ class ClaudeAgentSessionRegistryTest {
 
     private ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
         return new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), maxConcurrent, timeout, idleTimeout,
-                sessionFolders, listener);
+                sessionFolders, listener, new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)));
     }
 
     private static final class RecordingListener implements ClaudeSessionListener {

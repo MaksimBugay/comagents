@@ -122,6 +122,13 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- agent-proxy's own MCP server (/mcp) with the ask_human tool of every Claude Code run -->
+    <dependency>
+      <groupId>io.micronaut.mcp</groupId>
+      <artifactId>micronaut-mcp-server-java-sdk</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
     <dependency>
       <groupId>io.github.maksimbugay</groupId>
       <artifactId>pushca-client</artifactId>

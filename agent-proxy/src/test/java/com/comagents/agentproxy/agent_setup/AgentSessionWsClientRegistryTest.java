@@ -205,6 +205,17 @@ class AgentSessionWsClientRegistryTest {
         assertTrue(connection.closed);
     }
 
+    @Test
+    void sendsMessagesToTheSessionChat() {
+        assertFalse(registry.sendMessage(sessionId, "Question: which branch?"), "no chat yet");
+        registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks");
+
+        assertTrue(registry.sendMessage(sessionId, "Question: which branch?"));
+
+        await().atMost(WAIT).until(() -> onlyConnection().messages.size() == 1);
+        assertEquals("Question: which branch?", onlyConnection().messages.getFirst());
+    }
+
     private FakeConnection onlyConnection() {
         assertEquals(1, connector.connections.size());
         return connector.connections.getFirst();

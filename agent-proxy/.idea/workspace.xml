@@ -5,23 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="private channel logs">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentSessionChatListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/ArchivedSessionChats.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/LoggingAgentSessionChatListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeSessionOptions.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/ArchivedSessionChatsTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/RecordingChatListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/ExpertAnswers.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/AgentProxyMcpServer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/mcp/AgentSessionMcpContextExtractor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/mcp/AskExpertTool.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/ExpertAnswersTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/mcp/AskExpertToolTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/mcp/McpEndpointTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentSessionWsClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentSessionWsClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spec/claude_q_and_a.md" beforeDir="false" afterPath="$PROJECT_DIR$/spec/claude_q_and_a.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentSessionWsClientRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentSessionWsClientRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/PushcaConnector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/PushcaConnector.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/PushcaWebSocketConnector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/PushcaWebSocketConnector.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/LoggingAgentSessionChatListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/LoggingAgentSessionChatListener.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSession.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeSessionArchive.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeSessionArchive.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentSessionWsClientRegistryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentSessionWsClientRegistryTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentWithClaudeCodeSetupServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/ArchivedSessionChatsTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/ArchivedSessionChatsTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/FakePushcaConnector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/FakePushcaConnector.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistryTest.java" afterDir="false" />
     </list>

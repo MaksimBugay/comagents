@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup;
 
+import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.FakePushcaConnector.FakeConnection;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionArchive;
@@ -39,14 +40,15 @@ class ArchivedSessionChatsTest {
         AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(connector, chatListener,
                 "https://chat.example/chat-room.html");
         ClaudeAgentSessionRegistry claudeRegistry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 2,
-                Duration.ofMinutes(1), Duration.ofMinutes(1), sessionFolders, wsClientRegistry);
+                Duration.ofMinutes(1), Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
+                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)));
         archivedSessionChats = new ArchivedSessionChats(claudeRegistry, wsClientRegistry);
     }
 
     @Test
     void reopensTheExistingChatOfEachArchivedSession() throws IOException {
         UUID archived = UUID.randomUUID();
-        writeArchive(archived, "MBugai");
+        writeArchive(archived);
         // a session that was not archived (e.g. running when agent-proxy stopped) gets no chat back
         Files.createDirectories(sessionFolders.agentFolder(UUID.randomUUID(), AiAgent.CODE_REVIEW));
 
@@ -63,17 +65,18 @@ class ArchivedSessionChatsTest {
 
     @Test
     void sessionsStayArchivedWhenPushcaIsUnavailable() throws IOException {
-        writeArchive(UUID.randomUUID(), "MBugai");
+        writeArchive(UUID.randomUUID());
         connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
 
         assertEquals(0, archivedSessionChats.reopenAll());
     }
 
-    private void writeArchive(UUID sessionId, String actorAccountId) throws IOException {
+    // archived by actor MBugai
+    private void writeArchive(UUID sessionId) throws IOException {
         Path agentFolder = Files.createDirectories(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
         Instant now = Instant.now();
         ClaudeSessionArchive archive = new ClaudeSessionArchive(sessionId, AiAgent.CODE_REVIEW, agentFolder.toString(),
-                AgentSessionState.WAITING, now, now, now, null, false, actorAccountId);
+                AgentSessionState.WAITING, now, now, now, null, false, "MBugai");
         Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), ObjectMapper.getDefault().writeValueAsBytes(archive));
     }
 }

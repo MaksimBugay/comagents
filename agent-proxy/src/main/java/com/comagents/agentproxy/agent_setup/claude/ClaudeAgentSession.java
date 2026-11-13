@@ -3,9 +3,13 @@ package com.comagents.agentproxy.agent_setup.claude;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +21,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /** One headless Claude Code run ({@code claude -p}) and its state. */
 public final class ClaudeAgentSession {
 
+    private static final SecureRandom TOKEN_SOURCE = new SecureRandom();
+
     private final UUID sessionId;
     private final AiAgent agent;
     private final Path workingDirectory;
@@ -24,6 +30,8 @@ public final class ClaudeAgentSession {
     private final Path responseFile;
     private final boolean resumed;
     private final ClaudeSessionOptions options;
+    // the run's secret for agent-proxy's MCP server: only this run's Claude Code knows it (--mcp-config)
+    private final String mcpToken = newToken();
     // the last line reported for this session; written and read by the output thread only
     private String lastReportedOutput;
     private final Instant startedAt = Instant.now();
@@ -84,6 +92,22 @@ public final class ClaudeAgentSession {
 
     public ClaudeSessionOptions getOptions() {
         return options;
+    }
+
+    /** Whether {@code token} is this run's MCP token; compared in constant time. */
+    public boolean acceptsMcpToken(String token) {
+        return token != null && MessageDigest.isEqual(mcpToken.getBytes(StandardCharsets.UTF_8),
+                token.getBytes(StandardCharsets.UTF_8));
+    }
+
+    String mcpToken() {
+        return mcpToken;
+    }
+
+    private static String newToken() {
+        byte[] token = new byte[32];
+        TOKEN_SOURCE.nextBytes(token);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(token);
     }
 
     /** Remembers {@code output} as the session's last reported line; returns whether it repeats the one before. */

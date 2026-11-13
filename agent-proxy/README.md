@@ -40,6 +40,17 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
  "actorAccountId": "Maks", "loggingLevel": "INFO"}
 ```
 
+### Questions to the expert (`ask_expert`)
+
+agent-proxy runs its own MCP server on `/mcp` (stateless HTTP). Every Claude Code run gets it with `--mcp-config`
+(server `agentproxy`) and `mcp__agentproxy__ask_expert` pre-allowed. When the agent calls `ask_expert`, the question
+is posted to the session chat as `Question: …`, the session is `WAITING`, and the next message written in the chat
+is the tool's result. Without an answer within `AGENT_QUESTION_ANSWER_TIMEOUT`, or without a chat, the agent is
+told to go on with its best judgement (later replies answer nothing). One question per session at a time.
+
+Only the run itself can call the tool: its `--mcp-config` carries the session id and a random per-run token
+(`X-Agent-Session-Id`, `X-Agent-Session-Token`), and other calls get an error result.
+
 ## Build & run
 
 ```bash
@@ -80,4 +91,6 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `PUSHCA_API_URL`              | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |
 | `PUSHCA_CHAT_URL`             | `https://secure.fileshare.ovh/chat-room.html` | Chat page; each new session chat is logged with its join link (`pushca.chat-url`) |
 | `PUSHCA_CONNECT_TIMEOUT`      | `10s`        | How long signing in, opening the socket and waiting for the server to accept commands may each take (`pushca.connect-timeout`) |
+| `AGENT_PROXY_MCP_URL`         | `http://127.0.0.1:8080/mcp` | Where Claude Code reaches agent-proxy's MCP server (`agent-proxy.mcp-url`); change it with the port |
+| `AGENT_QUESTION_ANSWER_TIMEOUT` | `4m`       | How long `ask_expert` waits for an answer; below 5 min, after which Claude Code aborts the call (`agent-question.answer-timeout`) |
 | `AGENT_PROXY_SESSIONS_DIR`    | `/var/lib/agent-proxy/sessions` | One folder per session (`agent-proxy.sessions-dir`); put it on a persistent volume |

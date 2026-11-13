@@ -23,7 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Pushca clients of agent sessions, one per session. Each client signs in as the agent
  * ({@code <agent name>@comagents.com}, the session id as device id) and mirrors the session's output into the
  * session's own close private chat {@code <agent name>_session_<session id>}, whose only member is the actor who
- * started the session. Clients and chats are removed together with the session's files.
+ * started the session. What people write there is logged and passed to the {@link AgentSessionChatListener}. Clients
+ * and chats are removed together with the session's files.
  */
 @Singleton
 public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
@@ -103,6 +104,20 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
         Optional.ofNullable(clients.remove(sessionId)).ifPresent(AgentSessionWsClient::removeChannelAndClose);
     }
 
+    /**
+     * Posts {@code text} to the session's chat, after everything posted before it.
+     *
+     * @return whether the session has a chat; without one nobody reads the text
+     */
+    public boolean sendMessage(UUID sessionId, String text) {
+        AgentSessionWsClient client = clients.get(sessionId);
+        if (client == null) {
+            return false;
+        }
+        client.send(text);
+        return true;
+    }
+
     @Override
     public void onOutput(UUID sessionId, String output) {
         Optional.ofNullable(clients.get(sessionId)).ifPresent(client -> client.send(output));
@@ -136,6 +151,11 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
         return url.append("&avatar=human-manager&workspaceId=").append(encode(WORKSPACE_ID)).toString();
     }
 
+    private void onChatMessage(UUID sessionId, AiAgent agent, String senderAccountId, String text) {
+        LOG.info("[{} {}] chat message from {}: {}", agent.getAgentName(), sessionId, senderAccountId, text);
+        chatListener.onChatMessage(sessionId, agent, senderAccountId, text);
+    }
+
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
@@ -147,6 +167,6 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
                 : new ClientFilter(WORKSPACE_ID, actorAccountId, null, APPLICATION_ID);
         String channelName = agent.getAgentName() + "_session_" + sessionId;
         return new AgentSessionWsClient(sessionId, agent, client, channelName, actor,
-                joinUrl(chatPageUrl, channelName, actorAccountId), chatListener);
+                joinUrl(chatPageUrl, channelName, actorAccountId), this::onChatMessage);
     }
 }

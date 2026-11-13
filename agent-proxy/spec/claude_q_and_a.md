@@ -1,7 +1,11 @@
 # Claude Code sessions with remote Q&A
 
 Status: running Claude Code headless (sections 1–2), session status and response, archive and resume are
-implemented (`ClaudeAgentSessionRegistry`); Pushca and the Q&A parts (sections 3–6) are design only.
+implemented (`ClaudeAgentSessionRegistry`). The Pushca session chat is implemented (`AgentSessionWsClientRegistry`,
+one close private chat per session instead of `HumanChannel`). Section 4: the quick path only (`AskExpertTool`,
+`ExpertAnswers`; the answer is the next chat message, window `agent-question.answer-timeout`, 4 min); after the
+window the agent is told to go on without an answer: no deferred questions, resume with the answer or answer
+endpoint yet. Sections 5–6 are design only.
 
 agent-proxy prepares a session folder (`POST /{agentName}/start`: clone repo, copy agent files), then runs
 Claude Code headless in it. While Claude works, a human admin follows its output and answers its questions
@@ -26,7 +30,7 @@ admin ◄──── Pushca ────► HumanChannel (agent-proxy)
                            ▲   ▲            │
             progress events│   │questions,  │ new instructions
                            │   │approvals   ▼
-  ClaudeAgentSessionRegistry  MCP server /mcp ◄── tool calls (HTTP): ask_human, approve
+  ClaudeAgentSessionRegistry  MCP server /mcp ◄── tool calls (HTTP): ask_expert, approve
                    │    ▲                                │
        starts /    │    │ stream-json (stdout)           │
        resumes     ▼    │                                │
@@ -60,12 +64,12 @@ claude -p "<kickOffPrompt>" \
   --output-format stream-json --verbose \
   --disallowedTools AskUserQuestion \
   [--model <model>] [--effort <effort>] \
-  --allowedTools <agent.json allowedTools…> mcp__agentproxy__ask_human \
+  --allowedTools <agent.json allowedTools…> mcp__agentproxy__ask_expert \
   --mcp-config '<agent-proxy MCP server, section 4>' \
   --permission-prompt-tool mcp__agentproxy__approve
 ```
 
-Implemented today: everything except the last three lines (`mcp__agentproxy__ask_human`, `--mcp-config`,
+Implemented today: everything except the last three lines (`mcp__agentproxy__ask_expert`, `--mcp-config`,
 `--permission-prompt-tool`), which belong to sections 4–5.
 
 Resumed runs (`resume` after `archive`, the long path of section 4, section 6) use `--resume <sessionId>` instead
@@ -137,7 +141,7 @@ text, never prints tool results, and passes non-JSON lines (stderr warnings) thr
 [code_review 3f2b…] init: model=…, tools=24, mcp=[agentproxy]
 [code_review 3f2b…] tool: Read src/main/java/…/OrderService.java
 [code_review 3f2b…] tool: Bash ./mvnw -B -q test
-[code_review 3f2b…] ask_human: Should generated sources under target/ be reviewed?
+[code_review 3f2b…] ask_expert: Should generated sources under target/ be reviewed?
 [code_review 3f2b…] done: success, 42 turns, $0.87, 6m12s
 ```
 
@@ -192,9 +196,9 @@ Answers and approvals steer the agent, so both who connects and who may answer m
 - **agent-proxy's own Pushca credentials** (account id and secret) come from the environment, like the GitHub token
   and the API key: a Kubernetes Secret (`agent-proxy-secrets`), never a file.
 
-## 4. Claude asks the admin: the `ask_human` MCP tool
+## 4. Claude asks the admin: the `ask_expert` MCP tool
 
-agent-proxy runs its own MCP server with an `ask_human(question)` tool. An answer can come back two ways,
+agent-proxy runs its own MCP server with an `ask_expert(question)` tool. An answer can come back two ways,
 depending on how fast the admin is:
 
 - **Quick answer:** the tool call waits up to `agent-question.quick-answer-timeout` (e.g. 3 min). An answer in
@@ -208,7 +212,7 @@ it, and an agent-proxy or pod restart would lose the call and the answer.
 
 ### Flow
 
-1. **Claude calls `ask_human(question)`.** agent-proxy records the question and persists it with the session
+1. **Claude calls `ask_expert(question)`.** agent-proxy records the question and persists it with the session
    right away (`session-state.json`, so it survives a restart). The session becomes `WAITING`; the process is
    still alive (`markWaiting`). The call blocks up to the quick-answer window.
 2. **Quick path: the answer arrives in the window.** The tool returns the answer, the session goes back to
@@ -226,8 +230,8 @@ The tool call always gets a result before the session is archived, so the conver
 unanswered tool call, and the answer arrives as an ordinary new user message.
 
 ```java
-@Tool(name = "ask_human", description = "Ask the human operator a question ...")
-String askHuman(@ToolArg(name = "question") String question, McpTransportContext context) {
+@Tool(name = "ask_expert", description = "Ask the human operator a question ...")
+String askExpert(@ToolArg(name = "question") String question, McpTransportContext context) {
     ClaudeAgentSession session = caller(context);               // session id + token headers, see "Wiring"
     PendingQuestion asked = questions.ask(session, question);   // persisted with the session
     try (var _ = registry.markWaiting(session.getSessionId())) {
@@ -307,9 +311,9 @@ agent-proxy adds its server on the command line, next to whatever MCP servers th
 ```
 
 - `--mcp-config` takes this as an inline string (CLI help: "Load MCP servers from JSON files or strings").
-- `--allowedTools` gets `mcp__agentproxy__ask_human` appended to the agent's own `allowedTools`: in headless
+- `--allowedTools` gets `mcp__agentproxy__ask_expert` appended to the agent's own `allowedTools`: in headless
   mode an MCP tool must be pre-allowed.
-- `--disallowedTools AskUserQuestion` (already passed) keeps Claude on `ask_human`.
+- `--disallowedTools AskUserQuestion` (already passed) keeps Claude on `ask_expert`.
 - The token is random per run; the tool accepts a call only if it matches the running session (constant-time
   comparison).
 
@@ -365,7 +369,7 @@ claude -p "<instruction>" --resume <sessionId> --output-format stream-json --ver
   docs don't specify the stdin message format or an interrupt message for the CLI (only through the Agent
   SDK). Building on undocumented behaviour is not acceptable.
 - **Agent SDK (TypeScript/Python) sidecar**: documented and supports `interrupt()`, but adds a Node or
-  Python process to a Java service for no gain over resume-based runs plus `ask_human`.
+  Python process to a Java service for no gain over resume-based runs plus `ask_expert`.
 
 ## 7. Security
 
@@ -388,7 +392,7 @@ claude -p "<instruction>" --resume <sessionId> --output-format stream-json --ver
    timeout, concurrency cap, transcript file, status and response endpoints, 202 from `start`, archive and resume.
 2. Done: stream-json summaries into the logs.
 3. `HumanChannel` interface with an in-memory fake; `publish` wired to the runner.
-4. MCP server with `ask_human` (Micronaut MCP), per-run `--mcp-config`, quick-answer window, deferred
+4. MCP server with `ask_expert` (Micronaut MCP), per-run `--mcp-config`, quick-answer window, deferred
    questions with archive and resume-with-answer, answer endpoint, answer TTL.
 5. `PushcaHumanChannel`.
 6. `approve` tool and `--permission-prompt-tool`.

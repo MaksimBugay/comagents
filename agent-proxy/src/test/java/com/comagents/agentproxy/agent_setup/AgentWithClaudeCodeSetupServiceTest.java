@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup;
 
+import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
@@ -44,7 +45,8 @@ class AgentWithClaudeCodeSetupServiceTest {
                 new RecordingChatListener(),
                 "https://chat.example/chat-room.html");
         registry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1),
-                Duration.ofMinutes(1), sessionFolders, wsClientRegistry);
+                Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
+                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)));
         setupService = new AgentWithClaudeCodeSetupService(
                 new VcsGithubService(new AgentProxyConf("https://github.com/example/comagents.git", "token", "key",
                         "https://pushca.example", "pushca-key"), null),
