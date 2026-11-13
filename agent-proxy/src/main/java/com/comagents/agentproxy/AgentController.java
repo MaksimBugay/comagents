@@ -60,19 +60,21 @@ public class AgentController {
                 startAgentRequest.agent(),
                 new AiAgentAttributes(
                         startAgentRequest.sessionId(),
-                        startAgentRequest.cloneSourceUrl()
+                        startAgentRequest.cloneSourceUrl(),
+                        startAgentRequest.actorAccountId(),
+                        startAgentRequest.loggingLevel()
                 )
         );
         return HttpResponse.accepted().body(new AgentInfo(startAgentRequest.agent().getAgentName(), applicationName, version, instance));
     }
 
     @Error(exception = ClaudeSessionLimitException.class)
-    public HttpResponse<JsonError> sessionLimitReached(HttpRequest<?> request, ClaudeSessionLimitException e) {
+    public HttpResponse<JsonError> sessionLimitReached(HttpRequest<?> ignoredRequest, ClaudeSessionLimitException e) {
         return HttpResponse.<JsonError>status(HttpStatus.TOO_MANY_REQUESTS).body(new JsonError(e.getMessage()));
     }
 
     @Error(exception = ClaudeSessionExistsException.class)
-    public HttpResponse<JsonError> sessionExists(HttpRequest<?> request, ClaudeSessionExistsException e) {
+    public HttpResponse<JsonError> sessionExists(HttpRequest<?> ignoredRequest, ClaudeSessionExistsException e) {
         return HttpResponse.<JsonError>status(HttpStatus.CONFLICT).body(new JsonError(e.getMessage()));
     }
 

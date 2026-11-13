@@ -115,7 +115,8 @@ class AgentFilesTest {
         var request = new StartAgentRequest(
                 UUID.randomUUID(),
                 AiAgent.CODE_REVIEW,
-                "https://github.com/MaksimBugay/dynamic-captcha.git"
+                "https://github.com/MaksimBugay/dynamic-captcha.git",
+                "Maks"
         );
         ObjectMapper objectMapper = ObjectMapper.getDefault();
 

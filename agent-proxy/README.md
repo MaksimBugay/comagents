@@ -18,6 +18,21 @@ $ curl localhost:8080/code_review/info
 {"name":"code_review","proxy":"agent-proxy","version":"0.1","instance":"agent-proxy-7d9f-x2k"}
 ```
 
+### Session chat
+
+Every session mirrors its output into its own Pushca chat: a close private channel with id and name
+`<agent name>_session_<session id>` in workspace `comagents-secure-chat` (application `CHAT_ROOM`), owned by the
+agent (account `<agent name>@comagents.com`, the session id as device id). Its only member is the start request's
+`actorAccountId`, on any of their devices. `loggingLevel` `INFO` (default) leaves out thinking and thinking-token
+progress, `DEBUG` shows them too, in the chat and in agent-proxy's log. The chat is removed together with the
+session's files. When the agent gives a final answer, the full answer is the chat's last message. When Pushca
+is unavailable, the session runs without a chat.
+
+```json
+{"sessionId": "…", "agent": "CODE_REVIEW", "cloneSourceUrl": "https://github.com/<org>/<repo>.git",
+ "actorAccountId": "Maks", "loggingLevel": "INFO"}
+```
+
 ## Build & run
 
 ```bash
@@ -30,11 +45,13 @@ docker run -d --name agent-proxy -p 8080:8080 \
   -e CLONE_COMAGENTS_SOURCES_URL=https://github.com/<org>/<repo>.git \
   -e SOURCES_REPO_ACCESS_TOKEN \
   -e ANTHROPIC_API_KEY \
+  -e PUSHCA_API_KEY \
   agent-proxy:0.1                    # token and key taken from the host env, not the command line
 
 kubectl create secret generic agent-proxy-secrets \
   --from-literal=sources-repo-access-token="$SOURCES_REPO_ACCESS_TOKEN" \
-  --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY"
+  --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY" \
+  --from-literal=pushca-api-key="$PUSHCA_API_KEY"
 kubectl apply -f k8s/deployment.yaml   # one replica; sessions on a PersistentVolumeClaim, /tmp on emptyDir
 ```
 
@@ -52,4 +69,8 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`) |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |
 | `ANTHROPIC_API_KEY`           | — (required) | Claude API key for headless Claude Code (`anthropic.api-key`) |
+| `PUSHCA_API_KEY`              | — (required) | API key of the organization registered in Pushca (`pushca.api-key`) |
+| `PUSHCA_API_URL`              | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |
+| `PUSHCA_CHAT_URL`             | `https://secure.fileshare.ovh/chat-room.html` | Chat page; each new session chat is logged with its join link (`pushca.chat-url`) |
+| `PUSHCA_CONNECT_TIMEOUT`      | `10s`        | How long signing in, opening the socket and waiting for the server to accept commands may each take (`pushca.connect-timeout`) |
 | `AGENT_PROXY_SESSIONS_DIR`    | `/var/lib/agent-proxy/sessions` | One folder per session (`agent-proxy.sessions-dir`); put it on a persistent volume |

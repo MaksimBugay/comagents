@@ -24,8 +24,11 @@
     <micronaut.runtime>netty</micronaut.runtime>
     <exec.mainClass>com.comagents.agentproxy.Application</exec.mainClass>
 
+    <pushca-client.version>2.0.1</pushca-client.version>
+
     <!-- security overrides of micronaut-platform 5.2.5 BOM versions; drop once the platform catches up -->
-    <jackson-core.version>3.2.4</jackson-core.version> <!-- CVE-2026-110729 -->
+    <!-- all Jackson 3 modules on one version: core CVE-2026-110729, databind CVE-2026-110879 (via pushca-client) -->
+    <jackson.version>3.2.4</jackson.version>
     <logback.version>1.6.6</logback.version>           <!-- CVE-2026-19880 (fixed in 1.6.3+ only) -->
     <slf4j.version>2.0.20</slf4j.version>
     <reactor-core.version>3.8.8</reactor-core.version>
@@ -36,7 +39,17 @@
       <dependency>
         <groupId>tools.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
-        <version>${jackson-core.version}</version>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>tools.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>tools.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-xml</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>ch.qos.logback</groupId>
@@ -107,6 +120,12 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.github.maksimbugay</groupId>
+      <artifactId>pushca-client</artifactId>
+      <version>${pushca-client.version}</version>
     </dependency>
 
     <dependency>

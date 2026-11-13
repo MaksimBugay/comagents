@@ -37,17 +37,23 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
 
     private final SessionFolders sessionFolders;
 
+    private final AgentSessionWsClientRegistry agentSessionWsClientRegistry;
+
     public AgentWithClaudeCodeSetupService(VcsService vcsService, ClaudeAgentSessionRegistry claudeAgentSessionRegistry,
-                                           SessionFolders sessionFolders) {
+                                           SessionFolders sessionFolders,
+                                           AgentSessionWsClientRegistry agentSessionWsClientRegistry) {
         this.vcsService = vcsService;
         this.claudeAgentSessionRegistry = claudeAgentSessionRegistry;
         this.sessionFolders = sessionFolders;
+        this.agentSessionWsClientRegistry = agentSessionWsClientRegistry;
     }
 
 
     /**
      * Reserves a session slot first, so a busy service or a session id already in use (in memory or on disk) is
-     * rejected before any download; a failed setup frees the slot and leaves no half-prepared session folder behind.
+     * rejected before any download; a failed setup frees the slot and leaves no half-prepared session folder or
+     * chat behind. The session's Pushca chat is opened last, right before the run starts, so it gets all output;
+     * without Pushca the session runs without a chat.
      */
     @Override
     public void setup(AiAgent agent, AiAgentAttributes attributes) {
@@ -61,10 +67,12 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                     AgentFiles.copyInto(workingDirectory, comAgentsSources, agent, CLAUDE_CODE_FILES);
                     AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
                 });
-                slot.start(agent, workingDirectory);
+                agentSessionWsClientRegistry.openConnection(sessionId, agent, attributes.actorAccountId());
+                slot.start(agent, workingDirectory, attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG);
             } catch (RuntimeException e) {
                 // the folder did not exist before and the slot holds the id, so it belongs to this failed setup
                 FileTrees.deleteIfExists(sessionFolders.of(sessionId));
+                agentSessionWsClientRegistry.removeConnection(sessionId);
                 throw e;
             }
         }

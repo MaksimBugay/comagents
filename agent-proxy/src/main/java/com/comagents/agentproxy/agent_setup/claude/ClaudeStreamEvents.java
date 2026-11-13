@@ -18,6 +18,9 @@ final class ClaudeStreamEvents {
     // the input field that best identifies what a tool call works on, in order of preference
     private static final List<String> TOOL_TARGET_FIELDS = List.of("file_path", "path", "command", "pattern", "url", "query", "description");
 
+    private static final String THINKING = "thinking";
+    private static final String THINKING_TOKENS = "thinking_tokens";
+
     private ClaudeStreamEvents() {
     }
 
@@ -31,6 +34,27 @@ final class ClaudeStreamEvents {
             case "result" -> Optional.of(summarizeResult(event));
             default -> Optional.of("event: " + (type == null ? "unknown" : type));
         };
+    }
+
+    /** Thinking and thinking-token progress: detail for verbose output only, and by far the most frequent events. */
+    static boolean isVerbose(JsonNode event) {
+        String type = text(event, "type");
+        if ("system".equals(type)) {
+            return THINKING_TOKENS.equals(text(event, "subtype"));
+        }
+        if (!"assistant".equals(type)) {
+            return false;
+        }
+        JsonNode content = content(event);
+        if (content == null || content.size() == 0) {
+            return false;
+        }
+        for (JsonNode block : content.values()) {
+            if (!THINKING.equals(text(block, "type"))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     static boolean isResult(JsonNode event) {
@@ -63,22 +87,34 @@ final class ClaudeStreamEvents {
                 + ", mcp=" + mcpServerNames(event.get("mcp_servers"));
     }
 
+    // thinking is summarised only when the event holds nothing else (see isVerbose), so it never mixes into a
+    // summary that is shown without verbose output
     private static Optional<String> summarizeAssistant(JsonNode event) {
-        JsonNode message = event.get("message");
-        JsonNode content = message == null ? null : message.get("content");
-        if (content == null || !content.isArray()) {
+        JsonNode content = content(event);
+        if (content == null) {
             return Optional.empty();
         }
         List<String> parts = new ArrayList<>();
+        List<String> thinking = new ArrayList<>();
         for (JsonNode block : content.values()) {
             String blockType = text(block, "type");
             if ("text".equals(blockType)) {
                 parts.add("text: " + truncate(String.valueOf(text(block, "text"))));
             } else if ("tool_use".equals(blockType)) {
                 parts.add("tool: " + text(block, "name") + toolTarget(block.get("input")));
+            } else if (THINKING.equals(blockType)) {
+                thinking.add("thinking: " + truncate(String.valueOf(text(block, THINKING))));
             }
         }
-        return parts.isEmpty() ? Optional.empty() : Optional.of(truncate(String.join(" | ", parts)));
+        List<String> shown = parts.isEmpty() ? thinking : parts;
+        return shown.isEmpty() ? Optional.empty() : Optional.of(truncate(String.join(" | ", shown)));
+    }
+
+    // the content blocks of an assistant message
+    private static JsonNode content(JsonNode event) {
+        JsonNode message = event.get("message");
+        JsonNode content = message == null ? null : message.get("content");
+        return content != null && content.isArray() ? content : null;
     }
 
     private static String summarizeResult(JsonNode event) {

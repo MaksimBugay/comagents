@@ -40,18 +40,21 @@ class AgentWithClaudeCodeSetupServiceTest {
     void createServices() {
         sessionFolders = new SessionFolders(sessionsRoot.toString());
         // one slot, so a freed or held slot is observable with a second reservation
+        AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(new FakePushcaConnector(),
+                "https://chat.example/chat-room.html");
         registry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1),
-                Duration.ofMinutes(1), sessionFolders);
+                Duration.ofMinutes(1), sessionFolders, wsClientRegistry);
         setupService = new AgentWithClaudeCodeSetupService(
-                new VcsGithubService(new AgentProxyConf("https://github.com/example/comagents.git", "token", "key"), null),
-                registry, sessionFolders);
+                new VcsGithubService(new AgentProxyConf("https://github.com/example/comagents.git", "token", "key",
+                        "https://pushca.example", "pushca-key"), null),
+                registry, sessionFolders, wsClientRegistry);
     }
 
     @Test
     void failedSetupFreesSlotAndDeletesSessionFolder() {
         // not a GitHub URL: the clone step fails after the slot was reserved
         assertThrows(IllegalArgumentException.class,
-                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://gitlab.com/a/b")));
+                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://gitlab.com/a/b", "Maks", null)));
 
         assertFalse(Files.exists(sessionFolders.of(sessionId)));
         assertSlotFreed();
@@ -65,7 +68,7 @@ class AgentWithClaudeCodeSetupServiceTest {
         Files.writeString(earlierSessionsFile, "{}");
 
         ClaudeSessionExistsException e = assertThrows(ClaudeSessionExistsException.class,
-                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://gitlab.com/a/b")));
+                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://gitlab.com/a/b", "Maks", null)));
 
         assertTrue(e.getMessage().contains(sessionId.toString()), e.getMessage());
         assertTrue(Files.exists(earlierSessionsFile), "the earlier session's data is not deleted");
@@ -76,7 +79,7 @@ class AgentWithClaudeCodeSetupServiceTest {
     void busyServiceRejectsBeforeAnySetupWork() {
         try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(UUID.randomUUID())) {
             assertThrows(ClaudeSessionLimitException.class,
-                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://github.com/example/repo.git")));
+                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, "https://github.com/example/repo.git", "Maks", null)));
         }
 
         assertFalse(Files.exists(sessionFolders.of(sessionId)), "nothing was downloaded or created");
@@ -89,7 +92,7 @@ class AgentWithClaudeCodeSetupServiceTest {
 
         try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(sessionId)) {
             assertThrows(ClaudeSessionExistsException.class,
-                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, null)));
+                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, null, "Maks", null)));
         }
 
         assertTrue(Files.exists(otherSetupsFile), "the folder belongs to the setup that holds the id");

@@ -17,11 +17,12 @@ import java.util.UUID;
  * @param stateBeforeArchive the state when the session was archived: {@code RUNNING}, {@code WAITING}, or a final
  *                           state if the run had already ended
  * @param resultText         the agent's final answer, if it gave one before being archived
+ * @param verboseOutput      whether the session shows thinking; a resumed run keeps showing it
  */
 @Serdeable
 public record ClaudeSessionArchive(UUID sessionId, AiAgent agent, String workingDirectory,
                                    AgentSessionState stateBeforeArchive, Instant startedAt, Instant lastOutputAt,
-                                   Instant archivedAt, @Nullable String resultText) {
+                                   Instant archivedAt, @Nullable String resultText, boolean verboseOutput) {
 
     public static final String STATE_FILE = "session-state.json";
 }

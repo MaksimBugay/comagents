@@ -23,6 +23,9 @@ public final class ClaudeAgentSession {
     private final Path transcriptFile;
     private final Path responseFile;
     private final boolean resumed;
+    private final boolean verboseOutput;
+    // the last line reported for this session; written and read by the output thread only
+    private String lastReportedOutput;
     private final Instant startedAt = Instant.now();
 
     private final AtomicReference<AgentSessionState> state = new AtomicReference<>(AgentSessionState.RUNNING);
@@ -37,8 +40,9 @@ public final class ClaudeAgentSession {
     private int pendingWaits;
 
     ClaudeAgentSession(UUID sessionId, AiAgent agent, Path workingDirectory, Path transcriptFile, Path responseFile,
-                       boolean resumed) {
+                       boolean resumed, boolean verboseOutput) {
         this.resumed = resumed;
+        this.verboseOutput = verboseOutput;
         this.sessionId = sessionId;
         this.agent = agent;
         this.workingDirectory = workingDirectory;
@@ -71,6 +75,18 @@ public final class ClaudeAgentSession {
     /** Whether this run continues an archived session ({@code resume}) rather than starting a new one. */
     public boolean isResumed() {
         return resumed;
+    }
+
+    /** Whether thinking and thinking-token progress are shown (logged at INFO and reported), not only logged at DEBUG. */
+    public boolean isVerboseOutput() {
+        return verboseOutput;
+    }
+
+    /** Remembers {@code output} as the session's last reported line; returns whether it repeats the one before. */
+    boolean reportOutput(String output) {
+        boolean repeated = output.equals(lastReportedOutput);
+        lastReportedOutput = output;
+        return repeated;
     }
 
     public Instant getStartedAt() {

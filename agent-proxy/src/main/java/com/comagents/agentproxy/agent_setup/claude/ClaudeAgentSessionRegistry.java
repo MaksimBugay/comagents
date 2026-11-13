@@ -64,6 +64,7 @@ public class ClaudeAgentSessionRegistry {
     private final Duration sessionTimeout;
     private final Duration idleTimeout;
     private final SessionFolders sessionFolders;
+    private final ClaudeSessionListener sessionListener;
     private final Semaphore sessionSlots;
     private final Map<UUID, ClaudeAgentSession> sessions = new ConcurrentHashMap<>();
     // reserved, not yet started: a session id is either here or in sessions, never both
@@ -74,8 +75,10 @@ public class ClaudeAgentSessionRegistry {
                                       @Value("${claude.session.max-concurrent:2}") int maxConcurrentSessions,
                                       @Value("${claude.session.timeout:60m}") Duration sessionTimeout,
                                       @Value("${claude.session.idle-timeout:10m}") Duration idleTimeout,
-                                      SessionFolders sessionFolders) {
+                                      SessionFolders sessionFolders,
+                                      ClaudeSessionListener sessionListener) {
         this.sessionFolders = sessionFolders;
+        this.sessionListener = sessionListener;
         this.jsonMapper = jsonMapper;
         this.claudeExecutable = claudeExecutable;
         this.maxConcurrentSessions = maxConcurrentSessions;
@@ -135,14 +138,22 @@ public class ClaudeAgentSessionRegistry {
          *                               stays reserved until {@link #close}
          */
         public ClaudeAgentSession start(AiAgent agent, Path workingDirectory) {
-            return startRun(agent, workingDirectory, false);
+            return start(agent, workingDirectory, false);
         }
 
-        private ClaudeAgentSession startRun(AiAgent agent, Path workingDirectory, boolean resume) {
+        /**
+         * {@link #start(AiAgent, Path)}, showing thinking and thinking-token progress too when {@code verboseOutput}
+         * (see {@link ClaudeAgentSession#isVerboseOutput}).
+         */
+        public ClaudeAgentSession start(AiAgent agent, Path workingDirectory, boolean verboseOutput) {
+            return startRun(agent, workingDirectory, false, verboseOutput);
+        }
+
+        private ClaudeAgentSession startRun(AiAgent agent, Path workingDirectory, boolean resume, boolean verboseOutput) {
             if (started || closed) {
                 throw new IllegalStateException("Slot for session " + sessionId + " was already " + (started ? "started" : "closed"));
             }
-            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume);
+            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume, verboseOutput);
             sessions.put(sessionId, session);
             reservedSessionIds.remove(sessionId);
             started = true;
@@ -163,12 +174,14 @@ public class ClaudeAgentSessionRegistry {
         }
     }
 
-    private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory, boolean resume) {
+    private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory, boolean resume,
+                                      boolean verboseOutput) {
         Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
         List<String> command = command(readConfig(agent, agentFolder), sessionId, resume);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
-                agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume);
+                agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume,
+                verboseOutput);
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
@@ -252,6 +265,7 @@ public class ClaudeAgentSessionRegistry {
         }
         FileTrees.deleteIfExists(sessionFolders.of(sessionId));
         LOG.info("[{}] session data deleted", sessionId);
+        sessionListener.onSessionDataDeleted(sessionId);
     }
 
     /**
@@ -306,7 +320,8 @@ public class ClaudeAgentSessionRegistry {
             }
         }
         try (SessionSlot slot = reserve(sessionId)) {
-            ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true);
+            ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true,
+                    archive.verboseOutput());
             deleteArchive(stateFile, sessionId);
             return resumed;
         } catch (RuntimeException e) {
@@ -351,7 +366,7 @@ public class ClaudeAgentSessionRegistry {
     private void saveState(ClaudeAgentSession session, Path agentFolder) {
         ClaudeSessionArchive archive = new ClaudeSessionArchive(session.getSessionId(), session.getAgent(),
                 session.getWorkingDirectory().toString(), session.getState(), session.getStartedAt(),
-                session.getLastOutputAt(), Instant.now(), session.resultText().orElse(null));
+                session.getLastOutputAt(), Instant.now(), session.resultText().orElse(null), session.isVerboseOutput());
         try {
             Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), jsonMapper.writeValueAsBytes(archive));
         } catch (IOException e) {
@@ -429,19 +444,33 @@ public class ClaudeAgentSessionRegistry {
     }
 
     private void handleOutputLine(ClaudeAgentSession session, String line) {
-        String agentName = session.getAgent().getAgentName();
         Optional<JsonNode> parsed = parseEvent(line);
         if (parsed.isEmpty()) {
             // not an event: stderr is merged into the same stream (warnings, errors)
-            LOG.info("[{} {}] {}", agentName, session.getSessionId(), ClaudeStreamEvents.truncate(line));
+            reportOutput(session, ClaudeStreamEvents.truncate(line), false);
             return;
         }
         JsonNode event = parsed.get();
         ClaudeStreamEvents.summarize(event)
-                .ifPresent(summary -> LOG.info("[{} {}] {}", agentName, session.getSessionId(), summary));
+                .ifPresent(summary -> reportOutput(session, summary, ClaudeStreamEvents.isVerbose(event)));
         if (ClaudeStreamEvents.isResult(event)) {
             session.recordResult(ClaudeStreamEvents.resultText(event).orElse(null), ClaudeStreamEvents.isSuccessfulResult(event));
         }
+    }
+
+    // verbose output (thinking) is shown only by sessions started with verbose output; otherwise it is logged at
+    // DEBUG and not reported. Thinking-token progress arrives every few tokens as the same line ("system:
+    // thinking_tokens"): verbose output that repeats the previous line is dropped, so a run of it shows once.
+    private void reportOutput(ClaudeAgentSession session, String output, boolean verbose) {
+        if (session.reportOutput(output) && verbose) {
+            return;
+        }
+        if (verbose && !session.isVerboseOutput()) {
+            LOG.debug("[{} {}] {}", session.getAgent().getAgentName(), session.getSessionId(), output);
+            return;
+        }
+        LOG.info("[{} {}] {}", session.getAgent().getAgentName(), session.getSessionId(), output);
+        sessionListener.onOutput(session.getSessionId(), output);
     }
 
     // empty for lines that are not JSON, and for blank or "null" lines, which parse to no value
@@ -517,7 +546,10 @@ public class ClaudeAgentSessionRegistry {
         int exitCode = waitForExit(process, STOP_GRACE_PERIOD) ? process.exitValue() : forceStop(process);
         boolean succeeded = exitCode == 0 && session.isResultSuccessful();
         session.finish(succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
-        session.resultText().ifPresent(text -> writeResponse(session, text));
+        session.resultText().ifPresent(text -> {
+            writeResponse(session, text);
+            sessionListener.onResponse(sessionId, text);
+        });
         sessionSlots.release();
         session.markFinished();
         LOG.info("[{} {}] finished: {}, exit code {}", session.getAgent().getAgentName(), sessionId, session.getState(), exitCode);

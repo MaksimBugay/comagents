@@ -58,7 +58,8 @@ spec:
               value: https://github.com/MaksimBugay/comagents.git
             # kubectl create secret generic agent-proxy-secrets \
             #   --from-literal=sources-repo-access-token="$SOURCES_REPO_ACCESS_TOKEN" \
-            #   --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY"
+            #   --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY" \
+            #   --from-literal=pushca-api-key="$PUSHCA_API_KEY"
             - name: SOURCES_REPO_ACCESS_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -69,6 +70,11 @@ spec:
                 secretKeyRef:
                   name: agent-proxy-secrets
                   key: anthropic-api-key
+            - name: PUSHCA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-proxy-secrets
+                  key: pushca-api-key
             # memory below is sized for this many parallel Claude Code runs
             - name: CLAUDE_SESSION_MAX_CONCURRENT
               value: "2"

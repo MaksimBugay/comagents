@@ -35,6 +35,26 @@ class ClaudeStreamEventsTest {
     }
 
     @Test
+    void thinkingIsVerboseAndNeverMixedIntoOtherOutput() throws IOException {
+        JsonNode thinkingTokens = parse("""
+                {"type":"system","subtype":"thinking_tokens","estimated_tokens":6116,"estimated_tokens_delta":2}""");
+        JsonNode thinking = parse("""
+                {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"Check the\\npom first"}]}}""");
+        JsonNode thinkingAndToolCall = parse("""
+                {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"secret plan"},{"type":"tool_use","name":"Read","input":{"file_path":"pom.xml"}}]}}""");
+        JsonNode permissionDenied = parse("""
+                {"type":"system","subtype":"permission_denied"}""");
+
+        assertEquals(Optional.of("system: thinking_tokens"), ClaudeStreamEvents.summarize(thinkingTokens));
+        assertTrue(ClaudeStreamEvents.isVerbose(thinkingTokens));
+        assertEquals(Optional.of("thinking: Check the pom first"), ClaudeStreamEvents.summarize(thinking));
+        assertTrue(ClaudeStreamEvents.isVerbose(thinking));
+        assertEquals(Optional.of("tool: Read pom.xml"), ClaudeStreamEvents.summarize(thinkingAndToolCall));
+        assertFalse(ClaudeStreamEvents.isVerbose(thinkingAndToolCall));
+        assertFalse(ClaudeStreamEvents.isVerbose(permissionDenied));
+    }
+
+    @Test
     void summarizesAndReadsResult() throws IOException {
         JsonNode event = parse("""
                 {"type":"result","subtype":"success","is_error":false,"num_turns":42,"total_cost_usd":0.87,"duration_ms":372000,"result":"# Report"}""");

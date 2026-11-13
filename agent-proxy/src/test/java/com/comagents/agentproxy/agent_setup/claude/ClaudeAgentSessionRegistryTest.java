@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,6 +49,19 @@ class ClaudeAgentSessionRegistryTest {
             printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"num_turns":2,"result":"# Report\\n\\nAll good"}'
             """;
 
+    // thinking-token progress repeats: each run of it is reported once
+    private static final String THINKING_RUN = """
+            printf '%s\\n' '{"type":"system","subtype":"thinking_tokens","estimated_tokens":12}'
+            printf '%s\\n' '{"type":"system","subtype":"thinking_tokens","estimated_tokens":14}'
+            printf '%s\\n' '{"type":"system","subtype":"thinking_tokens","estimated_tokens":17}'
+            printf '%s\\n' '{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"Read the pom first"}]}}'
+            printf '%s\\n' '{"type":"system","subtype":"thinking_tokens","estimated_tokens":21}'
+            printf '%s\\n' '{"type":"system","subtype":"thinking_tokens","estimated_tokens":25}'
+            printf '%s\\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"pom.xml"}}]}}'
+            printf '%s\\n' 'a warning on stderr' >&2
+            printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"num_turns":1,"result":"done"}'
+            """;
+
     // first run: works until archived; resumed run (--resume): finishes with an answer
     private static final String INTERRUPTED_THEN_RESUMED = """
             printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
@@ -68,6 +82,7 @@ class ClaudeAgentSessionRegistryTest {
     Path sessionsRoot;
 
     private final List<UUID> sessionIds = new ArrayList<>();
+    private final RecordingListener listener = new RecordingListener();
     private SessionFolders sessionFolders;
     private ClaudeAgentSessionRegistry registry;
 
@@ -329,6 +344,59 @@ class ClaudeAgentSessionRegistryTest {
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory));
         assertTrue(e.getMessage().contains("agent.json"));
+    }
+
+    @Test
+    void reportsOutputToListenerWithoutThinking() throws Exception {
+        registry = registry(fakeClaude(THINKING_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        assertEquals(List.of(
+                new RecordingListener.Output(sessionId, "tool: Read pom.xml"),
+                new RecordingListener.Output(sessionId, "a warning on stderr"),
+                new RecordingListener.Output(sessionId, "done: success, 1 turns")
+        ), listener.outputs);
+        assertEquals(List.of(new RecordingListener.Output(sessionId, "done")), listener.responses);
+        assertTrue(listener.deleted.isEmpty());
+
+        registry.cleanAllSessionData(sessionId);
+
+        assertEquals(List.of(sessionId), listener.deleted);
+    }
+
+    @Test
+    void verboseSessionReportsThinkingToo() throws Exception {
+        registry = registry(fakeClaude(THINKING_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+
+        ClaudeAgentSession session;
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
+            session = slot.start(AiAgent.CODE_REVIEW, workingDirectory, true);
+        }
+        session.awaitFinished(WAIT);
+
+        assertTrue(session.isVerboseOutput());
+        assertEquals(List.of(
+                new RecordingListener.Output(sessionId, "system: thinking_tokens"),
+                new RecordingListener.Output(sessionId, "thinking: Read the pom first"),
+                new RecordingListener.Output(sessionId, "system: thinking_tokens"),
+                new RecordingListener.Output(sessionId, "tool: Read pom.xml"),
+                new RecordingListener.Output(sessionId, "a warning on stderr"),
+                new RecordingListener.Output(sessionId, "done: success, 1 turns")
+        ), listener.outputs);
+    }
+
+    @Test
+    void runWithoutResultReportsNoResponse() throws Exception {
+        registry = registry(fakeClaude("printf '%s\\n' 'crashed' >&2; exit 1"), 2, WAIT);
+        UUID sessionId = newSessionId();
+
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        assertEquals(List.of(new RecordingListener.Output(sessionId, "crashed")), listener.outputs);
+        assertTrue(listener.responses.isEmpty());
     }
 
     @Test
@@ -620,6 +688,31 @@ class ClaudeAgentSessionRegistryTest {
 
     private ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
         return new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), maxConcurrent, timeout, idleTimeout,
-                sessionFolders);
+                sessionFolders, listener);
+    }
+
+    private static final class RecordingListener implements ClaudeSessionListener {
+
+        record Output(UUID sessionId, String output) {
+        }
+
+        final List<Output> outputs = new CopyOnWriteArrayList<>();
+        final List<Output> responses = new CopyOnWriteArrayList<>();
+        final List<UUID> deleted = new CopyOnWriteArrayList<>();
+
+        @Override
+        public void onOutput(UUID sessionId, String output) {
+            outputs.add(new Output(sessionId, output));
+        }
+
+        @Override
+        public void onResponse(UUID sessionId, String response) {
+            responses.add(new Output(sessionId, response));
+        }
+
+        @Override
+        public void onSessionDataDeleted(UUID sessionId) {
+            deleted.add(sessionId);
+        }
     }
 }
