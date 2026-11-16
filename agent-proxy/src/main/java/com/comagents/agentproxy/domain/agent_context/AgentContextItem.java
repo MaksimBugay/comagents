@@ -31,7 +31,8 @@ public abstract sealed class AgentContextItem permits StringAgentContextItem, Fi
      */
     protected AgentContextItem(AgentContextItemType type, String name, String value) {
         this.type = Objects.requireNonNull(type, "type");
-        this.name = requireNotBlank(type, name, "name", name);
+        // surrounding whitespace is no part of a name: " focus" is "focus"
+        this.name = requireNotBlank(type, name, "name", name).strip();
         this.value = requireNotBlank(type, value, "value", name);
     }
 

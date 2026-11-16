@@ -5,11 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="Agent context was introduced">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/GithubRepositoryUrl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/GithubRepositoryUrl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/GithubRepositoryUrlTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/GithubRepositoryUrlTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContextItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContextItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/RequiredAgentContextItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/RequiredAgentContextItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextItemTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextItemTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tmp.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tmp.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

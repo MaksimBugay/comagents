@@ -22,6 +22,8 @@ public record RequiredAgentContextItem(@Nullable AgentContextItemType type, @Nul
         if (type == null && name == null) {
             throw new IllegalArgumentException("A required item needs a type, a name, or both");
         }
+        // like item names: surrounding whitespace is no part of the name
+        name = name == null ? null : name.strip();
     }
 
     public boolean matches(AgentContextItem item) {

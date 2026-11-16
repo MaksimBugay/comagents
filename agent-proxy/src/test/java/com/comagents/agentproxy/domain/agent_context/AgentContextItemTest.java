@@ -57,6 +57,16 @@ class AgentContextItemTest {
     }
 
     @Test
+    void namesAreTrimmed() {
+        StringAgentContextItem padded = new StringAgentContextItem("  focus \t", "security");
+
+        assertEquals("focus", padded.getName());
+        assertEquals(new StringAgentContextItem("focus", "other"), padded);
+        assertTrue(padded.isNamed("focus"));
+        assertTrue(new RequiredAgentContextItem(AgentContextItemType.STRING, " Focus ").matches(padded));
+    }
+
+    @Test
     void sameRepositoryNameUnderDifferentOwnersIsADifferentItem() {
         assertNotEquals(new GithubRepositoryAgentContextItem("https://github.com/acme/utils.git"),
                 new GithubRepositoryAgentContextItem("https://github.com/other/utils.git"));
