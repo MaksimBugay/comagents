@@ -7,6 +7,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionArchive;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,8 @@ class ArchivedSessionChatsTest {
                 "https://chat.example/chat-room.html");
         ClaudeAgentSessionRegistry claudeRegistry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 2,
                 Duration.ofMinutes(1), Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
-                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)));
+                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+                ApplicationEventPublisher.noOp());
         archivedSessionChats = new ArchivedSessionChats(claudeRegistry, wsClientRegistry);
     }
 

@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.agent_context.AgentContext;
@@ -121,6 +122,7 @@ class ClaudeAgentSessionRegistryTest {
 
     private final List<UUID> sessionIds = new ArrayList<>();
     private final RecordingListener listener = new RecordingListener();
+    private final List<AgentResponseReady> responsesReady = new CopyOnWriteArrayList<>();
     private SessionFolders sessionFolders;
     private ClaudeAgentSessionRegistry registry;
 
@@ -147,6 +149,7 @@ class ClaudeAgentSessionRegistryTest {
                 Files.readString(scripts.resolve("config-dir.txt")), "Claude Code's state is kept per session");
         assertEquals(sessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".json"), session.getResponseFile());
         assertEquals("# Report\n\nAll good", responseText(session.getResponseFile()));
+        assertEquals(List.of(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId)), responsesReady, "once it is on disk");
         assertEquals(6, Files.readAllLines(session.getTranscriptFile()).size());
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
         assertEquals(List.of("-p", KICK_OFF_PROMPT), args.subList(0, 2));
@@ -264,6 +267,7 @@ class ClaudeAgentSessionRegistryTest {
         assertEquals(Optional.of(AgentSessionState.FAILED), session.awaitFinished(WAIT));
         assertFalse(Files.exists(session.getResponseFile()));
         assertTrue(listener.responses.isEmpty());
+        assertTrue(responsesReady.isEmpty(), "no response, nothing to send");
     }
 
     @Test
@@ -1065,7 +1069,8 @@ class ClaudeAgentSessionRegistryTest {
 
     private ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
         return new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), maxConcurrent, timeout, idleTimeout,
-                sessionFolders, listener, new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)));
+                sessionFolders, listener, new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+                responsesReady::add);
     }
 
     private static final class RecordingListener implements ClaudeSessionListener {

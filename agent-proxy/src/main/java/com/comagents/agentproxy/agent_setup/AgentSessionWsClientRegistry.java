@@ -140,6 +140,26 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
         return true;
     }
 
+    /**
+     * Sends {@code message} from the session's client to the clients matching {@code receivers}.
+     *
+     * @return whether it was sent; not when the session has no client (no Pushca at its setup) or Pushca fails
+     */
+    public boolean broadcast(UUID sessionId, ClientFilter receivers, String message) {
+        AgentSessionWsClient client = clients.get(sessionId);
+        if (client == null) {
+            LOG.warn("[{}] no Pushca client, nothing sent to {}", sessionId, receivers.accountId);
+            return false;
+        }
+        try {
+            client.broadcast(receivers, message);
+            return true;
+        } catch (RuntimeException e) {
+            LOG.warn("[{}] cannot send to {}: {}", sessionId, receivers.accountId, e.getMessage());
+            return false;
+        }
+    }
+
     @Override
     public void onOutput(UUID sessionId, String output) {
         Optional.ofNullable(clients.get(sessionId)).ifPresent(client -> client.send(output));

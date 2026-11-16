@@ -9,7 +9,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 | GET    | `/{agentName}/info`   | Info about the given agent      |
 | POST   | `/{agentName}/start`  | Set up an agent session (clone repo, copy agent files) and start the agent in the background: **202 Accepted**; **409** if the session id is already in use or still has data on disk |
 | GET    | `/agent-status/{agentName}/{sessionId}` | Session state (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`, `KILLED`, `ARCHIVED`), times, and whether a response is available |
-| GET    | `/agent-response/{agentName}/{sessionId}` | The agent's final answer as an agent context (per the agent's `responseSchema`, or one `STRING` item `response`), with the start request; session files and chat are deleted 5 minutes after the first fetch, or 1 hour after the session finished if never fetched (archived sessions are kept). After a restart, sessions that are not archived are deleted with their chats |
+| GET    | `/agent-response/{agentName}/{sessionId}` | The agent's final answer as an agent context (per the agent's `responseSchema`, or one `STRING` item `response`), with the start request. As soon as it is on disk, the same JSON is sent as a find-any Pushca broadcast to one `agent-orchestrator@comagents.com` client (`comagents-main`, `AGENT_ORCHESTRATOR`). Session files and chat are deleted 5 minutes after it was sent or first fetched, or 1 hour after the session finished if never fetched (archived sessions are kept). After a restart, sessions that are not archived are deleted with their chats |
 | GET    | `/health/liveness`    | Kubernetes liveness probe       |
 | GET    | `/health/readiness`   | Kubernetes readiness probe      |
 

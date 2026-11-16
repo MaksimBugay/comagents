@@ -18,6 +18,9 @@ public interface PushcaConnection extends AutoCloseable {
 
     void removeChannel(PChannel channel);
 
+    /** Sends {@code message} to the connected clients matching {@code receivers}; to only one of them with {@code findAny}. */
+    void broadcastMessage(ClientFilter receivers, String message);
+
     @Override
     void close();
 }

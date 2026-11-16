@@ -68,7 +68,8 @@ public class AgentResponseService {
         return response;
     }
 
-    private Optional<AgentSessionResponse> readResponse(AiAgent agent, UUID sessionId) {
+    /** {@link #findResponse} without scheduling the cleanup. */
+    public Optional<AgentSessionResponse> readResponse(AiAgent agent, UUID sessionId) {
         Optional<AgentSessionAttributes> attributes = setupServiceFor(agent).attributes(sessionId);
         if (attributes.isEmpty()) {
             return Optional.empty();
@@ -95,10 +96,14 @@ public class AgentResponseService {
                 .orElseThrow(() -> new IllegalStateException("No setup service for harness provider " + agent.getAiHarnessProvider()));
     }
 
-    // only the first fetch schedules; the set entry is dropped once the cleanup has run
-    private void scheduleCleanup(AiAgent agent, UUID sessionId) {
+    /**
+     * Deletes the session's files after {@code agent-response.cleanup-delay}, once its response was handed out
+     * (fetched, or sent to an orchestrator). Only the first call schedules; the set entry is dropped once the cleanup
+     * has run.
+     */
+    public void scheduleCleanup(AiAgent agent, UUID sessionId) {
         if (scheduledCleanups.add(sessionId)) {
-            LOG.info("[{} {}] response fetched, deleting session files in {}", agent.getAgentName(), sessionId, cleanupDelay);
+            LOG.info("[{} {}] response handed out, deleting session files in {}", agent.getAgentName(), sessionId, cleanupDelay);
             taskScheduler.schedule(cleanupDelay, () -> cleanUp(agent, sessionId));
         }
     }

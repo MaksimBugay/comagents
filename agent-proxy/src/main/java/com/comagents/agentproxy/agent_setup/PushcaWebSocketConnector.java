@@ -91,6 +91,11 @@ public class PushcaWebSocketConnector implements PushcaConnector {
         }
 
         @Override
+        public void broadcastMessage(ClientFilter receivers, String message) {
+            webSocket.broadcastMessage(receivers, message);
+        }
+
+        @Override
         public void close() {
             webSocket.close();
         }

@@ -28,6 +28,9 @@ public final class FakePushcaConnector implements PushcaConnector {
         return connection;
     }
 
+    public record Broadcast(ClientFilter receivers, String message) {
+    }
+
     public static final class FakeConnection implements PushcaConnection {
 
         final PClient client;
@@ -35,6 +38,9 @@ public final class FakePushcaConnector implements PushcaConnector {
         final List<ClientFilter> members = new CopyOnWriteArrayList<>();
         public final List<String> messages = new CopyOnWriteArrayList<>();
         final List<PChannel> removedChannels = new CopyOnWriteArrayList<>();
+        public final List<Broadcast> broadcasts = new CopyOnWriteArrayList<>();
+        // set to make broadcasts fail, as when the socket is broken
+        volatile RuntimeException broadcastFailure;
         volatile boolean closed;
         private final RuntimeException addMembersFailure;
         private final Consumer<ChannelMessage> channelMessages;
@@ -78,6 +84,14 @@ public final class FakePushcaConnector implements PushcaConnector {
         @Override
         public void removeChannel(PChannel channel) {
             removedChannels.add(channel);
+        }
+
+        @Override
+        public void broadcastMessage(ClientFilter receivers, String message) {
+            if (broadcastFailure != null) {
+                throw broadcastFailure;
+            }
+            broadcasts.add(new Broadcast(receivers, message));
         }
 
         @Override

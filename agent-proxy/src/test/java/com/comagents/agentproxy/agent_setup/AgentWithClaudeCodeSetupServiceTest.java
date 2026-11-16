@@ -12,6 +12,7 @@ import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
 import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
 import com.comagents.agentproxy.vcs.VcsGithubService;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +55,8 @@ class AgentWithClaudeCodeSetupServiceTest {
                 "https://chat.example/chat-room.html");
         registry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
-                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)));
+                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+                ApplicationEventPublisher.noOp());
         setupService = new AgentWithClaudeCodeSetupService(
                 // not a GitHub URL: downloading the agent's files, the first setup step, fails without network access
                 new VcsGithubService(new AgentProxyConf("https://gitlab.com/example/comagents.git", "token", "key",

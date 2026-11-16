@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.agent_context.AgentContext;
@@ -7,6 +8,7 @@ import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.json.JsonMapper;
 import io.micronaut.json.tree.JsonNode;
@@ -70,6 +72,7 @@ public class ClaudeAgentSessionRegistry {
     private final Duration idleTimeout;
     private final SessionFolders sessionFolders;
     private final ClaudeSessionListener sessionListener;
+    private final ApplicationEventPublisher<AgentResponseReady> responseReadyPublisher;
     private final AgentProxyMcpServer mcpServer;
     private final Semaphore sessionSlots;
     private final Map<UUID, ClaudeAgentSession> sessions = new ConcurrentHashMap<>();
@@ -83,9 +86,11 @@ public class ClaudeAgentSessionRegistry {
                                       @Value("${claude.session.idle-timeout:10m}") Duration idleTimeout,
                                       SessionFolders sessionFolders,
                                       ClaudeSessionListener sessionListener,
-                                      AgentProxyMcpServer mcpServer) {
+                                      AgentProxyMcpServer mcpServer,
+                                      ApplicationEventPublisher<AgentResponseReady> responseReadyPublisher) {
         this.sessionFolders = sessionFolders;
         this.sessionListener = sessionListener;
+        this.responseReadyPublisher = responseReadyPublisher;
         this.mcpServer = mcpServer;
         this.jsonMapper = jsonMapper;
         this.claudeExecutable = claudeExecutable;
@@ -773,9 +778,12 @@ public class ClaudeAgentSessionRegistry {
             boolean succeeded = exitCode == 0 && session.isResultSuccessful() && response.isPresent();
             session.finish(succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
             response.ifPresent(context -> {
-                writeResponse(session, context);
+                boolean written = writeResponse(session, context);
                 sessionListener.onResponse(sessionId, answersPerSchema(session)
                         ? toJson(context) : session.resultText().orElseThrow());
+                if (written) {
+                    responseReadyPublisher.publishEvent(new AgentResponseReady(session.getAgent(), sessionId));
+                }
             });
         }
         sessionSlots.release();
@@ -839,14 +847,16 @@ public class ClaudeAgentSessionRegistry {
     }
 
     // written to a temporary file and renamed, so a reader never sees a half-written response
-    private void writeResponse(ClaudeAgentSession session, AgentContext response) {
+    private boolean writeResponse(ClaudeAgentSession session, AgentContext response) {
         Path responseFile = session.getResponseFile();
         Path partial = responseFile.resolveSibling(responseFile.getFileName() + ".partial");
         try {
             Files.write(partial, jsonMapper.writeValueAsBytes(response));
             Files.move(partial, responseFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            return true;
         } catch (IOException e) {
             LOG.error("[{} {}] writing {} failed", session.getAgent().getAgentName(), session.getSessionId(), session.getResponseFile(), e);
+            return false;
         }
     }
 

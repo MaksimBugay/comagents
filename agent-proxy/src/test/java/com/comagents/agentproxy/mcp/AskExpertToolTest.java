@@ -10,6 +10,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.json.tree.JsonNode;
 import io.micronaut.serde.ObjectMapper;
 import io.modelcontextprotocol.common.McpTransportContext;
@@ -86,7 +87,8 @@ class AskExpertToolTest {
         chats = new AgentSessionWsClientRegistry(connector, answers, "https://chat.example/chat-room.html");
         sessions = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, chats,
-                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)));
+                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+                ApplicationEventPublisher.noOp());
         session = sessions.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
         await().atMost(WAIT).until(() -> Files.exists(scripts.resolve("args.txt")));
     }
