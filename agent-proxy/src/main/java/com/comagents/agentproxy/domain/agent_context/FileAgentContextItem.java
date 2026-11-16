@@ -9,11 +9,6 @@ public final class FileAgentContextItem extends AgentContextItem {
 
     @Creator
     public FileAgentContextItem(String name, String value) {
-        super(name, value);
-    }
-
-    @Override
-    public AgentContextItemType type() {
-        return AgentContextItemType.FILE;
+        super(AgentContextItemType.FILE, name, value);
     }
 }

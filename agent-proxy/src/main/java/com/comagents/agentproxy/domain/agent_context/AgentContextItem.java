@@ -20,16 +20,24 @@ import java.util.Objects;
         @JsonSubTypes.Type(value = GithubRepositoryAgentContextItem.class, name = "GITHUB_REPOSITORY")})
 public abstract sealed class AgentContextItem permits StringAgentContextItem, FileAgentContextItem, GithubRepositoryAgentContextItem {
 
+    private final AgentContextItemType type;
     private final String name;
     private final String value;
 
-    /** @throws InvalidAgentContextException when the name or the value is blank */
-    protected AgentContextItem(String name, String value) {
-        this.name = requireNotBlank(name, "name", name);
-        this.value = requireNotBlank(value, "value", name);
+    /**
+     * @param type the subclass's own type, passed in rather than asked for, so construction never calls an overridable
+     *             method
+     * @throws InvalidAgentContextException when the name or the value is blank
+     */
+    protected AgentContextItem(AgentContextItemType type, String name, String value) {
+        this.type = Objects.requireNonNull(type, "type");
+        this.name = requireNotBlank(type, name, "name", name);
+        this.value = requireNotBlank(type, value, "value", name);
     }
 
-    public abstract AgentContextItemType type();
+    public final AgentContextItemType type() {
+        return type;
+    }
 
     public String getName() {
         return name;
@@ -39,15 +47,17 @@ public abstract sealed class AgentContextItem permits StringAgentContextItem, Fi
         return value;
     }
 
-    private String requireNotBlank(String text, String what, String itemName) {
+    private static String requireNotBlank(AgentContextItemType type, String text, String what, String itemName) {
         if (StringUtils.isBlank(text)) {
-            throw new InvalidAgentContextException(type() + " item " + (itemName == null ? "" : itemName + " ")
+            throw new InvalidAgentContextException(type + " item " + (itemName == null ? "" : itemName + " ")
                     + "has no " + what);
         }
         return text;
     }
 
-    /** Whether this item is called {@code otherName}; names ignore case. */
+    /**
+     * Whether this item is called {@code otherName}; names ignore case.
+     */
     public boolean isNamed(String otherName) {
         return otherName != null && nameKey(name).equals(nameKey(otherName));
     }

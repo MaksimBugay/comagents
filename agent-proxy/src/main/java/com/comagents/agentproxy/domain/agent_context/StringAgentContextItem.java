@@ -9,11 +9,6 @@ public final class StringAgentContextItem extends AgentContextItem {
 
     @Creator
     public StringAgentContextItem(String name, String value) {
-        super(name, value);
-    }
-
-    @Override
-    public AgentContextItemType type() {
-        return AgentContextItemType.STRING;
+        super(AgentContextItemType.STRING, name, value);
     }
 }

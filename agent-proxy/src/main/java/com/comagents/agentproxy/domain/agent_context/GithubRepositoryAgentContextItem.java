@@ -18,17 +18,12 @@ public final class GithubRepositoryAgentContextItem extends AgentContextItem {
     /** @throws InvalidAgentContextException when the URL is blank or not a GitHub repository URL */
     @Creator
     public GithubRepositoryAgentContextItem(@JsonProperty("value") String cloneUrl, boolean primary) {
-        super(fullName(cloneUrl), cloneUrl);
+        super(AgentContextItemType.GITHUB_REPOSITORY, fullName(cloneUrl), cloneUrl);
         this.primary = primary;
     }
 
     public GithubRepositoryAgentContextItem(String cloneUrl) {
         this(cloneUrl, false);
-    }
-
-    @Override
-    public AgentContextItemType type() {
-        return AgentContextItemType.GITHUB_REPOSITORY;
     }
 
     public boolean isPrimary() {
