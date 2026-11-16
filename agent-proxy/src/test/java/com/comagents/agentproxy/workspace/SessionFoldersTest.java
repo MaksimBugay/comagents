@@ -30,7 +30,7 @@ class SessionFoldersTest {
         assertEquals(root, sessionFolders.root());
         assertEquals(root.resolve(sessionId.toString()), sessionFolders.of(sessionId));
         assertEquals(root.resolve(sessionId + "/code_review"), sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW));
-        assertEquals(root.resolve(sessionId + "/code_review/agent-response-" + sessionId + ".md"),
+        assertEquals(root.resolve(sessionId + "/code_review/agent-response-" + sessionId + ".json"),
                 sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW));
     }
 

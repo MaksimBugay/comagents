@@ -2,6 +2,8 @@ package com.comagents.agentproxy.agent_setup.claude;
 
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.json.tree.JsonNode;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -29,6 +31,7 @@ public final class ClaudeAgentSession {
     private final Path transcriptFile;
     private final Path responseFile;
     private final boolean resumed;
+    private final boolean structuredResponse;
     private final ClaudeSessionOptions options;
     // the run's secret for agent-proxy's MCP server: only this run's Claude Code knows it (--mcp-config)
     private final String mcpToken = newToken();
@@ -41,6 +44,7 @@ public final class ClaudeAgentSession {
 
     private volatile Process process;
     private volatile String resultText;
+    private volatile JsonNode structuredOutput;
     private volatile boolean resultSuccessful;
     private volatile Instant finishedAt;
     private volatile Instant lastOutputAt = startedAt;
@@ -53,8 +57,9 @@ public final class ClaudeAgentSession {
     private boolean archivedForAnswer;
 
     ClaudeAgentSession(UUID sessionId, AiAgent agent, Path workingDirectory, Path transcriptFile, Path responseFile,
-                       boolean resumed, ClaudeSessionOptions options) {
+                       boolean resumed, boolean structuredResponse, ClaudeSessionOptions options) {
         this.resumed = resumed;
+        this.structuredResponse = structuredResponse;
         this.options = options;
         this.sessionId = sessionId;
         this.agent = agent;
@@ -88,6 +93,11 @@ public final class ClaudeAgentSession {
     /** Whether this run continues an archived session ({@code resume}) rather than starting a new one. */
     public boolean isResumed() {
         return resumed;
+    }
+
+    /** Whether the agent answers per its response schema ({@code --json-schema}) rather than with text. */
+    public boolean isStructuredResponse() {
+        return structuredResponse;
     }
 
     /** Whether thinking and thinking-token progress are shown (logged at INFO and reported), not only logged at DEBUG. */
@@ -224,9 +234,15 @@ public final class ClaudeAgentSession {
         return Optional.ofNullable(earlyAnswer);
     }
 
-    void recordResult(String text, boolean successful) {
+    void recordResult(String text, @Nullable JsonNode structuredOutput, boolean successful) {
         this.resultText = text;
+        this.structuredOutput = structuredOutput;
         this.resultSuccessful = successful;
+    }
+
+    /** The final answer of a run with {@code --json-schema}. */
+    Optional<JsonNode> structuredOutput() {
+        return Optional.ofNullable(structuredOutput);
     }
 
     Optional<String> resultText() {

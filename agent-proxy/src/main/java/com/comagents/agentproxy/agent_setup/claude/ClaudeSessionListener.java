@@ -12,8 +12,8 @@ public interface ClaudeSessionListener {
     void onOutput(UUID sessionId, String output);
 
     /**
-     * The agent's final answer (the session's response file holds the same text), reported after all of its
-     * output when the run ends with one.
+     * The agent's final answer, reported after all of its output when the run ends with a valid one: the text, or,
+     * for an agent with a response schema, the response context as JSON (the session's response file holds it).
      */
     void onResponse(UUID sessionId, String response);
 

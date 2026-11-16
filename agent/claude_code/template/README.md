@@ -49,6 +49,7 @@ How agent-proxy runs the agent headless (`claude -p`):
 | `allowedTools` | `--allowedTools` | tools the agent may use without approval, in permission-rule syntax |
 | `kickOffPrompt` | the prompt | the first instruction of every session; required |
 | `requiredItems` | start-request check | agent context items the agent can't work without, as `type` and/or `name`: a missing type matches any type, a missing name any name. A start request without a matching item is rejected with 400. E.g. `{"type": "GITHUB_REPOSITORY"}` for an agent that works on a cloned repository, `{"type": "GITHUB_REPOSITORY", "name": "acme/kn-challenge"}` (owner/repository) for one that works on that repository only; leave it out (or `[]`) if the agent needs nothing |
+| `responseSchema` | `--json-schema`, end of the kick-off prompt | JSON Schema of the agent's final answer, which must be an agent context: `{"items": [{"type": "STRING", "name": "verdict", "value": "approve"}, ...]}`, validated like a request's context (an invalid answer fails the session). It is passed to `--json-schema` and appended at the very end of the kick-off prompt. Leave it out and the final text becomes the response as one `STRING` item named `response` |
 | `resumePrompt` | the prompt on resume | the instruction when an archived session is resumed; optional, a generic "continue where you stopped" by default |
 
 Allow rules go here, not in `.claude/settings.json`: a headless run never trusts the folder it starts in, so

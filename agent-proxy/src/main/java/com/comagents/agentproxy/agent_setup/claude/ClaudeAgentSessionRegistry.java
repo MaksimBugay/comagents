@@ -2,6 +2,8 @@ package com.comagents.agentproxy.agent_setup.claude;
 
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.annotation.Value;
@@ -28,6 +30,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -41,8 +44,9 @@ import java.util.stream.Stream;
  * <p>
  * A run is started asynchronously in the session's working directory with the agent's kick-off prompt and our
  * session id as Claude's session id, so later runs can {@code --resume} it. Its stream-json output is written to a
- * transcript file and summarised into the log; the final answer is written to
- * {@code <session folder>/<agent name>/agent-response-<session id>.md}.
+ * transcript file and summarised into the log; the final answer, as an agent context (see
+ * {@link ClaudeAgentConfig#responseSchema()}), is written to
+ * {@code <session folder>/<agent name>/agent-response-<session id>.json}.
  */
 @Singleton
 public class ClaudeAgentSessionRegistry {
@@ -193,7 +197,7 @@ public class ClaudeAgentSessionRegistry {
         ClaudeAgentConfig config = readConfig(agent, agentFolder);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume,
-                options);
+                config.responseSchema() != null, options);
         ProcessBuilder processBuilder = new ProcessBuilder(command(config, session, prompt, promptContext));
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
@@ -470,7 +474,8 @@ public class ClaudeAgentSessionRegistry {
         ClaudeSessionArchive archive = new ClaudeSessionArchive(session.getSessionId(), session.getAgent(),
                 session.getWorkingDirectory().toString(), session.getState(), session.getStartedAt(),
                 session.getLastOutputAt(), Instant.now(), session.resultText().orElse(null), session.isVerboseOutput(),
-                session.getOptions().actorAccountId(), session.deferredQuestion().orElse(null));
+                session.getOptions().actorAccountId(), session.deferredQuestion().orElse(null),
+                session.getOptions().attributes());
         try {
             Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), jsonMapper.writeValueAsBytes(archive));
         } catch (IOException e) {
@@ -509,6 +514,9 @@ public class ClaudeAgentSessionRegistry {
         if (config.effort() != null) {
             command.addAll(List.of("--effort", config.effort()));
         }
+        if (config.responseSchema() != null) {
+            command.addAll(List.of("--json-schema", responseSchema(config)));
+        }
         // headless runs can only call pre-allowed MCP tools
         command.add("--allowedTools");
         command.addAll(config.allowedTools());
@@ -516,8 +524,24 @@ public class ClaudeAgentSessionRegistry {
         return command;
     }
 
-    private static String kickOffPrompt(ClaudeAgentConfig config, @Nullable String promptContext) {
-        return promptContext == null ? config.kickOffPrompt() : config.kickOffPrompt() + "\n\n" + promptContext;
+    private String responseSchema(ClaudeAgentConfig config) {
+        try {
+            return jsonMapper.writeValueAsString(config.responseSchema());
+        } catch (IOException e) {
+            throw new IllegalStateException("Unwritable responseSchema", e);
+        }
+    }
+
+    // the agent's kick-off prompt, then the session's context, then the response schema at the very end
+    private String kickOffPrompt(ClaudeAgentConfig config, @Nullable String promptContext) {
+        StringBuilder prompt = new StringBuilder(config.kickOffPrompt());
+        if (promptContext != null) {
+            prompt.append("\n\n").append(promptContext);
+        }
+        if (config.responseSchema() != null) {
+            prompt.append("\n\nReturn your final answer as JSON matching this schema:\n").append(responseSchema(config));
+        }
+        return prompt.toString();
     }
 
     private ClaudeAgentConfig readConfig(AiAgent agent, Path agentFolder) {
@@ -576,7 +600,8 @@ public class ClaudeAgentSessionRegistry {
         ClaudeStreamEvents.summarize(event)
                 .ifPresent(summary -> reportOutput(session, summary, ClaudeStreamEvents.isVerbose(event)));
         if (ClaudeStreamEvents.isResult(event)) {
-            session.recordResult(ClaudeStreamEvents.resultText(event).orElse(null), ClaudeStreamEvents.isSuccessfulResult(event));
+            session.recordResult(ClaudeStreamEvents.resultText(event).orElse(null),
+                    ClaudeStreamEvents.structuredOutput(event).orElse(null), ClaudeStreamEvents.isSuccessfulResult(event));
         }
         if (session.deferredQuestion().isPresent()
                 && ClaudeStreamEvents.hasToolResultStartingWith(event, AgentProxyMcpServer.NO_ANSWER_YET)) {
@@ -687,11 +712,13 @@ public class ClaudeAgentSessionRegistry {
                 && (session.getState() == AgentSessionState.ARCHIVED
                     || !session.getState().isFinished() && archiveUntilAnswered(session));
         if (!awaitsAnswer) {
-            boolean succeeded = exitCode == 0 && session.isResultSuccessful();
+            Optional<AgentContext> response = response(session);
+            boolean succeeded = exitCode == 0 && session.isResultSuccessful() && response.isPresent();
             session.finish(succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
-            session.resultText().ifPresent(text -> {
-                writeResponse(session, text);
-                sessionListener.onResponse(sessionId, text);
+            response.ifPresent(context -> {
+                writeResponse(session, context);
+                sessionListener.onResponse(sessionId, session.isStructuredResponse()
+                        ? toJson(context) : session.resultText().orElseThrow());
             });
         }
         sessionSlots.release();
@@ -717,12 +744,43 @@ public class ClaudeAgentSessionRegistry {
         return true;
     }
 
+    // the final answer as an agent context: the structured output, or the text as one item; empty when the run ended
+    // without an answer or with an invalid one
+    private Optional<AgentContext> response(ClaudeAgentSession session) {
+        if (session.resultText().isEmpty() && session.structuredOutput().isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(session.isStructuredResponse()
+                    ? structuredResponse(session)
+                    : new AgentContext(List.of(new StringAgentContextItem(ClaudeAgentConfig.DEFAULT_RESPONSE_ITEM,
+                            session.resultText().orElse(null)))));
+        } catch (IOException | RuntimeException e) {
+            LOG.error("[{} {}] invalid final answer: {}", session.getAgent().getAgentName(), session.getSessionId(), e.getMessage());
+            sessionListener.onOutput(session.getSessionId(), "The agent's final answer is invalid: " + e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private AgentContext structuredResponse(ClaudeAgentSession session) throws IOException {
+        JsonNode output = session.structuredOutput().orElseThrow(() -> new IllegalArgumentException("no structured output"));
+        return Objects.requireNonNull(jsonMapper.readValueFromTree(output, AgentContext.class), "empty structured output");
+    }
+
+    private String toJson(AgentContext context) {
+        try {
+            return jsonMapper.writeValueAsString(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     // written to a temporary file and renamed, so a reader never sees a half-written response
-    private void writeResponse(ClaudeAgentSession session, String text) {
+    private void writeResponse(ClaudeAgentSession session, AgentContext response) {
         Path responseFile = session.getResponseFile();
         Path partial = responseFile.resolveSibling(responseFile.getFileName() + ".partial");
         try {
-            Files.writeString(partial, text, StandardCharsets.UTF_8);
+            Files.write(partial, jsonMapper.writeValueAsBytes(response));
             Files.move(partial, responseFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             LOG.error("[{} {}] writing {} failed", session.getAgent().getAgentName(), session.getSessionId(), session.getResponseFile(), e);

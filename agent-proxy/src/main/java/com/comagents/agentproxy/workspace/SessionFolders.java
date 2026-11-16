@@ -45,8 +45,8 @@ public class SessionFolders {
         return of(sessionId).resolve(agent.getAgentName());
     }
 
-    /** The agent's final answer for the session. */
+    /** The agent's final answer for the session: an agent context, as JSON. */
     public Path agentResponseFile(UUID sessionId, AiAgent agent) {
-        return agentFolder(sessionId, agent).resolve("agent-response-" + sessionId + ".md");
+        return agentFolder(sessionId, agent).resolve("agent-response-" + sessionId + ".json");
     }
 }

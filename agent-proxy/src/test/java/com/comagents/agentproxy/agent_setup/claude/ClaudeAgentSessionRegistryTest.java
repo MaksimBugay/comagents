@@ -2,6 +2,8 @@ package com.comagents.agentproxy.agent_setup.claude;
 
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.json.tree.JsonNode;
 import io.micronaut.serde.ObjectMapper;
@@ -25,6 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -139,8 +142,8 @@ class ClaudeAgentSessionRegistryTest {
         assertEquals(workingDirectory, session.getWorkingDirectory());
         assertEquals(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("claude-state").toString(),
                 Files.readString(scripts.resolve("config-dir.txt")), "Claude Code's state is kept per session");
-        assertEquals(sessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".md"), session.getResponseFile());
-        assertEquals("# Report\n\nAll good", Files.readString(session.getResponseFile()));
+        assertEquals(sessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".json"), session.getResponseFile());
+        assertEquals("# Report\n\nAll good", responseText(session.getResponseFile()));
         assertEquals(6, Files.readAllLines(session.getTranscriptFile()).size());
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
         assertEquals(List.of("-p", KICK_OFF_PROMPT), args.subList(0, 2));
@@ -165,6 +168,65 @@ class ClaudeAgentSessionRegistryTest {
 
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
         assertEquals(List.of(KICK_OFF_PROMPT, "", "Context: focus on security"), args.subList(1, 4));
+    }
+
+    private static final String RESPONSE_SCHEMA = """
+            {"type": "object", "required": ["items"], "properties": {"items": {"type": "array"}}}""";
+
+    @Test
+    void answersPerResponseSchema() throws Exception {
+        registry = registry(fakeClaude("""
+                printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"","structured_output":{"items":[{"type":"STRING","name":"verdict","value":"approve"}]}}'
+                """), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"kickOffPrompt": "Review it", "responseSchema": %s}""".formatted(RESPONSE_SCHEMA));
+
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
+        AgentContext response = Objects.requireNonNull(ObjectMapper.getDefault().readValue(Files.readAllBytes(session.getResponseFile()), AgentContext.class));
+        assertEquals(new AgentContext(List.of(new StringAgentContextItem("verdict", "approve"))), response);
+        assertEquals("approve", response.items().getFirst().getValue());
+        List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
+        String schema = args.get(args.indexOf("--json-schema") + 1);
+        assertEquals(ObjectMapper.getDefault().readValue(RESPONSE_SCHEMA, JsonNode.class), ObjectMapper.getDefault().readValue(schema, JsonNode.class));
+        assertEquals(List.of("Review it", "", "Return your final answer as JSON matching this schema:", schema), args.subList(1, 5),
+                "the schema comes at the very end of the kick-off prompt");
+    }
+
+    @Test
+    void responseSchemaComesAfterThePromptContext() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"kickOffPrompt": "Review it", "responseSchema": %s}""".formatted(RESPONSE_SCHEMA));
+
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
+            slot.start(AiAgent.CODE_REVIEW, workingDirectory, ClaudeSessionOptions.DEFAULT, "Context: focus on security")
+                    .awaitFinished(WAIT);
+        }
+
+        List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
+        assertEquals(List.of("Review it", "", "Context: focus on security", "", "Return your final answer as JSON matching this schema:"),
+                args.subList(1, 6));
+    }
+
+    @Test
+    void invalidStructuredAnswerFailsTheSession() throws Exception {
+        registry = registry(fakeClaude("""
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"","structured_output":{"items":[{"type":"STRING","name":"verdict","value":" "}]}}'
+                """), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"kickOffPrompt": "Review it", "responseSchema": %s}""".formatted(RESPONSE_SCHEMA));
+
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        assertEquals(Optional.of(AgentSessionState.FAILED), session.awaitFinished(WAIT));
+        assertFalse(Files.exists(session.getResponseFile()));
+        assertTrue(listener.responses.isEmpty());
     }
 
     @Test
@@ -248,7 +310,7 @@ class ClaudeAgentSessionRegistryTest {
         assertEquals(Optional.of(AgentSessionState.DONE), resumed.awaitFinished(WAIT));
         assertEquals(List.of("-p", ClaudeAgentSessionRegistry.answerPrompt(QUESTION, "green"), "--resume", sessionId.toString()),
                 Files.readAllLines(scripts.resolve("resume-args.txt")).subList(0, 4));
-        assertEquals("review done", Files.readString(resumed.getResponseFile()));
+        assertEquals("review done", responseText(resumed.getResponseFile()));
         assertFalse(registry.answerDeferredQuestion(sessionId, "green again"), "answered: nothing waits any more");
     }
 
@@ -292,7 +354,7 @@ class ClaudeAgentSessionRegistryTest {
         Files.createFile(scripts.resolve("end-turn"));
 
         assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
-        assertEquals("waiting for the answer", Files.readString(session.getResponseFile()));
+        assertEquals("waiting for the answer", responseText(session.getResponseFile()));
     }
 
     @Test
@@ -722,7 +784,7 @@ class ClaudeAgentSessionRegistryTest {
         assertFalse(args.contains("--session-id"));
         assertEquals("test-model", args.get(args.indexOf("--model") + 1), "same agent.json as the first run");
         assertEquals("1", Files.readString(scripts.resolve("resume-env.txt")), "finish the interrupted turn first");
-        assertEquals("resumed answer", Files.readString(resumed.getResponseFile()));
+        assertEquals("resumed answer", responseText(resumed.getResponseFile()));
         String transcript = Files.readString(resumed.getTranscriptFile());
         assertTrue(transcript.contains("first run") && transcript.contains("resumed answer"), "transcript covers both runs");
         assertFalse(Files.exists(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE)), "no longer archived");
@@ -860,6 +922,15 @@ class ClaudeAgentSessionRegistryTest {
 
     private void writeAgentConfig(UUID sessionId, String json) throws IOException {
         Files.writeString(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve(ClaudeAgentConfig.FILE_NAME), json);
+    }
+
+    // the text of a response without schema: its one "response" item
+    private static String responseText(Path responseFile) throws IOException {
+        AgentContext response = Objects.requireNonNull(ObjectMapper.getDefault().readValue(Files.readAllBytes(responseFile), AgentContext.class));
+        assertEquals(1, response.items().size());
+        StringAgentContextItem item = assertInstanceOf(StringAgentContextItem.class, response.items().getFirst());
+        assertEquals(ClaudeAgentConfig.DEFAULT_RESPONSE_ITEM, item.getName());
+        return item.getValue();
     }
 
     // field.field...: fails the test when one is missing

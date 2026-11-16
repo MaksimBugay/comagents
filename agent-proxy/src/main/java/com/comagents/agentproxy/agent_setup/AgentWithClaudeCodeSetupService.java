@@ -89,7 +89,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                 Path workingDirectory = preparedDirectory.get();
                 agentSessionWsClientRegistry.openConnection(sessionId, agent, attributes.actorAccountId());
                 slot.start(agent, workingDirectory, new ClaudeSessionOptions(
-                        attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG, attributes.actorAccountId()),
+                        attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG, attributes.actorAccountId(), attributes),
                         AgentContextPrompt.render(attributes.agentContext()).orElse(null));
             } catch (RuntimeException e) {
                 // the folder did not exist before and the slot holds the id, so it belongs to this failed setup
@@ -133,6 +133,12 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     public Optional<AgentSessionStatus> status(UUID sessionId) {
         return claudeAgentSessionRegistry.findSession(sessionId)
                 .map(session -> new AgentSessionStatus(session.getState(), session.getStartedAt(), session.getFinishedAt()));
+    }
+
+    @Override
+    public Optional<AgentSessionAttributes> attributes(UUID sessionId) {
+        return claudeAgentSessionRegistry.findSession(sessionId)
+                .map(session -> session.getOptions().attributes());
     }
 
     @Override

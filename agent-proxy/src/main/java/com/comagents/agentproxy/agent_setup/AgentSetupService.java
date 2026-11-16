@@ -16,6 +16,9 @@ public sealed interface AgentSetupService permits AgentWithClaudeCodeSetupServic
     /** Empty when the session is unknown: never started, or already cleaned up. */
     Optional<AgentSessionStatus> status(@NotNull UUID sessionId);
 
+    /** What the session was started with; empty when the session is unknown. */
+    Optional<AgentSessionAttributes> attributes(@NotNull UUID sessionId);
+
     /** Stops the session if it is still running and deletes everything it left behind. */
     void cleanUp(@NotNull UUID sessionId);
 

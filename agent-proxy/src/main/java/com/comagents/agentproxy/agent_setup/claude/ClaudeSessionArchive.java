@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import io.micronaut.core.annotation.Nullable;
@@ -21,16 +22,18 @@ import java.util.UUID;
  * @param actorAccountId     the Pushca account that started the session: its chat is reopened for it after a restart
  * @param deferredQuestion   the question the agent asked the expert and ended its turn on: the session is resumed with
  *                           the answer as soon as one arrives in its chat
+ * @param attributes         what the session was started with (see {@link ClaudeSessionOptions#attributes()})
  */
 @Serdeable
 public record ClaudeSessionArchive(UUID sessionId, AiAgent agent, String workingDirectory,
                                    AgentSessionState stateBeforeArchive, Instant startedAt, Instant lastOutputAt,
                                    Instant archivedAt, @Nullable String resultText, boolean verboseOutput,
-                                   @Nullable String actorAccountId, @Nullable String deferredQuestion) {
+                                   @Nullable String actorAccountId, @Nullable String deferredQuestion,
+                                   @Nullable AgentSessionAttributes attributes) {
 
     public static final String STATE_FILE = "session-state.json";
 
     public ClaudeSessionOptions options() {
-        return new ClaudeSessionOptions(verboseOutput, actorAccountId);
+        return new ClaudeSessionOptions(verboseOutput, actorAccountId, attributes);
     }
 }

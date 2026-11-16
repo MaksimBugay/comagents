@@ -100,6 +100,11 @@ final class ClaudeStreamEvents {
         return Optional.ofNullable(text(event, "result"));
     }
 
+    /** The final answer of a {@code result} event of a run with {@code --json-schema}. */
+    static Optional<JsonNode> structuredOutput(JsonNode event) {
+        return Optional.ofNullable(event.get("structured_output"));
+    }
+
     static boolean isSuccessfulResult(JsonNode event) {
         JsonNode isError = event.get("is_error");
         return "success".equals(text(event, "subtype")) && (isError == null || !isError.getBooleanValue());

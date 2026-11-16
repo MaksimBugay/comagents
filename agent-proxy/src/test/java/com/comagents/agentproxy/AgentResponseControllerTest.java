@@ -1,9 +1,15 @@
 package com.comagents.agentproxy;
 
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.agentproxy.agent_setup.AgentSessionLoggingLevel;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
+import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
+import com.comagents.agentproxy.request.StartAgentSessionRequest;
 import com.comagents.agentproxy.response.AgentSessionResponse;
 import com.comagents.agentproxy.response.AgentResponseUnavailable;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -12,20 +18,21 @@ import io.micronaut.http.HttpStatus;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
+import io.micronaut.serde.ObjectMapper;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,7 +44,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Property(name = "claude.executable", value = "false")
 class AgentResponseControllerTest {
 
+    private static final AgentContext ALL_GOOD = new AgentContext(List.of(new StringAgentContextItem("response", "# Report\n\nAll good")));
+
     private final UUID sessionId = UUID.randomUUID();
+    private final AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId,
+            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "MBugai",
+            AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
 
     @Inject
     @Client("/")
@@ -55,19 +67,21 @@ class AgentResponseControllerTest {
     }
 
     @Test
-    void returnsResponseAndDeletesSessionFilesAfterDelay() throws Exception {
-        Path responseFile = writeAllGoodResponse();
-        long createdAt = Files.readAttributes(responseFile, java.nio.file.attribute.BasicFileAttributes.class).creationTime().toMillis();
+    void returnsResponseWithItsRequestAndDeletesSessionFilesAfterDelay() throws Exception {
+        startSession();
+        writeAllGoodResponse();
+        long before = Instant.now().toEpochMilli();
 
         AgentSessionResponse response = client.toBlocking().retrieve(uri(), AgentSessionResponse.class);
 
-        assertEquals(AiAgent.CODE_REVIEW, response.aiAgent());
-        assertEquals(sessionId, response.sessionId());
-        assertArrayEquals("# Report\n\nAll good".getBytes(StandardCharsets.UTF_8), response.body());
-        assertEquals(createdAt, response.createdAt());
+        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "MBugai",
+                AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
+        assertEquals(ALL_GOOD, response.agentContext());
+        assertEquals("# Report\n\nAll good", response.agentContext().items().getFirst().getValue());
+        assertTrue(response.createdAt() >= before, "built when fetched");
 
         // a second fetch within the delay still works and does not schedule another cleanup
-        assertArrayEquals(response.body(), client.toBlocking().retrieve(uri(), AgentSessionResponse.class).body());
+        assertEquals(ALL_GOOD, client.toBlocking().retrieve(uri(), AgentSessionResponse.class).agentContext());
 
         await("session files deleted after the cleanup delay").atMost(Duration.ofSeconds(10))
                 .until(() -> !Files.exists(sessionFolders.of(sessionId)));
@@ -105,11 +119,7 @@ class AgentResponseControllerTest {
 
     @Test
     void archivedSessionKeepsItsFilesAfterResponseFetch() throws Exception {
-        Path agentFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
-        Files.createDirectories(agentFolder);
-        Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
-                {"kickOffPrompt": "Review it"}""");
-        registry.createSession(sessionId, AiAgent.CODE_REVIEW, agentFolder).awaitFinished(Duration.ofSeconds(20));
+        startSession();
         writeAllGoodResponse();
         registry.archive(sessionId);
 
@@ -134,10 +144,22 @@ class AgentResponseControllerTest {
         return "/agent-response/code_review/" + sessionId;
     }
 
-    private Path writeAllGoodResponse() throws IOException {
+    // started by a request with the test's attributes; "false" ends it FAILED at once, without a response
+    private void startSession() throws Exception {
+        Path agentFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
+        Files.createDirectories(agentFolder);
+        Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
+                {"kickOffPrompt": "Review it"}""");
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
+            slot.start(AiAgent.CODE_REVIEW, agentFolder, new ClaudeSessionOptions(false, "MBugai", attributes))
+                    .awaitFinished(Duration.ofSeconds(20));
+        }
+    }
+
+    private void writeAllGoodResponse() throws IOException {
         Path responseFile = sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW);
         Files.createDirectories(responseFile.getParent());
-        return Files.writeString(responseFile, "# Report\n\nAll good");
+        Files.write(responseFile, ObjectMapper.getDefault().writeValueAsBytes(ALL_GOOD));
     }
 
     private HttpStatus statusOf(String uri) {

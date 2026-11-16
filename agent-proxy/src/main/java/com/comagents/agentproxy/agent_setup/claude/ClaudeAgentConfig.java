@@ -2,6 +2,7 @@ package com.comagents.agentproxy.agent_setup.claude;
 
 import com.comagents.agentproxy.domain.agent_context.RequiredAgentContextItem;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.json.tree.JsonNode;
 import io.micronaut.serde.annotation.Serdeable;
 
 import java.util.List;
@@ -21,13 +22,20 @@ import java.util.Set;
  * @param resumePrompt  the instruction when an archived session is resumed; {@link #DEFAULT_RESUME_PROMPT} if null
  * @param requiredItems the agent context items the agent can't work without (type and/or name): a start request
  *                      without them is rejected; none if null
+ * @param responseSchema {@code --json-schema}: the JSON Schema of the agent's final answer, which must describe an
+ *                      agent context ({@code {"items": [...]}}) and is read as the session's response; if null the
+ *                      final text is the response, as one {@code STRING} item named
+ *                      {@value #DEFAULT_RESPONSE_ITEM}
  */
 @Serdeable
 public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
                                 String kickOffPrompt, @Nullable String resumePrompt,
-                                @Nullable Set<RequiredAgentContextItem> requiredItems) {
+                                @Nullable Set<RequiredAgentContextItem> requiredItems,
+                                @Nullable JsonNode responseSchema) {
 
     public static final String FILE_NAME = "agent.json";
+
+    public static final String DEFAULT_RESPONSE_ITEM = "response";
 
     public static final String DEFAULT_RESUME_PROMPT = "You were stopped before you finished. Continue the task from where "
             + "you stopped, and return your final answer as you would have.";

@@ -1,10 +1,9 @@
 package com.comagents.agentproxy.response;
 
-import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import com.comagents.agentproxy.request.StartAgentSessionRequest;
 import io.micronaut.serde.annotation.Serdeable;
 
-import java.util.UUID;
-
 @Serdeable
-public record AgentSessionResponse(AiAgent aiAgent, UUID sessionId, byte[] body, long createdAt) {
+public record AgentSessionResponse(StartAgentSessionRequest request, AgentContext agentContext, long createdAt) {
 }
