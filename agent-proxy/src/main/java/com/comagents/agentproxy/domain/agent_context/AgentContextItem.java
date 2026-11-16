@@ -5,11 +5,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.micronaut.serde.annotation.Serdeable;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Locale;
 import java.util.Objects;
 
 /**
  * One item of an {@link AgentContext}, in JSON {@code {"type": "STRING" | "FILE" | "GITHUB_REPOSITORY", ...}}. Items are
- * unique by type and name; every item has a name and a value.
+ * unique by type and name, names ignoring case; every item has a name and a value.
  */
 @Serdeable
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
@@ -46,14 +47,23 @@ public abstract sealed class AgentContextItem permits StringAgentContextItem, Fi
         return text;
     }
 
+    /** Whether this item is called {@code otherName}; names ignore case. */
+    public boolean isNamed(String otherName) {
+        return otherName != null && nameKey(name).equals(nameKey(otherName));
+    }
+
+    private static String nameKey(String itemName) {
+        return itemName.toLowerCase(Locale.ROOT);
+    }
+
     @Override
     public boolean equals(Object o) {
-        return o instanceof AgentContextItem that && type() == that.type() && name.equals(that.name);
+        return o instanceof AgentContextItem that && type() == that.type() && isNamed(that.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type(), name);
+        return Objects.hash(type(), nameKey(name));
     }
 
     @Override

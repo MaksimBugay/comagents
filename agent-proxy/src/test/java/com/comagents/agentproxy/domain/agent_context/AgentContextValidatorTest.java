@@ -26,6 +26,8 @@ class AgentContextValidatorTest {
     @Test
     void requiredItemMatchesByTypeAndName() {
         assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "acme/kn-challenge"))));
+        assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "ACME/KN-Challenge"),
+                required(AgentContextItemType.STRING, "Focus"))), "names ignore case");
 
         InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class,
                 () -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "other/kn-challenge"))));

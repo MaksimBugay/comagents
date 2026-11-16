@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AgentContextItemTest {
 
@@ -40,6 +41,19 @@ class AgentContextItemTest {
         assertThrows(InvalidAgentContextException.class,
                 () -> new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge/tree/main"));
         assertEquals("acme/kn-challenge", new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge").getName());
+    }
+
+    @Test
+    void namesIgnoreCase() {
+        assertEquals(new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge.git"),
+                new GithubRepositoryAgentContextItem("https://github.com/ACME/KN-Challenge.git"));
+        assertEquals(new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge.git").hashCode(),
+                new GithubRepositoryAgentContextItem("https://github.com/ACME/KN-Challenge.git").hashCode());
+        assertTrue(new GithubRepositoryAgentContextItem("https://github.com/ACME/KN-Challenge.git").isNamed("acme/kn-challenge"));
+        assertEquals(new StringAgentContextItem("note", "a"), new StringAgentContextItem("Note", "b"));
+        assertEquals(new FileAgentContextItem("a.md", "x").hashCode(), new FileAgentContextItem("A.MD", "y").hashCode());
+        assertTrue(new StringAgentContextItem("Note", "a").isNamed("note"));
+        assertFalse(new StringAgentContextItem("Note", "a").isNamed(null));
     }
 
     @Test
