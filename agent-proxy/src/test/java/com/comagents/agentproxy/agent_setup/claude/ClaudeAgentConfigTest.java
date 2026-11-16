@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
-import com.comagents.agentproxy.domain.agent_context.AgentContextItemAttributes;
+import com.comagents.agentproxy.domain.agent_context.RequiredAgentContextItem;
 import com.comagents.agentproxy.domain.agent_context.AgentContextItemType;
 import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -17,9 +17,10 @@ class ClaudeAgentConfigTest {
     void readsRequiredItems() throws IOException {
         ClaudeAgentConfig config = read("""
                 {"kickOffPrompt": "Review it",
-                 "requiredItems": [{"type": "REPOSITORY", "name": "sources", "primary": true}]}""");
+                 "requiredItems": [{"type": "GITHUB_REPOSITORY", "name": "sources"}, {"type": "FILE"}]}""");
 
-        assertEquals(Set.of(new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "sources", true)),
+        assertEquals(Set.of(new RequiredAgentContextItem(AgentContextItemType.GITHUB_REPOSITORY, "sources"),
+                        new RequiredAgentContextItem(AgentContextItemType.FILE, null)),
                 config.requiredItems());
     }
 

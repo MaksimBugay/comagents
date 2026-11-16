@@ -109,19 +109,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     }
 
     private void validateContext(AiAgentAttributes attributes, ClaudeAgentConfig config) {
-        AgentContext context = attributes.agentContext();
-        agentContextValidator.validate(context == null ? null : context.items(), config.requiredItems());
-        Optional.ofNullable(context).flatMap(AgentContext::primaryRepository)
-                .ifPresent(AgentWithClaudeCodeSetupService::requireNameMatchesCloneUrl);
-    }
-
-    // the clone lands in <session folder>/<repo name from the URL>: the item's name must be that name
-    static void requireNameMatchesCloneUrl(AgentContextItem repository) {
-        String repoName = VcsService.repoName(repository.value());
-        if (!repoName.equals(repository.attributes().name())) {
-            throw new InvalidAgentContextException("Repository item " + repository.attributes().name()
-                    + " has the clone URL of repository " + repoName);
-        }
+        agentContextValidator.validate(attributes.agentContext(), config.requiredItems());
     }
 
     private ClaudeAgentConfig readConfig(Path comAgentsSources, AiAgent agent) {
@@ -133,11 +121,11 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         }
     }
 
-    // Claude Code runs in the context's primary repository, cloned, or in the agent folder when there is none
+    // Claude Code runs in the context's repository to clone, or in the agent folder when there is none
     private Path prepareWorkingDirectory(AiAgentAttributes attributes, Path agentFolder) {
         Optional<String> cloneSourceUrl = Optional.ofNullable(attributes.agentContext())
-                .flatMap(AgentContext::primaryRepository)
-                .map(AgentContextItem::value);
+                .flatMap(AgentContext::repositoryToClone)
+                .map(AgentContextItem::getValue);
         if (cloneSourceUrl.isPresent()) {
             return vcsService.clone(cloneSourceUrl.get(), sessionFolders.of(attributes.sessionId()));
         }

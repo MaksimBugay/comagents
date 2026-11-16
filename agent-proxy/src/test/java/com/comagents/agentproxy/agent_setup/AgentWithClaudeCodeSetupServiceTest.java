@@ -8,11 +8,8 @@ import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.domain.agent_context.AgentContext;
-import com.comagents.agentproxy.domain.agent_context.AgentContextItem;
-import com.comagents.agentproxy.domain.agent_context.AgentContextItemAttributes;
-import com.comagents.agentproxy.domain.agent_context.AgentContextItemType;
 import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
-import com.comagents.agentproxy.domain.agent_context.InvalidAgentContextException;
+import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
 import com.comagents.agentproxy.vcs.VcsGithubService;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.serde.ObjectMapper;
@@ -24,11 +21,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -36,6 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** The slot reservation around setup; nothing here reaches GitHub or Claude Code. */
 class AgentWithClaudeCodeSetupServiceTest {
+
+    private static final AgentContext REPOSITORY_CONTEXT =
+            new AgentContext(List.of(new GithubRepositoryAgentContextItem("https://github.com/example/repo.git")));
 
     private final UUID sessionId = UUID.randomUUID();
 
@@ -67,7 +65,7 @@ class AgentWithClaudeCodeSetupServiceTest {
     void failedSetupFreesSlotAndDeletesSessionFolder() {
         // the download of the agent's files fails after the slot was reserved
         assertThrows(IllegalArgumentException.class,
-                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, repository("https://gitlab.com/a/b"), "Maks", null)));
+                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
 
         assertFalse(Files.exists(sessionFolders.of(sessionId)));
         assertSlotFreed();
@@ -81,7 +79,7 @@ class AgentWithClaudeCodeSetupServiceTest {
         Files.writeString(earlierSessionsFile, "{}");
 
         ClaudeSessionExistsException e = assertThrows(ClaudeSessionExistsException.class,
-                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, repository("https://gitlab.com/a/b"), "Maks", null)));
+                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
 
         assertTrue(e.getMessage().contains(sessionId.toString()), e.getMessage());
         assertTrue(Files.exists(earlierSessionsFile), "the earlier session's data is not deleted");
@@ -92,7 +90,7 @@ class AgentWithClaudeCodeSetupServiceTest {
     void busyServiceRejectsBeforeAnySetupWork() {
         try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(UUID.randomUUID())) {
             assertThrows(ClaudeSessionLimitException.class,
-                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, repository("https://github.com/example/repo.git"), "Maks", null)));
+                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
         }
 
         assertFalse(Files.exists(sessionFolders.of(sessionId)), "nothing was downloaded or created");
@@ -111,30 +109,10 @@ class AgentWithClaudeCodeSetupServiceTest {
         assertTrue(Files.exists(otherSetupsFile), "the folder belongs to the setup that holds the id");
     }
 
-    @Test
-    void primaryRepositoryNameMustMatchItsCloneUrl() {
-        assertDoesNotThrow(() -> AgentWithClaudeCodeSetupService.requireNameMatchesCloneUrl(
-                primaryKnChallenge("https://github.com/acme/kn-challenge.git")));
-
-        InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class,
-                () -> AgentWithClaudeCodeSetupService.requireNameMatchesCloneUrl(
-                        primaryKnChallenge("https://github.com/acme/other-repo.git")));
-        assertEquals("Repository item kn-challenge has the clone URL of repository other-repo", e.getMessage());
-    }
-
-    private static AgentContextItem primaryKnChallenge(String cloneUrl) {
-        return new AgentContextItem(new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "kn-challenge", true), cloneUrl);
-    }
-
     private void assertSlotFreed() {
         try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(UUID.randomUUID())) {
             assertNotNull(slot, "the rejected or failed setup freed its slot");
         }
     }
 
-    private static AgentContext repository(String cloneSourceUrl) {
-        AgentContextItem sources = new AgentContextItem(
-                new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "sources", true), cloneSourceUrl);
-        return new AgentContext(Set.of(sources));
-    }
 }

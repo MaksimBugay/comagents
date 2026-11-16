@@ -1,5 +1,7 @@
 package com.comagents.agentproxy.vcs;
 
+import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
+
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
@@ -32,11 +34,6 @@ public sealed interface VcsService permits VcsGithubService {
      * @throws IllegalArgumentException when the URL has none
      */
     static String repoName(String sourcesRepoUrl) {
-        String path = sourcesRepoUrl.replaceAll("/+$", "");
-        String repoName = path.substring(path.lastIndexOf('/') + 1).replaceAll("\\.git$", "");
-        if (repoName.isEmpty() || repoName.equals(".") || repoName.equals("..")) {
-            throw new IllegalArgumentException("No repository name in URL: " + sourcesRepoUrl);
-        }
-        return repoName;
+        return GithubRepositoryAgentContextItem.repositoryName(sourcesRepoUrl);
     }
 }

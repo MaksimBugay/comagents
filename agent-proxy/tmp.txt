@@ -1,0 +1,58 @@
+1. primary is part of an item's identity.
+   - Items are equal by (type, name, primary). So REPOSITORY "kn-challenge" primary and REPOSITORY "kn-challenge" non-primary are two different items: both get into the set and both appear in the prompt.
+   - requiredItems matching uses the same triple. A client that sends kn-challenge without "primary": true gets "Required item REPOSITORY kn-challenge is missing or has no value", which is wrong: it's there, just not primary.
+   - primary describes the item's role, not which item it is. Identity should be (type, name), and the primary check should be separate, with its own error message.
+2. Duplicate items are silently dropped.
+   - items is a Set and items are equal by attributes only. Two items with the same attributes but different values deserialize to one; which value survives is unspecified.
+   - It should be rejected as a duplicate instead.
+   - It also follows that two contexts with different values compare equal, which is surprising for a record. The round trip in the requestSample test therefore proves less than it seems.
+3. Some invalid input gets 500 instead of 400.
+   - A primary repository with a non-GitHub URL fails in VcsGithubService.clone, and a URL with no repository name fails in repoName. Both throw a plain IllegalArgumentException, which isn't mapped, so the client gets 500.
+   - A null type crashes the prompt's switch with a NullPointerException, after the clone.
+   - A null or blank name is accepted and prints as "null" in the prompt.
+4. Agent-independent rules are checked too late.
+   - These don't depend on the agent:
+     - at most one primary repository;
+     - type and name present;
+     - no duplicates;
+     - the name matches the clone URL;
+     - the URL is a valid GitHub URL.
+   - Yet they run only after the comagents sources are downloaded over the network. They could be checked on the request itself, before a slot or download. Only the requiredItems check needs agent.json.
+5. agent.json itself is never validated.
+   - If requiredItems lists two primary repositories, or primary: true on a STRING or FILE, no request can ever satisfy it, and each attempt just gets 400.
+   - A broken requiredItems entry (missing type or name) isn't caught either.
+
+Inconsistencies
+
+6. primary on STRING or FILE is meaningless but accepted. It's ignored by the clone and the prompt, but still counts in equality and required matching (see 1).
+7. The name-vs-URL check covers only the primary repository. Other repositories' names and URLs are listed in the prompt without any check, so the prompt can say repository "docs" while the URL points to something else.
+8. Validation is spread over three places: AgentContextValidator (primary count, required items), the setup service (name vs URL), and the clone itself (GitHub URL). The rules belong in one place.
+9. Null handling is duplicated. AgentContext already turns null items into an empty set, but the validator still handles null, because setup passes null when the request has no context.
+
+Security
+
+10. Credentials can end up in the prompt.
+    - Presigned S3 URLs and clone URLs, which may carry a token such as https://<token>@github.com/…, are written into the kick-off prompt.
+    - From there they go to the model provider (DeepSeek for code_review) and into Claude Code's stored session files.
+    - A presigned URL is a short-lived bearer credential.
+    - When the Git and object-storage MCP servers arrive, the prompt should list names only, and the MCP servers should resolve them to URLs.
+11. STRING values go into the prompt unchanged. A multi-line value breaks the list, and the requester can steer the agent through it. That's acceptable if the actor is trusted, but it should be a conscious decision.
+
+Smaller points
+
+12. Prompt order. Items sort by enum order (STRING, FILE, REPOSITORY), so the primary repository, the most important item, comes last.
+13. The prompt text doesn't fit sessions without a repository. "Only the working directory is available locally" still appears; there the working directory is just the agent's own folder.
+14. The JSON shape differs between request and config. The request nests {"attributes": {...}, "value": …}, while agent.json's requiredItems are flat attributes. It's consistent in code but awkward for clients.
+15. code_review is now tied to "kn-challenge". It's a general Java reviewer, but every request must use a primary repository with exactly that name. That's fine for testing, but probably not intended for good.
+16. Layering. The domain package depends on Micronaut (@Singleton, CollectionUtils) and on agent_setup.AgentSessionLoggingLevel. This is minor and was already the case before this work.
+
+My recommendation
+
+- Identity by (type, name), with primary allowed only on repositories.
+- Reject duplicates.
+- One request-level validator for every rule that doesn't depend on the agent, run before a slot or download, answering 400 for every rule including bad URLs.
+- Check requiredItems against agent.json as it does now, and also validate requiredItems itself when reading agent.json.
+
+Point 10 matters most once real customer data is involved.
+
+Which of these do you want me to fix?

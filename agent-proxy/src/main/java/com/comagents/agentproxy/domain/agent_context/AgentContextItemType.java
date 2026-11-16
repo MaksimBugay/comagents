@@ -1,5 +1,5 @@
 package com.comagents.agentproxy.domain.agent_context;
 
 public enum AgentContextItemType {
-    STRING, FILE, REPOSITORY
+    STRING, FILE, GITHUB_REPOSITORY
 }

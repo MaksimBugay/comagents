@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
-import com.comagents.agentproxy.domain.agent_context.AgentContextItemAttributes;
+import com.comagents.agentproxy.domain.agent_context.RequiredAgentContextItem;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
@@ -19,13 +19,13 @@ import java.util.Set;
  *                      never trusts its folder, so Claude Code ignores (and warns about) a project's allow rules
  * @param kickOffPrompt the first instruction of every session
  * @param resumePrompt  the instruction when an archived session is resumed; {@link #DEFAULT_RESUME_PROMPT} if null
- * @param requiredItems the agent context items the agent can't work without (type, name, primary): a start request
+ * @param requiredItems the agent context items the agent can't work without (type and/or name): a start request
  *                      without them is rejected; none if null
  */
 @Serdeable
 public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
                                 String kickOffPrompt, @Nullable String resumePrompt,
-                                @Nullable Set<AgentContextItemAttributes> requiredItems) {
+                                @Nullable Set<RequiredAgentContextItem> requiredItems) {
 
     public static final String FILE_NAME = "agent.json";
 

@@ -37,24 +37,28 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
 
 ```json
 {"sessionId": "…", "agent": "CODE_REVIEW", "actorAccountId": "Maks", "loggingLevel": "INFO",
- "agentContext": {
-   "items": [
-     {"attributes": {"type": "REPOSITORY", "name": "sources", "primary": true}, "value": "https://github.com/<org>/<repo>.git"},
-     {"attributes": {"type": "FILE", "name": "requirements.md"}, "value": "<S3 download URL>"},
-     {"attributes": {"type": "STRING", "name": "focus"}, "value": "security"}]}}
+ "agentContext": {"items": [
+   {"type": "GITHUB_REPOSITORY", "value": "https://github.com/<org>/kn-challenge.git", "primary": true},
+   {"type": "FILE", "name": "requirements.md", "value": "<S3 download URL>"},
+   {"type": "STRING", "name": "focus", "value": "security"}]}}
 ```
 
 ### Agent context
 
-`agentContext` is optional. Its primary `REPOSITORY` item (`"primary": true`, at most one) is cloned as the session's
-working directory; without one nothing is cloned. Its `name` must be the repository name in its clone URL
-(`…/kn-challenge.git` → `kn-challenge`). The agent's `agent.json` can list `requiredItems` (by `type`,
-`name` and `primary`): the items it can't work without, e.g. the primary repository. They must be in `items` with
-a value; the context is checked before anything is cloned for the session. Every
-item with a value is appended to the agent's kick-off prompt as a "Context of this session" list: other
-repositories and `FILE` items (name = file name, value = download URL in S3-compatible object storage) are listed
-by URL only, not cloned or downloaded, for the agent to fetch if useful; `STRING` items are given as text. An
-invalid context is rejected with **400**.
+`agentContext` is optional. Its `items` are typed by `type`:
+
+- `STRING`: a `name` and a text `value`;
+- `FILE`: the file `name` and its download URL in S3-compatible object storage as `value`;
+- `GITHUB_REPOSITORY`: the clone URL as `value` (`https://github.com/<owner>/<repo>[.git]`, checked on arrival), named after the repository in it (`…/kn-challenge.git` → `kn-challenge`),
+  and optionally `"primary": true`.
+
+Every item needs a value, and items are unique by type and name. One repository is cloned as the session's working
+directory: the only one, or the primary one when there are several (at most one primary; several repositories
+without one are rejected). Without a repository nothing is cloned. The agent's `agent.json` can list
+`requiredItems` by `type` and/or `name` (an omitted one matches any): a context without a matching item is
+rejected before anything is cloned for the session. Every item is appended to the agent's kick-off prompt as a
+"Context of this session" list: other repositories and files are listed by URL only, not cloned or downloaded, for
+the agent to fetch if useful; `STRING` items are given as text. An invalid context is rejected with **400**.
 
 ### Questions to the expert (`ask_expert`)
 

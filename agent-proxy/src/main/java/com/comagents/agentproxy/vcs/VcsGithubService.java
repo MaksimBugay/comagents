@@ -1,6 +1,7 @@
 package com.comagents.agentproxy.vcs;
 
 import com.comagents.agentproxy.conf.AgentProxyConf;
+import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
 import com.comagents.agentproxy.workspace.FileTrees;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
@@ -32,7 +33,7 @@ public final class VcsGithubService implements VcsService {
 
     private static final String GITHUB_API_URL = "https://api.github.com";
 
-    private static final Pattern REPO_URL = Pattern.compile("^https://github\\.com/([^/]+)/([^/]+?)(?:\\.git)?/?$");
+    private static final Pattern REPO_URL = GithubRepositoryAgentContextItem.GITHUB_REPOSITORY_URL;
 
     private final String accessToken;
 
@@ -102,7 +103,7 @@ public final class VcsGithubService implements VcsService {
     @Override
     public void cloneComAgentsSources(Consumer<Path> sourcesConsumer) {
         // a folder per call: concurrent setups never share or delete each other's sources
-        Path sources = createTempDirectory("comagents-");
+        Path sources = createSourcesDirectory();
         try {
             clone(comAgentsSourcesUrl, sources.toString());
             sourcesConsumer.accept(sources);
@@ -111,9 +112,9 @@ public final class VcsGithubService implements VcsService {
         }
     }
 
-    private static Path createTempDirectory(String prefix) {
+    private static Path createSourcesDirectory() {
         try {
-            return Files.createTempDirectory(prefix);
+            return Files.createTempDirectory("comagents-");
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to create a temporary folder", e);
         }

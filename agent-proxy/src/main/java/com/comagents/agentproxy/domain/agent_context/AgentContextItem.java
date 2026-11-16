@@ -1,40 +1,63 @@
 package com.comagents.agentproxy.domain.agent_context;
 
-import io.micronaut.core.annotation.Creator;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.micronaut.serde.annotation.Serdeable;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Objects;
 
 /**
- * Items are equal by their attributes, whatever their value.
- *
- * @param value the text of a {@code STRING} item, the clone URL of a {@code REPOSITORY}, the download URL (S3-compatible
- *              object storage) of a {@code FILE} named by its file name
+ * One item of an {@link AgentContext}, in JSON {@code {"type": "STRING" | "FILE" | "GITHUB_REPOSITORY", ...}}. Items are
+ * unique by type and name; every item has a name and a value.
  */
 @Serdeable
-public record AgentContextItem(AgentContextItemAttributes attributes, String value) {
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = StringAgentContextItem.class, name = "STRING"),
+        @JsonSubTypes.Type(value = FileAgentContextItem.class, name = "FILE"),
+        @JsonSubTypes.Type(value = GithubRepositoryAgentContextItem.class, name = "GITHUB_REPOSITORY")})
+public abstract sealed class AgentContextItem permits StringAgentContextItem, FileAgentContextItem, GithubRepositoryAgentContextItem {
 
-    @Creator
-    public AgentContextItem {
-        Objects.requireNonNull(attributes, "attributes");
+    private final String name;
+    private final String value;
+
+    /** @throws InvalidAgentContextException when the name or the value is blank */
+    protected AgentContextItem(String name, String value) {
+        this.name = requireNotBlank(name, "name", name);
+        this.value = requireNotBlank(value, "value", name);
     }
 
-    public AgentContextItem(AgentContextItemType type, String name, String value) {
-        this(new AgentContextItemAttributes(type, name), value);
+    public abstract AgentContextItemType type();
+
+    public String getName() {
+        return name;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    private String requireNotBlank(String text, String what, String itemName) {
+        if (StringUtils.isBlank(text)) {
+            throw new InvalidAgentContextException(type() + " item " + (itemName == null ? "" : itemName + " ")
+                    + "has no " + what);
+        }
+        return text;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        return attributes.equals(((AgentContextItem) o).attributes);
+        return o instanceof AgentContextItem that && type() == that.type() && name.equals(that.name);
     }
 
     @Override
     public int hashCode() {
-        return attributes.hashCode();
+        return Objects.hash(type(), name);
     }
 
-    public static boolean isPrimaryRepository(AgentContextItem item) {
-        return item.attributes().type() == AgentContextItemType.REPOSITORY && item.attributes().primary();
+    @Override
+    public String toString() {
+        return type() + " " + name;
     }
 }
