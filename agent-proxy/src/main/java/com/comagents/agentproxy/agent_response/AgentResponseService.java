@@ -4,7 +4,7 @@ import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.response.AgentResponse;
+import com.comagents.agentproxy.response.AgentSessionResponse;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.scheduling.TaskExecutors;
@@ -54,17 +54,17 @@ public class AgentResponseService {
     /**
      * @return the response, or empty while the agent has not answered yet (or after the session was cleaned up)
      */
-    public Optional<AgentResponse> findResponse(AiAgent agent, UUID sessionId) {
-        Optional<AgentResponse> response = readResponse(agent, sessionId);
+    public Optional<AgentSessionResponse> findResponse(AiAgent agent, UUID sessionId) {
+        Optional<AgentSessionResponse> response = readResponse(agent, sessionId);
         response.ifPresent(_ -> scheduleCleanup(agent, sessionId));
         return response;
     }
 
-    private Optional<AgentResponse> readResponse(AiAgent agent, UUID sessionId) {
+    private Optional<AgentSessionResponse> readResponse(AiAgent agent, UUID sessionId) {
         Path responseFile = sessionFolders.agentResponseFile(sessionId, agent);
         try {
             long createdAt = Files.readAttributes(responseFile, BasicFileAttributes.class).creationTime().toMillis();
-            return Optional.of(new AgentResponse(agent, sessionId, Files.readAllBytes(responseFile), createdAt));
+            return Optional.of(new AgentSessionResponse(agent, sessionId, Files.readAllBytes(responseFile), createdAt));
         } catch (NoSuchFileException e) {
             return Optional.empty();
         } catch (IOException e) {

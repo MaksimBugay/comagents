@@ -4,7 +4,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.response.AgentResponse;
+import com.comagents.agentproxy.response.AgentSessionResponse;
 import com.comagents.agentproxy.response.AgentResponseUnavailable;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.annotation.Property;
@@ -59,7 +59,7 @@ class AgentResponseControllerTest {
         Path responseFile = writeAllGoodResponse();
         long createdAt = Files.readAttributes(responseFile, java.nio.file.attribute.BasicFileAttributes.class).creationTime().toMillis();
 
-        AgentResponse response = client.toBlocking().retrieve(uri(), AgentResponse.class);
+        AgentSessionResponse response = client.toBlocking().retrieve(uri(), AgentSessionResponse.class);
 
         assertEquals(AiAgent.CODE_REVIEW, response.aiAgent());
         assertEquals(sessionId, response.sessionId());
@@ -67,7 +67,7 @@ class AgentResponseControllerTest {
         assertEquals(createdAt, response.createdAt());
 
         // a second fetch within the delay still works and does not schedule another cleanup
-        assertArrayEquals(response.body(), client.toBlocking().retrieve(uri(), AgentResponse.class).body());
+        assertArrayEquals(response.body(), client.toBlocking().retrieve(uri(), AgentSessionResponse.class).body());
 
         await("session files deleted after the cleanup delay").atMost(Duration.ofSeconds(10))
                 .until(() -> !Files.exists(sessionFolders.of(sessionId)));
@@ -113,7 +113,7 @@ class AgentResponseControllerTest {
         writeAllGoodResponse();
         registry.archive(sessionId);
 
-        client.toBlocking().retrieve(uri(), AgentResponse.class);
+        client.toBlocking().retrieve(uri(), AgentSessionResponse.class);
 
         // the cleanup delay (1 s) passes several times; the archived session's files stay
         await().during(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(5))

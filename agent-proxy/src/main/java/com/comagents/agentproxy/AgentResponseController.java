@@ -4,7 +4,6 @@ import com.comagents.agentproxy.agent_response.AgentResponseService;
 import com.comagents.agentproxy.agent_status.AgentStatusService;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.response.AgentResponse;
 import com.comagents.agentproxy.response.AgentResponseUnavailable;
 import com.comagents.agentproxy.response.AgentStatus;
 import io.micronaut.http.HttpResponse;

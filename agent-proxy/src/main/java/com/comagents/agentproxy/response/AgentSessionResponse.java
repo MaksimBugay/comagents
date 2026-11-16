@@ -6,5 +6,5 @@ import io.micronaut.serde.annotation.Serdeable;
 import java.util.UUID;
 
 @Serdeable
-public record AgentResponse(AiAgent aiAgent, UUID sessionId, byte[] body, long createdAt) {
+public record AgentSessionResponse(AiAgent aiAgent, UUID sessionId, byte[] body, long createdAt) {
 }
