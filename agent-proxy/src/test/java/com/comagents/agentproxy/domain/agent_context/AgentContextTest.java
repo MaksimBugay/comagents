@@ -56,6 +56,19 @@ class AgentContextTest {
     }
 
     @Test
+    void namesAndValuesTogetherAreLimited() {
+        String half = "x".repeat(AgentContext.MAX_BYTES / 2 - 4);
+        assertDoesNotThrow(() -> new AgentContext(List.of(new StringAgentContextItem("a", half), new StringAgentContextItem("b", half))));
+
+        InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class, () -> new AgentContext(List.of(
+                new StringAgentContextItem("a", half), new StringAgentContextItem("b", half + "xxxxxxxx"))));
+        assertEquals("Agent context too large: 65538 bytes of names and values, at most 65536", e.getMessage());
+        // counted in UTF-8 bytes: "é" takes two
+        assertThrows(InvalidAgentContextException.class,
+                () -> new AgentContext(List.of(new StringAgentContextItem("a", "é".repeat(AgentContext.MAX_BYTES / 2 + 1)))));
+    }
+
+    @Test
     void readsTypedItemsFromJson() throws IOException {
         AgentContext context = ObjectMapper.getDefault().readValue("""
                 {"items": [

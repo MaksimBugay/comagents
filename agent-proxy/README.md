@@ -59,8 +59,10 @@ without one are rejected). Without a repository nothing is cloned. The agent's `
 rejected before anything is cloned for the session. Every other item is appended to the agent's kick-off prompt as a
 "Context of this session" list (the cloned repository is not: it is the working directory): other repositories and
 files are listed by URL only, not cloned or downloaded, for the agent to fetch if useful; `STRING` items are given as
-text. An invalid context is rejected with **400** and a
-message saying what is wrong (e.g. "Duplicate item STRING focus").
+text. All names and values together may take at most 64 KiB
+(UTF-8): the context goes into the prompt, which Claude Code gets as one command-line argument (128 KiB at most on
+Linux). An invalid context is rejected with **400** and a message saying what is wrong (e.g. "Duplicate item STRING
+focus").
 
 ### Questions to the expert (`ask_expert`)
 

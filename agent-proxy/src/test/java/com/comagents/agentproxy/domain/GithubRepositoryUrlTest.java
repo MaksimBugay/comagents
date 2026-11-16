@@ -25,4 +25,18 @@ class GithubRepositoryUrlTest {
         assertThrows(IllegalArgumentException.class, () -> GithubRepositoryUrl.parse("https://github.com/acme/.."));
         assertThrows(IllegalArgumentException.class, () -> GithubRepositoryUrl.parse(" "));
     }
+
+    @Test
+    void acceptsOnlyCharactersGithubAllows() {
+        assertEquals(new GithubRepositoryUrl("my-org", "repo_1.v2"), GithubRepositoryUrl.parse("https://github.com/my-org/repo_1.v2.git"));
+        for (String url : new String[]{
+                "https://github.com/acme/repo?x=1",
+                "https://github.com/acme/repo#readme",
+                "https://github.com/acme/re%2Fpo",
+                "https://github.com/acme/my repo",
+                "https://github.com/../repo",
+                "https://github.com/ac.me/repo"}) {
+            assertThrows(IllegalArgumentException.class, () -> GithubRepositoryUrl.parse(url), url);
+        }
+    }
 }

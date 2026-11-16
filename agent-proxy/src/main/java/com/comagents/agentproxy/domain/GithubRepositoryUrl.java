@@ -9,7 +9,8 @@ import java.util.regex.Pattern;
  */
 public record GithubRepositoryUrl(String owner, String repository) {
 
-    private static final Pattern URL = Pattern.compile("^https://github\\.com/([^/]+)/([^/]+?)(?:\\.git)?/?$");
+    // only the characters GitHub allows: owners letters, digits and hyphens; repositories also dots and underscores
+    private static final Pattern URL = Pattern.compile("^https://github\\.com/([A-Za-z0-9-]+)/([A-Za-z0-9._-]+?)(?:\\.git)?/?$");
 
     /**
      * @throws IllegalArgumentException when {@code url} is blank or not a GitHub repository URL
