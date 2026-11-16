@@ -14,13 +14,13 @@ import java.util.UUID;
  *                     all its items are added to the kick-off prompt; without one nothing is cloned
  */
 @Serdeable
-public record StartAgentRequest(UUID sessionId,
+public record StartAgentSessionRequest(UUID sessionId,
                                 @NotNull AiAgent agent,
                                 @Nullable AgentContext agentContext,
                                 String actorAccountId,
                                 AgentSessionLoggingLevel loggingLevel) {
 
-    public StartAgentRequest(UUID sessionId, AiAgent agent, @Nullable AgentContext agentContext, String actorAccountId) {
+    public StartAgentSessionRequest(UUID sessionId, AiAgent agent, @Nullable AgentContext agentContext, String actorAccountId) {
         this(sessionId, agent, agentContext, actorAccountId, AgentSessionLoggingLevel.INFO);
     }
 }

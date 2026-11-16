@@ -7,7 +7,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.domain.agent_context.InvalidAgentContextException;
-import com.comagents.agentproxy.request.StartAgentRequest;
+import com.comagents.agentproxy.request.StartAgentSessionRequest;
 import io.micronaut.core.convert.exceptions.ConversionErrorException;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpRequest;
@@ -58,7 +58,7 @@ public class AgentController {
     // setup downloads and copies files (blocking I/O), which must not run on the Netty event loop
     @Post("/start")
     @ExecuteOn(TaskExecutors.BLOCKING)
-    public HttpResponse<AgentInfo> start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentRequest startAgentRequest) {
+    public HttpResponse<AgentInfo> start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentSessionRequest startAgentRequest) {
         requireSameAgent(agentName, startAgentRequest.agent());
         setupServiceFor(startAgentRequest.agent()).setup(
                 startAgentRequest.agent(),
