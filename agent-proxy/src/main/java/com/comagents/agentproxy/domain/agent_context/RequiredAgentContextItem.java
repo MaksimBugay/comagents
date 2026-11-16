@@ -1,6 +1,5 @@
 package com.comagents.agentproxy.domain.agent_context;
 
-import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
@@ -31,7 +30,7 @@ public record RequiredAgentContextItem(@Nullable AgentContextItemType type, @Nul
 
     @SuppressWarnings("NullableProblems")
     @Override
-    public @NonNull String toString() {
+    public String toString() {
         return (type == null ? "item" : type + " item") + (name == null ? "" : " " + name);
     }
 }
