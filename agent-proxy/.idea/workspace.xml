@@ -5,11 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="ask expert MCP tool">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spec/claude_q_and_a.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/spec/known_gaps.md" beforeDir="false" afterPath="$PROJECT_DIR$/spec/known_gaps.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContext.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContextItem.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContextItemAttributes.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContextItemType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextItemTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -21,8 +24,8 @@
       <list>
         <option value="Interface" />
         <option value="Class" />
-        <option value="Record" />
         <option value="Enum" />
+        <option value="Record" />
       </list>
     </option>
   </component>
@@ -50,61 +53,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.002484995581775" />
-      <entry key="MS500" value="1.444675913739505" />
-      <entry key="S2" value="2.9044538884671396" />
-      <entry key="S5" value="3.897288672392905" />
-      <entry key="S10" value="4.38845167959035" />
-      <entry key="S30" value="4.780747654549265" />
-      <entry key="S60" value="4.888304625142105" />
-      <entry key="M2" value="4.943623504684398" />
-      <entry key="M5" value="4.977320983762279" />
-      <entry key="M10" value="4.988711458933811" />
-      <entry key="M15" value="4.996068691951253" />
-      <entry key="M30" value="5.2119900387685245" />
-      <entry key="H1" value="7.109565410948399" />
-      <entry key="H2" value="12.545707829735743" />
-      <entry key="H4" value="20.610550779175888" />
-      <entry key="D1" value="91.40404191431831" />
-      <entry key="W1" value="195.20880535087642" />
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="3.753239818920448E-225" />
+      <entry key="S2" value="1.1341188240654643E-56" />
+      <entry key="S5" value="6.239504562893357E-23" />
+      <entry key="S10" value="1.1138597378314689E-11" />
+      <entry key="S30" value="3.543097087949541E-4" />
+      <entry key="S60" value="0.026937373069766023" />
+      <entry key="M2" value="0.2769010507250987" />
+      <entry key="M5" value="1.8977628305943466" />
+      <entry key="M10" value="4.3629743937144" />
+      <entry key="M15" value="5.883059456682992" />
+      <entry key="M30" value="8.00929301306601" />
+      <entry key="H1" value="9.376507903590694" />
+      <entry key="H2" value="10.153290842344497" />
+      <entry key="H4" value="10.567946637451087" />
+      <entry key="D1" value="26.138810801002105" />
+      <entry key="W1" value="162.08307776626637" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="0.0" />
-      <entry key="S10" value="0.0" />
-      <entry key="S30" value="3.1202263098024265E-144" />
-      <entry key="S60" value="3.448612640711953E-72" />
-      <entry key="M2" value="3.69076048338049E-36" />
-      <entry key="M5" value="1.542951282951512E-14" />
-      <entry key="M10" value="2.5386116052436024E-7" />
-      <entry key="M15" value="6.588653890521963E-5" />
-      <entry key="M30" value="0.017625446535840444" />
-      <entry key="H1" value="0.2939947793187856" />
-      <entry key="H2" value="1.209323037860548" />
-      <entry key="H4" value="2.5315021274875043" />
-      <entry key="D1" value="35.092118051851585" />
-      <entry key="W1" value="106.91756217191437" />
+      <entry key="MS100" value="1.0000000000586124" />
+      <entry key="MS500" value="1.0089866554168017" />
+      <entry key="S2" value="1.3078927923578314" />
+      <entry key="S5" value="1.6242518081287627" />
+      <entry key="S10" value="1.7900960752546926" />
+      <entry key="S30" value="1.9246085160444073" />
+      <entry key="S60" value="1.9733980547826127" />
+      <entry key="M2" value="2.1156060819725657" />
+      <entry key="M5" value="3.0062232008702567" />
+      <entry key="M10" value="4.367695556975279" />
+      <entry key="M15" value="5.203859510799822" />
+      <entry key="M30" value="6.368969988853201" />
+      <entry key="H1" value="7.115650539179209" />
+      <entry key="H2" value="7.539077050090384" />
+      <entry key="H4" value="7.764697476767734" />
+      <entry key="D1" value="13.800388611456318" />
+      <entry key="W1" value="90.74955597045019" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9750134332415027" />
-      <entry key="MS500" value="1.3926052840064147" />
-      <entry key="S2" value="2.8392107322946405" />
-      <entry key="S5" value="3.8604546684784364" />
-      <entry key="S10" value="4.3677530218780145" />
-      <entry key="S30" value="4.77328471402569" />
-      <entry key="S60" value="4.884498885648629" />
-      <entry key="M2" value="4.941701765983536" />
-      <entry key="M5" value="4.9765477205437145" />
-      <entry key="M10" value="4.988324314807953" />
-      <entry key="M15" value="4.995875922420407" />
-      <entry key="M30" value="5.229457894681994" />
-      <entry key="H1" value="7.403256303125207" />
-      <entry key="H2" value="13.754500838686473" />
-      <entry key="H4" value="23.141516365781747" />
-      <entry key="D1" value="126.49525433284634" />
-      <entry key="W1" value="302.12598918168453" />
+      <entry key="MS100" value="5.055004510944223E-4" />
+      <entry key="MS500" value="0.21915302313281013" />
+      <entry key="S2" value="0.7197302685711788" />
+      <entry key="S5" value="1.1223185436245444" />
+      <entry key="S10" value="1.439898321174547" />
+      <entry key="S30" value="1.7759752252515864" />
+      <entry key="S60" value="1.9190170772168371" />
+      <entry key="M2" value="2.3421574553916913" />
+      <entry key="M5" value="4.869396598996424" />
+      <entry key="M10" value="8.705474230233797" />
+      <entry key="M15" value="11.067237294314323" />
+      <entry key="M30" value="14.36652125589358" />
+      <entry key="H1" value="16.48570083926369" />
+      <entry key="H2" value="17.688975667219538" />
+      <entry key="H4" value="18.330904836934913" />
+      <entry key="D1" value="39.93875261317024" />
+      <entry key="W1" value="252.83229844566458" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">

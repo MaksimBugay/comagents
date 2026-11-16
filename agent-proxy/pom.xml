@@ -25,6 +25,7 @@
     <exec.mainClass>com.comagents.agentproxy.Application</exec.mainClass>
 
     <pushca-client.version>2.0.1</pushca-client.version>
+    <commons-lang3.version>3.22.0</commons-lang3.version>
 
     <!-- security overrides of micronaut-platform 5.2.5 BOM versions; drop once the platform catches up -->
     <!-- all Jackson 3 modules on one version: core CVE-2026-110729, databind CVE-2026-110879 (via pushca-client) -->
@@ -120,6 +121,13 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <scope>runtime</scope>
+    </dependency>
+
+    <!-- StringUtils; not managed by the Micronaut BOM -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${commons-lang3.version}</version>
     </dependency>
 
     <!-- agent-proxy's own MCP server (/mcp) with the ask_human tool of every Claude Code run -->
