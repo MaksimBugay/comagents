@@ -133,7 +133,8 @@ class ClaudeAgentSessionRegistryTest {
 
     @AfterEach
     void cleanUp() {
-        sessionIds.forEach(registry::cleanAllSessionData);
+        // a lambda, not registry::cleanAllSessionData: a test without sessions may not create a registry
+        sessionIds.forEach(sessionId -> registry.cleanAllSessionData(sessionId));
     }
 
     @Test
@@ -786,6 +787,39 @@ class ClaudeAgentSessionRegistryTest {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
 
         assertThrows(IllegalStateException.class, () -> registry.archive(UUID.randomUUID()));
+    }
+
+    @Test
+    void claudeCodeGetsOnlyAllowlistedEnvironment() {
+        for (String name : List.of("PATH", "HOME", "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+                "DISABLE_AUTOUPDATER")) {
+            assertTrue(ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name), name);
+        }
+        for (String name : List.of("SOURCES_REPO_ACCESS_TOKEN", "PUSHCA_API_KEY", "CLONE_COMAGENTS_SOURCES_URL",
+                "CLAUDE_EXECUTABLE", "AGENT_PROXY_SESSIONS_DIR", "JAVA_HOME")) {
+            assertFalse(ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name), name);
+        }
+    }
+
+    @Test
+    void runsWithoutAgentProxysOwnEnvironment() throws Exception {
+        registry = registry(fakeClaude("""
+                env | cut -d= -f1 > "$(dirname "$0")/env.txt"
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"done"}'
+                """), 2, WAIT);
+        UUID sessionId = newSessionId();
+
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        List<String> names = Files.readAllLines(scripts.resolve("env.txt"));
+        assertTrue(names.contains("PATH"), names.toString());
+        assertTrue(names.contains("CLAUDE_CONFIG_DIR"), names.toString());
+        // the shell adds PWD, SHLVL and _ itself
+        List<String> leaked = names.stream()
+                .filter(name -> !ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name))
+                .filter(name -> !List.of("CLAUDE_CONFIG_DIR", "PWD", "OLDPWD", "SHLVL", "_").contains(name))
+                .toList();
+        assertEquals(List.of(), leaked);
     }
 
     @Test

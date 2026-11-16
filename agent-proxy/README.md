@@ -99,7 +99,10 @@ claude -p "<kickOffPrompt>" \
 
 - **Session id:** our `sessionId` is Claude's session id, so agent-proxy never reads it back. Resumed runs use
   `--resume <sessionId>` with the agent's `resumePrompt`, or with the expert's answer.
-- **Environment:** the container's, plus `CLAUDE_CONFIG_DIR=<sessions-dir>/<sessionId>/<agentName>/claude-state`
+- **Environment:** only an allowlist of the container's: `PATH`, `HOME`, `LANG`, `LC_ALL`, `TZ`, `TMPDIR`,
+  `DISABLE_AUTOUPDATER`, `ANTHROPIC_*` (API key, base URL) and `CLAUDE_CODE_*`. agent-proxy's own secrets
+  (`SOURCES_REPO_ACCESS_TOKEN`, `PUSHCA_API_KEY`, ...) never reach the run. Plus
+  `CLAUDE_CONFIG_DIR=<sessions-dir>/<sessionId>/<agentName>/claude-state`
   (Claude Code's own state for the session: settings, the conversation `--resume` reads; deleted with the session,
   kept by an archive, never shared), and `CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1` when resuming with the
   `resumePrompt` (finish the interrupted turn first; not when resuming with an answer).

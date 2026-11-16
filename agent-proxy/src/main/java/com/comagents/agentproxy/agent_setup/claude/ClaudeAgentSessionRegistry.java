@@ -62,6 +62,11 @@ public class ClaudeAgentSessionRegistry {
     /** Claude Code's config dir ({@code CLAUDE_CONFIG_DIR}) inside each session's agent folder. */
     public static final String CLAUDE_STATE_FOLDER = "claude-state";
 
+    // see isInheritedByClaudeCode
+    private static final Set<String> INHERITED_ENVIRONMENT = Set.of("PATH", "HOME", "LANG", "LC_ALL", "TZ", "TMPDIR",
+            "DISABLE_AUTOUPDATER");
+    private static final List<String> INHERITED_ENVIRONMENT_PREFIXES = List.of("ANTHROPIC_", "CLAUDE_CODE_");
+
     // how often the watchdog checks the time limit and the idle timeout
     private static final Duration WATCHDOG_INTERVAL = Duration.ofSeconds(1);
 
@@ -205,6 +210,7 @@ public class ClaudeAgentSessionRegistry {
                 agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume,
                 config.responseSchema() != null, options);
         ProcessBuilder processBuilder = new ProcessBuilder(command(config, session, prompt, promptContext));
+        processBuilder.environment().keySet().removeIf(name -> !isInheritedByClaudeCode(name));
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
         processBuilder.environment().put("CLAUDE_CONFIG_DIR", agentFolder.resolve(CLAUDE_STATE_FOLDER).toString());
@@ -548,6 +554,16 @@ public class ClaudeAgentSessionRegistry {
     @PreDestroy
     void killAllSessions() {
         sessions.keySet().forEach(this::killSession);
+    }
+
+    /**
+     * Whether Claude Code gets agent-proxy's environment variable {@code name}: an allowlist, so agent-proxy's own
+     * secrets (SOURCES_REPO_ACCESS_TOKEN, PUSHCA_API_KEY, any added later) never reach the run, where anything the
+     * agent runs could read them. It gets the model provider's settings ({@code ANTHROPIC_*}, the API key among them:
+     * Claude Code can't work without it), its own settings ({@code CLAUDE_CODE_*}) and a few basics.
+     */
+    static boolean isInheritedByClaudeCode(String name) {
+        return INHERITED_ENVIRONMENT.contains(name) || INHERITED_ENVIRONMENT_PREFIXES.stream().anyMatch(name::startsWith);
     }
 
     private static void requirePrepared(UUID sessionId, Path... folders) {
