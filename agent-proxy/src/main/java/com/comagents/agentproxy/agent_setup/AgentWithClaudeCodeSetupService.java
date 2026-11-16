@@ -7,7 +7,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.AiAgentAttributes;
+import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.domain.AiHarnessProvider;
 import com.comagents.agentproxy.domain.agent_context.AgentContext;
 import com.comagents.agentproxy.domain.agent_context.AgentContextItem;
@@ -71,7 +71,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
      * before the run starts, so it gets all output; without Pushca the session runs without a chat.
      */
     @Override
-    public void setup(AiAgent agent, AiAgentAttributes attributes) {
+    public void setup(AiAgent agent, AgentSessionAttributes attributes) {
         UUID sessionId = attributes.sessionId();
         try (SessionSlot slot = claudeAgentSessionRegistry.reserve(sessionId)) {
             requireNoSessionFolder(sessionId);
@@ -119,7 +119,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     }
 
     // Claude Code runs in the context's repository to clone, or in the agent folder when there is none
-    private Path prepareWorkingDirectory(AiAgentAttributes attributes, Path agentFolder) {
+    private Path prepareWorkingDirectory(AgentSessionAttributes attributes, Path agentFolder) {
         Optional<String> cloneSourceUrl = Optional.ofNullable(attributes.agentContext())
                 .flatMap(AgentContext::repositoryToClone)
                 .map(AgentContextItem::getValue);

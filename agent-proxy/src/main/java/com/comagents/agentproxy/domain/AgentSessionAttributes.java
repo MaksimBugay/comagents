@@ -12,12 +12,12 @@ import java.util.UUID;
  * @param actorAccountId the Pushca account that started the session: the only member of the session's chat
  * @param loggingLevel   what the session's chat shows; {@link AgentSessionLoggingLevel#INFO} when not given
  */
-public record AiAgentAttributes(@NotNull UUID sessionId,
+public record AgentSessionAttributes(@NotNull UUID sessionId,
                                 @Nullable AgentContext agentContext,
                                 @Nullable String actorAccountId,
                                 AgentSessionLoggingLevel loggingLevel) {
 
-    public AiAgentAttributes {
+    public AgentSessionAttributes {
         if (loggingLevel == null) {
             loggingLevel = AgentSessionLoggingLevel.INFO;
         }

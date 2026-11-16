@@ -6,7 +6,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.AiAgentAttributes;
+import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.domain.agent_context.AgentContext;
 import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
 import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
@@ -65,7 +65,7 @@ class AgentWithClaudeCodeSetupServiceTest {
     void failedSetupFreesSlotAndDeletesSessionFolder() {
         // the download of the agent's files fails after the slot was reserved
         assertThrows(IllegalArgumentException.class,
-                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
+                () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
 
         assertFalse(Files.exists(sessionFolders.of(sessionId)));
         assertSlotFreed();
@@ -79,7 +79,7 @@ class AgentWithClaudeCodeSetupServiceTest {
         Files.writeString(earlierSessionsFile, "{}");
 
         ClaudeSessionExistsException e = assertThrows(ClaudeSessionExistsException.class,
-                () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
+                () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
 
         assertTrue(e.getMessage().contains(sessionId.toString()), e.getMessage());
         assertTrue(Files.exists(earlierSessionsFile), "the earlier session's data is not deleted");
@@ -90,7 +90,7 @@ class AgentWithClaudeCodeSetupServiceTest {
     void busyServiceRejectsBeforeAnySetupWork() {
         try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(UUID.randomUUID())) {
             assertThrows(ClaudeSessionLimitException.class,
-                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
+                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "Maks", null)));
         }
 
         assertFalse(Files.exists(sessionFolders.of(sessionId)), "nothing was downloaded or created");
@@ -103,7 +103,7 @@ class AgentWithClaudeCodeSetupServiceTest {
 
         try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(sessionId)) {
             assertThrows(ClaudeSessionExistsException.class,
-                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, null, "Maks", null)));
+                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, null, "Maks", null)));
         }
 
         assertTrue(Files.exists(otherSetupsFile), "the folder belongs to the setup that holds the id");

@@ -5,7 +5,7 @@ import com.comagents.agentproxy.agent_setup.AgentSetupServices;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.AiAgentAttributes;
+import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.domain.agent_context.InvalidAgentContextException;
 import com.comagents.agentproxy.request.StartAgentSessionRequest;
 import io.micronaut.core.convert.exceptions.ConversionErrorException;
@@ -62,7 +62,7 @@ public class AgentController {
         requireSameAgent(agentName, startAgentRequest.agent());
         setupServiceFor(startAgentRequest.agent()).setup(
                 startAgentRequest.agent(),
-                new AiAgentAttributes(
+                new AgentSessionAttributes(
                         startAgentRequest.sessionId(),
                         startAgentRequest.agentContext(),
                         startAgentRequest.actorAccountId(),

@@ -2,7 +2,7 @@ package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.AiAgentAttributes;
+import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.domain.AiHarnessProvider;
 import jakarta.validation.constraints.NotNull;
 
@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public sealed interface AgentSetupService permits AgentWithClaudeCodeSetupService {
 
-    void setup(@NotNull AiAgent agent, @NotNull AiAgentAttributes attributes);
+    void setup(@NotNull AiAgent agent, @NotNull AgentSessionAttributes attributes);
 
     /** Empty when the session is unknown: never started, or already cleaned up. */
     Optional<AgentSessionStatus> status(@NotNull UUID sessionId);
