@@ -105,6 +105,28 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
     }
 
     /**
+     * Removes the chat of a session this registry may have no client for, e.g. one left behind by a restart: then it
+     * signs in as the session just for that, as {@link #reopenConnection} does. Best effort: when Pushca can't be
+     * reached, or the session never had a chat, nothing changes.
+     */
+    public void removeChat(UUID sessionId, AiAgent agent) {
+        if (clients.containsKey(sessionId)) {
+            removeConnection(sessionId);
+            return;
+        }
+        AgentSessionWsClient client = newClient(sessionId, agent, null);
+        try {
+            client.connect(connector, true);
+        } catch (RuntimeException e) {
+            LOG.warn("[{} {}] Pushca unavailable, the chat is not removed: {}", agent.getAgentName(), sessionId,
+                    e.getMessage());
+            client.shutdown();
+            return;
+        }
+        client.removeChannelAndClose();
+    }
+
+    /**
      * Posts {@code text} to the session's chat, after everything posted before it.
      *
      * @return whether the session has a chat; without one nobody reads the text

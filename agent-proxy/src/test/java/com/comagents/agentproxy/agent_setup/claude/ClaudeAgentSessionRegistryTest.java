@@ -18,8 +18,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -780,6 +782,65 @@ class ClaudeAgentSessionRegistryTest {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
 
         assertThrows(IllegalStateException.class, () -> registry.archive(UUID.randomUUID()));
+    }
+
+    @Test
+    void deletesSessionsFinishedBeforeTheCutoff() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+        assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
+        Instant finishedAt = session.getFinishedAt().orElseThrow();
+
+        registry.deleteSessionsFinishedBefore(finishedAt);
+        assertTrue(Files.exists(sessionFolders.of(sessionId)), "not finished before the cutoff");
+
+        // its response was never fetched
+        registry.deleteSessionsFinishedBefore(finishedAt.plusMillis(1));
+        assertFalse(Files.exists(sessionFolders.of(sessionId)));
+        assertEquals(Optional.empty(), registry.findSession(sessionId));
+        assertEquals(List.of(sessionId), listener.deleted, "its chat is removed");
+    }
+
+    @Test
+    void keepsArchivedSessionsPastTheCutoff() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+        registry.archive(sessionId);
+
+        registry.deleteSessionsFinishedBefore(Instant.now().plus(Duration.ofDays(1)));
+
+        assertTrue(Files.exists(sessionFolders.of(sessionId)));
+        assertTrue(listener.deleted.isEmpty());
+    }
+
+    @Test
+    void deletesSessionsLeftBehindByARestart() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID finished = newSessionId();
+        registry.createSession(finished, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+        UUID archived = newSessionId();
+        registry.createSession(archived, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+        registry.archive(archived);
+        // a setup that failed before the agent's files were copied
+        UUID withoutAgentFolder = UUID.randomUUID();
+        Files.createDirectories(sessionFolders.of(withoutAgentFolder).resolve("kn-challenge"));
+        Path notASession = Files.createDirectories(sessionsRoot.resolve("not-a-session"));
+
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID known = newSessionId();
+        registry.createSession(known, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+        listener.deleted.clear();
+
+        assertEquals(Map.of(finished, AiAgent.CODE_REVIEW), registry.deleteLeftoverSessions());
+
+        assertFalse(Files.exists(sessionFolders.of(finished)));
+        assertFalse(Files.exists(sessionFolders.of(withoutAgentFolder)));
+        assertTrue(Files.exists(sessionFolders.of(archived)), "kept for a resume");
+        assertTrue(Files.exists(sessionFolders.of(known)), "known to this registry, deleted when due");
+        assertTrue(Files.exists(notASession));
+        assertTrue(listener.deleted.isEmpty(), "their chats are removed separately");
     }
 
     @Test

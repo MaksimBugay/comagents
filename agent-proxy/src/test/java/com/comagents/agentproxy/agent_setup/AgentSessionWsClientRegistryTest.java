@@ -181,6 +181,39 @@ class AgentSessionWsClientRegistryTest {
     }
 
     @Test
+    void removesTheChatOfASessionWithoutClient() {
+        // e.g. a session left behind by a restart
+        registry.removeChat(sessionId, AiAgent.CODE_REVIEW);
+
+        FakeConnection connection = onlyConnection();
+        assertEquals("code_review@comagents.com", connection.client.accountId);
+        assertEquals(sessionId.toString(), connection.client.deviceId);
+        assertTrue(connection.createdChannels.isEmpty(), "the chat is not created again");
+        assertEquals(List.of("code_review_session_" + sessionId), connection.removedChannels.stream().map(channel -> channel.id).toList());
+        assertTrue(connection.closed);
+    }
+
+    @Test
+    void removingTheChatOfAConnectedSessionUsesItsClient() {
+        registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks");
+
+        registry.removeChat(sessionId, AiAgent.CODE_REVIEW);
+
+        FakeConnection connection = onlyConnection();
+        assertEquals(connection.createdChannels, connection.removedChannels);
+        assertTrue(connection.closed);
+    }
+
+    @Test
+    void chatStaysWhenPushcaIsUnavailableForItsRemoval() {
+        connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+
+        registry.removeChat(sessionId, AiAgent.CODE_REVIEW);
+
+        assertTrue(connector.connections.isEmpty());
+    }
+
+    @Test
     void sessionRunsWithoutChatWhenPushcaIsUnavailable() {
         connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
 

@@ -28,6 +28,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -283,6 +284,62 @@ public class ClaudeAgentSessionRegistry {
         FileTrees.deleteIfExists(sessionFolders.of(sessionId));
         LOG.info("[{}] session data deleted", sessionId);
         sessionListener.onSessionDataDeleted(sessionId);
+    }
+
+    /**
+     * Deletes, as {@link #cleanAllSessionData} does, the sessions that finished before {@code cutoff}, whether or not
+     * their response was fetched. Archived sessions are kept for a resume.
+     */
+    public void deleteSessionsFinishedBefore(Instant cutoff) {
+        sessions.values().stream()
+                .filter(session -> session.getState().isFinished() && session.getState() != AgentSessionState.ARCHIVED)
+                .filter(session -> session.getFinishedAt().filter(cutoff::isAfter).isPresent())
+                .map(ClaudeAgentSession::getSessionId)
+                .toList()
+                .forEach(sessionId -> {
+                    LOG.info("[{}] finished before {}, deleting the session", sessionId, cutoff);
+                    cleanAllSessionData(sessionId);
+                });
+    }
+
+    /**
+     * Deletes the sessions a restart left behind: folders in the sessions dir of sessions this registry doesn't know
+     * and that aren't archived. Nothing can fetch their response or resume them any more. Their chats are not touched.
+     *
+     * @return the deleted sessions that had an agent folder (so maybe a chat, which is opened after the agent's files
+     *         are copied), with that agent
+     */
+    public Map<UUID, AiAgent> deleteLeftoverSessions() {
+        Map<UUID, AiAgent> deleted = new HashMap<>();
+        try (Stream<Path> sessionFolderStream = Files.list(sessionFolders.root())) {
+            for (Path sessionFolder : sessionFolderStream.filter(Files::isDirectory).toList()) {
+                sessionIdOf(sessionFolder).filter(this::isLeftover).ifPresent(sessionId -> {
+                    Optional<AiAgent> agent = agentOf(sessionFolder);
+                    FileTrees.deleteIfExists(sessionFolder);
+                    LOG.info("[{}] left behind by a restart, session data deleted", sessionId);
+                    agent.ifPresent(it -> deleted.put(sessionId, it));
+                });
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to list " + sessionFolders.root(), e);
+        }
+        return deleted;
+    }
+
+    private boolean isLeftover(UUID sessionId) {
+        return !sessions.containsKey(sessionId) && !reservedSessionIds.contains(sessionId) && findArchive(sessionId).isEmpty();
+    }
+
+    // the agent folder is the one with the agent's agent.json; a cloned repository may have any name
+    private static Optional<AiAgent> agentOf(Path sessionFolder) {
+        try (Stream<Path> folders = Files.list(sessionFolder)) {
+            return folders.filter(folder -> Files.isRegularFile(folder.resolve(ClaudeAgentConfig.FILE_NAME)))
+                    .map(folder -> AiAgent.fromAgentName(folder.getFileName().toString()))
+                    .flatMap(Optional::stream)
+                    .findFirst();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to list " + sessionFolder, e);
+        }
     }
 
     /**
