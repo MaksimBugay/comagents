@@ -56,9 +56,10 @@ Every item needs a value, and items are unique by type and name. One repository 
 directory: the only one, or the primary one when there are several (at most one primary; several repositories
 without one are rejected). Without a repository nothing is cloned. The agent's `agent.json` can list
 `requiredItems` by `type` and/or `name` (an omitted one matches any): a context without a matching item is
-rejected before anything is cloned for the session. Every item is appended to the agent's kick-off prompt as a
-"Context of this session" list: other repositories and files are listed by URL only, not cloned or downloaded, for
-the agent to fetch if useful; `STRING` items are given as text. An invalid context is rejected with **400** and a
+rejected before anything is cloned for the session. Every other item is appended to the agent's kick-off prompt as a
+"Context of this session" list (the cloned repository is not: it is the working directory): other repositories and
+files are listed by URL only, not cloned or downloaded, for the agent to fetch if useful; `STRING` items are given as
+text. An invalid context is rejected with **400** and a
 message saying what is wrong (e.g. "Duplicate item STRING focus").
 
 ### Questions to the expert (`ask_expert`)

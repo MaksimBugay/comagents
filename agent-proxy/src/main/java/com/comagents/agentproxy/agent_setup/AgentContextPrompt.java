@@ -9,8 +9,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * A session's {@link AgentContext} as a section of the kick-off prompt. Only the cloned repository is local (the
- * working directory); other repositories and files are listed by URL, for the agent to fetch only if useful.
+ * A session's {@link AgentContext} as a section of the kick-off prompt, for the agent to use only if useful. The
+ * cloned repository is left out: it is the working directory, already there. Other repositories and files are listed
+ * by URL.
  */
 public final class AgentContextPrompt {
 
@@ -21,25 +22,27 @@ public final class AgentContextPrompt {
     private AgentContextPrompt() {
     }
 
-    /** The prompt section, or empty without a context or items. */
+    /** The prompt section, or empty when the context has nothing besides the cloned repository. */
     public static Optional<String> render(AgentContext context) {
-        if (context == null || context.items().isEmpty()) {
+        if (context == null) {
             return Optional.empty();
         }
         Optional<GithubRepositoryAgentContextItem> cloned = context.repositoryToClone();
         List<String> lines = context.items().stream()
+                .filter(item -> cloned.filter(item::equals).isEmpty())
                 .sorted(ORDER)
-                .map(item -> line(item, cloned.filter(item::equals).isPresent()))
+                .map(AgentContextPrompt::line)
                 .toList();
-        return Optional.of("Context of this session. Only the working directory is available locally; the other items "
-                + "are listed for reference, use one only if it helps:\n" + String.join("\n", lines));
+        if (lines.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of("Context of this session, besides the working directory. These items are not available "
+                + "locally; use one only if it helps:\n" + String.join("\n", lines));
     }
 
-    private static String line(AgentContextItem item, boolean cloned) {
+    private static String line(AgentContextItem item) {
         return switch (item.type()) {
-            case GITHUB_REPOSITORY -> cloned
-                    ? "- repository \"" + item.getName() + "\", cloned into the working directory: " + item.getValue()
-                    : "- repository \"" + item.getName() + "\" (not cloned): " + item.getValue();
+            case GITHUB_REPOSITORY -> "- repository \"" + item.getName() + "\" (not cloned): " + item.getValue();
             case FILE -> "- file \"" + item.getName() + "\" (not downloaded), download URL: " + item.getValue();
             case STRING -> "- text \"" + item.getName() + "\": " + item.getValue();
         };

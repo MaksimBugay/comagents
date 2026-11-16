@@ -10,12 +10,12 @@ import java.util.Optional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class AgentContextPromptTest {
 
     @Test
-    void listsEveryItem() {
+    void listsEveryItemButTheClonedRepository() {
         AgentContext context = new AgentContext(List.of(
                 new StringAgentContextItem("focus", "security"),
                 new FileAgentContextItem("requirements.md", "https://storage.example/requirements.md"),
@@ -23,21 +23,22 @@ class AgentContextPromptTest {
                 new GithubRepositoryAgentContextItem("https://github.com/acme/sources.git", true)));
 
         assertEquals(Optional.of("""
-                Context of this session. Only the working directory is available locally; the other items are listed \
-                for reference, use one only if it helps:
+                Context of this session, besides the working directory. These items are not available locally; use one \
+                only if it helps:
                 - text "focus": security
                 - file "requirements.md" (not downloaded), download URL: https://storage.example/requirements.md
-                - repository "acme/docs" (not cloned): https://github.com/acme/docs.git
-                - repository "acme/sources", cloned into the working directory: https://github.com/acme/sources.git"""),
+                - repository "acme/docs" (not cloned): https://github.com/acme/docs.git"""),
                 AgentContextPrompt.render(context));
     }
 
     @Test
-    void theOnlyRepositoryIsTheClonedOne() {
-        AgentContext context = new AgentContext(List.of(new GithubRepositoryAgentContextItem("https://github.com/acme/docs.git")));
+    void theOnlyRepositoryIsClonedSoNotListed() {
+        AgentContext onlyRepository = new AgentContext(List.of(new GithubRepositoryAgentContextItem("https://github.com/acme/docs.git")));
+        AgentContext withText = new AgentContext(List.of(new GithubRepositoryAgentContextItem("https://github.com/acme/docs.git"),
+                new StringAgentContextItem("focus", "security")));
 
-        assertTrue(AgentContextPrompt.render(context).orElseThrow()
-                .endsWith("- repository \"acme/docs\", cloned into the working directory: https://github.com/acme/docs.git"));
+        assertEquals(Optional.empty(), AgentContextPrompt.render(onlyRepository));
+        assertFalse(AgentContextPrompt.render(withText).orElseThrow().contains("acme/docs"));
     }
 
     @Test
