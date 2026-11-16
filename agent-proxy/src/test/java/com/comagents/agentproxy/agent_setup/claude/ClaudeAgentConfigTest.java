@@ -17,9 +17,9 @@ class ClaudeAgentConfigTest {
     void readsRequiredItems() throws IOException {
         ClaudeAgentConfig config = read("""
                 {"kickOffPrompt": "Review it",
-                 "requiredItems": [{"type": "GITHUB_REPOSITORY", "name": "sources"}, {"type": "FILE"}]}""");
+                 "requiredItems": [{"type": "GITHUB_REPOSITORY", "name": "acme/sources"}, {"type": "FILE"}]}""");
 
-        assertEquals(Set.of(new RequiredAgentContextItem(AgentContextItemType.GITHUB_REPOSITORY, "sources"),
+        assertEquals(Set.of(new RequiredAgentContextItem(AgentContextItemType.GITHUB_REPOSITORY, "acme/sources"),
                         new RequiredAgentContextItem(AgentContextItemType.FILE, null)),
                 config.requiredItems());
     }

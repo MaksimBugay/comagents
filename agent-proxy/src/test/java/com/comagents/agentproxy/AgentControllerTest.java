@@ -4,6 +4,7 @@ import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MediaType;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
@@ -53,6 +54,25 @@ class AgentControllerTest {
     @Test
     void startRejectsMissingAgentInRequest() {
         assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start", Map.of()));
+    }
+
+    @Test
+    void startExplainsWhyTheAgentContextIsInvalid() {
+        assertEquals("Not a GitHub repository URL: https://gitlab.com/acme/b.git", startError(
+                "[{\"type\": \"GITHUB_REPOSITORY\", \"value\": \"https://gitlab.com/acme/b.git\"}]"));
+        assertEquals("Duplicate item STRING focus", startError("""
+                [{"type": "STRING", "name": "focus", "value": "security"},
+                 {"type": "STRING", "name": "focus", "value": "performance"}]"""));
+    }
+
+    // the 400 message for a start request with these context items
+    private String startError(String items) {
+        String body = "{\"sessionId\": \"" + UUID.randomUUID() + "\", \"agent\": \"CODE_REVIEW\", "
+                + "\"agentContext\": {\"items\": " + items + "}}";
+        HttpClientResponseException e = assertThrows(HttpClientResponseException.class, () -> client.toBlocking()
+                .exchange(HttpRequest.POST("/code_review/start", body).contentType(MediaType.APPLICATION_JSON_TYPE)));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
+        return e.getResponse().getBody(Map.class).map(json -> String.valueOf(json.get("message"))).orElse("");
     }
 
     @Test

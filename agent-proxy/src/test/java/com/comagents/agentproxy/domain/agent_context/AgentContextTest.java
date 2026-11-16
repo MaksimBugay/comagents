@@ -65,7 +65,7 @@ class AgentContextTest {
 
         assertNotNull(context);
         GithubRepositoryAgentContextItem repository = assertInstanceOf(GithubRepositoryAgentContextItem.class, context.items().getFirst());
-        assertEquals("kn-challenge", repository.getName());
+        assertEquals("acme/kn-challenge", repository.getName());
         assertTrue(repository.isPrimary());
         assertInstanceOf(FileAgentContextItem.class, context.items().get(1));
         assertEquals("security", assertInstanceOf(StringAgentContextItem.class, context.items().get(2)).getValue());

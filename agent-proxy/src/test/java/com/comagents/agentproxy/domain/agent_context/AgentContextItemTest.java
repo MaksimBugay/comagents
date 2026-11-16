@@ -27,10 +27,11 @@ class AgentContextItemTest {
     void repositoryIsNamedAfterItsCloneUrl() {
         GithubRepositoryAgentContextItem repository = new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge.git");
 
-        assertEquals("kn-challenge", repository.getName());
+        assertEquals("acme/kn-challenge", repository.getName());
         assertEquals("https://github.com/acme/kn-challenge.git", repository.getValue());
         assertFalse(repository.isPrimary());
-        assertEquals("kn-challenge", GithubRepositoryAgentContextItem.repositoryName("https://github.com/acme/kn-challenge/"));
+        assertEquals("acme/kn-challenge", GithubRepositoryAgentContextItem.repositoryName("https://github.com/acme/kn-challenge/"));
+        assertEquals("kn-challenge", GithubRepositoryAgentContextItem.repositoryFolderName("https://github.com/acme/kn-challenge.git"));
     }
 
     @Test
@@ -40,7 +41,13 @@ class AgentContextItemTest {
                         () -> new GithubRepositoryAgentContextItem("https://gitlab.com/acme/kn-challenge.git")).getMessage());
         assertThrows(InvalidAgentContextException.class,
                 () -> new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge/tree/main"));
-        assertEquals("kn-challenge", new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge").getName());
+        assertEquals("acme/kn-challenge", new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge").getName());
+    }
+
+    @Test
+    void sameRepositoryNameUnderDifferentOwnersIsADifferentItem() {
+        assertNotEquals(new GithubRepositoryAgentContextItem("https://github.com/acme/utils.git"),
+                new GithubRepositoryAgentContextItem("https://github.com/other/utils.git"));
     }
 
     @Test

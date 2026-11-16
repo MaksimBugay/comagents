@@ -25,11 +25,11 @@ class AgentContextValidatorTest {
 
     @Test
     void requiredItemMatchesByTypeAndName() {
-        assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "kn-challenge"))));
+        assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "acme/kn-challenge"))));
 
         InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class,
-                () -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "other"))));
-        assertEquals("Required GITHUB_REPOSITORY item other is missing", e.getMessage());
+                () -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "other/kn-challenge"))));
+        assertEquals("Required GITHUB_REPOSITORY item other/kn-challenge is missing", e.getMessage());
         assertThrows(InvalidAgentContextException.class,
                 () -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.FILE, "focus"))));
     }

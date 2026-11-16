@@ -8,7 +8,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * A GitHub repository, given by its clone URL (the value); its name is the repository name in that URL. The primary one is
+ * A GitHub repository, given by its clone URL (the value); its name is {@code <owner>/<repository>} from that URL,
+ * so repositories of the same name under different owners are different items. The primary one is
  * cloned as the session's working directory when the context has several.
  */
 @Serdeable
@@ -40,12 +41,27 @@ public final class GithubRepositoryAgentContextItem extends AgentContextItem {
     }
 
     /**
-     * The repository name in a GitHub clone URL ({@link #GITHUB_REPOSITORY_URL}), e.g. {@code kn-challenge} for
-     * {@code https://github.com/acme/kn-challenge.git}.
+     * The item name for a GitHub clone URL ({@link #GITHUB_REPOSITORY_URL}): {@code <owner>/<repository>}, e.g.
+     * {@code acme/kn-challenge} for {@code https://github.com/acme/kn-challenge.git}.
      *
      * @throws InvalidAgentContextException when the URL is blank or not a GitHub repository URL
      */
     public static String repositoryName(String cloneUrl) {
+        Matcher url = matchUrl(cloneUrl);
+        return url.group(1) + "/" + url.group(2);
+    }
+
+    /**
+     * The repository's own name in a GitHub clone URL, without the owner: {@code kn-challenge} for
+     * {@code https://github.com/acme/kn-challenge.git}, e.g. the folder it is cloned into.
+     *
+     * @throws InvalidAgentContextException when the URL is blank or not a GitHub repository URL
+     */
+    public static String repositoryFolderName(String cloneUrl) {
+        return matchUrl(cloneUrl).group(2);
+    }
+
+    private static Matcher matchUrl(String cloneUrl) {
         if (cloneUrl == null || cloneUrl.isBlank()) {
             throw new InvalidAgentContextException("GITHUB_REPOSITORY item has no clone URL");
         }
@@ -53,6 +69,6 @@ public final class GithubRepositoryAgentContextItem extends AgentContextItem {
         if (!url.matches() || url.group(2).equals(".") || url.group(2).equals("..")) {
             throw new InvalidAgentContextException("Not a GitHub repository URL: " + cloneUrl);
         }
-        return url.group(2);
+        return url;
     }
 }

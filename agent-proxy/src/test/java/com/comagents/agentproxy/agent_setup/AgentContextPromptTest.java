@@ -27,8 +27,8 @@ class AgentContextPromptTest {
                 for reference, use one only if it helps:
                 - text "focus": security
                 - file "requirements.md" (not downloaded), download URL: https://storage.example/requirements.md
-                - repository "docs" (not cloned): https://github.com/acme/docs.git
-                - repository "sources", cloned into the working directory: https://github.com/acme/sources.git"""),
+                - repository "acme/docs" (not cloned): https://github.com/acme/docs.git
+                - repository "acme/sources", cloned into the working directory: https://github.com/acme/sources.git"""),
                 AgentContextPrompt.render(context));
     }
 
@@ -37,7 +37,7 @@ class AgentContextPromptTest {
         AgentContext context = new AgentContext(List.of(new GithubRepositoryAgentContextItem("https://github.com/acme/docs.git")));
 
         assertTrue(AgentContextPrompt.render(context).orElseThrow()
-                .endsWith("- repository \"docs\", cloned into the working directory: https://github.com/acme/docs.git"));
+                .endsWith("- repository \"acme/docs\", cloned into the working directory: https://github.com/acme/docs.git"));
     }
 
     @Test

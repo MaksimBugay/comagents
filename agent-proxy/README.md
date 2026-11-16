@@ -49,7 +49,7 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
 
 - `STRING`: a `name` and a text `value`;
 - `FILE`: the file `name` and its download URL in S3-compatible object storage as `value`;
-- `GITHUB_REPOSITORY`: the clone URL as `value` (`https://github.com/<owner>/<repo>[.git]`, checked on arrival), named after the repository in it (`…/kn-challenge.git` → `kn-challenge`),
+- `GITHUB_REPOSITORY`: the clone URL as `value` (`https://github.com/<owner>/<repo>[.git]`, checked on arrival), named `<owner>/<repo>` after it (`…/acme/kn-challenge.git` → `acme/kn-challenge`), cloned into a folder named `<repo>`,
   and optionally `"primary": true`.
 
 Every item needs a value, and items are unique by type and name. One repository is cloned as the session's working
@@ -58,7 +58,8 @@ without one are rejected). Without a repository nothing is cloned. The agent's `
 `requiredItems` by `type` and/or `name` (an omitted one matches any): a context without a matching item is
 rejected before anything is cloned for the session. Every item is appended to the agent's kick-off prompt as a
 "Context of this session" list: other repositories and files are listed by URL only, not cloned or downloaded, for
-the agent to fetch if useful; `STRING` items are given as text. An invalid context is rejected with **400**.
+the agent to fetch if useful; `STRING` items are given as text. An invalid context is rejected with **400** and a
+message saying what is wrong (e.g. "Duplicate item STRING focus").
 
 ### Questions to the expert (`ask_expert`)
 

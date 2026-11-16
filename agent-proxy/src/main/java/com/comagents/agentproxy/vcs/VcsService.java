@@ -29,11 +29,11 @@ public sealed interface VcsService permits VcsGithubService {
     }
 
     /**
-     * The repository name in a clone URL: its last path segment without {@code .git}.
+     * The repository name in a clone URL, without the owner: its last path segment without {@code .git}.
      *
      * @throws IllegalArgumentException when the URL has none
      */
     static String repoName(String sourcesRepoUrl) {
-        return GithubRepositoryAgentContextItem.repositoryName(sourcesRepoUrl);
+        return GithubRepositoryAgentContextItem.repositoryFolderName(sourcesRepoUrl);
     }
 }

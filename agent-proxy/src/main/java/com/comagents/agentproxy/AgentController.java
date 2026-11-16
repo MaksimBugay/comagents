@@ -8,6 +8,7 @@ import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.domain.agent_context.InvalidAgentContextException;
 import com.comagents.agentproxy.request.StartAgentRequest;
+import io.micronaut.core.convert.exceptions.ConversionErrorException;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -24,6 +25,8 @@ import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+
+import java.util.Optional;
 
 @Controller("/{agentName}")
 public class AgentController {
@@ -77,6 +80,23 @@ public class AgentController {
     @Error(exception = InvalidAgentContextException.class)
     public HttpResponse<JsonError> invalidAgentContext(HttpRequest<?> ignoredRequest, InvalidAgentContextException e) {
         return HttpResponse.<JsonError>status(HttpStatus.BAD_REQUEST).body(new JsonError(e.getMessage()));
+    }
+
+    // an AgentContext rejects itself while the request body is read; the deserializer wraps that rejection, so its
+    // message would otherwise be lost behind "Failed to convert argument"
+    @Error(exception = ConversionErrorException.class)
+    public HttpResponse<JsonError> unreadableRequest(HttpRequest<?> ignoredRequest, ConversionErrorException e) {
+        String message = invalidAgentContextCause(e).map(Throwable::getMessage).orElse(e.getMessage());
+        return HttpResponse.<JsonError>status(HttpStatus.BAD_REQUEST).body(new JsonError(message));
+    }
+
+    private static Optional<InvalidAgentContextException> invalidAgentContextCause(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof InvalidAgentContextException invalid) {
+                return Optional.of(invalid);
+            }
+        }
+        return Optional.empty();
     }
 
     @Error(exception = ClaudeSessionExistsException.class)
