@@ -232,6 +232,23 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
+    void structuredRunEndingWithAnErrorKeepsTheError() throws Exception {
+        registry = registry(fakeClaude("""
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":true,"result":"API Error: 500"}'
+                """), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"kickOffPrompt": "Review it", "responseSchema": %s}""".formatted(RESPONSE_SCHEMA));
+
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        assertEquals(Optional.of(AgentSessionState.FAILED), session.awaitFinished(WAIT));
+        assertEquals("API Error: 500", responseText(session.getResponseFile()));
+        assertEquals(List.of(new RecordingListener.Output(sessionId, "API Error: 500")), listener.responses);
+        assertTrue(listener.outputs.stream().noneMatch(output -> output.output().contains("invalid")), listener.outputs.toString());
+    }
+
+    @Test
     void invalidStructuredAnswerFailsTheSession() throws Exception {
         registry = registry(fakeClaude("""
                 printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"","structured_output":{"items":[{"type":"STRING","name":"verdict","value":" "}]}}'

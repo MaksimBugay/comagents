@@ -13,7 +13,8 @@ public interface ClaudeSessionListener {
 
     /**
      * The agent's final answer, reported after all of its output when the run ends with a valid one: the text, or,
-     * for an agent with a response schema, the response context as JSON (the session's response file holds it).
+     * for an agent with a response schema, the response context as JSON (the session's response file holds it),
+     * unless the run ended with an error and no structured output: then its error text.
      */
     void onResponse(UUID sessionId, String response);
 

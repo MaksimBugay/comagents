@@ -717,7 +717,7 @@ public class ClaudeAgentSessionRegistry {
             session.finish(succeeded ? AgentSessionState.DONE : AgentSessionState.FAILED);
             response.ifPresent(context -> {
                 writeResponse(session, context);
-                sessionListener.onResponse(sessionId, session.isStructuredResponse()
+                sessionListener.onResponse(sessionId, answersPerSchema(session)
                         ? toJson(context) : session.resultText().orElseThrow());
             });
         }
@@ -751,7 +751,7 @@ public class ClaudeAgentSessionRegistry {
             return Optional.empty();
         }
         try {
-            return Optional.of(session.isStructuredResponse()
+            return Optional.of(answersPerSchema(session)
                     ? structuredResponse(session)
                     : new AgentContext(List.of(new StringAgentContextItem(ClaudeAgentConfig.DEFAULT_RESPONSE_ITEM,
                             session.resultText().orElse(null)))));
@@ -760,6 +760,12 @@ public class ClaudeAgentSessionRegistry {
             sessionListener.onOutput(session.getSessionId(), "The agent's final answer is invalid: " + e.getMessage());
             return Optional.empty();
         }
+    }
+
+    // per the response schema, unless the run ended with an error (max turns, API error, ...) and no structured
+    // output: then its error text is kept, as for an agent without a schema
+    private static boolean answersPerSchema(ClaudeAgentSession session) {
+        return session.isStructuredResponse() && (session.isResultSuccessful() || session.structuredOutput().isPresent());
     }
 
     private AgentContext structuredResponse(ClaudeAgentSession session) throws IOException {
