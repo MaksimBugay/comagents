@@ -66,7 +66,8 @@ public class AgentController {
                         startAgentRequest.sessionId(),
                         startAgentRequest.agentContext(),
                         startAgentRequest.actorAccountId(),
-                        startAgentRequest.loggingLevel()
+                        startAgentRequest.loggingLevel(),
+                        startAgentRequest.createdAt()
                 )
         );
         return HttpResponse.accepted().body(new AgentInfo(startAgentRequest.agent().getAgentName(), applicationName, version, instance));

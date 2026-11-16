@@ -13,9 +13,10 @@ import java.util.UUID;
  * @param loggingLevel   what the session's chat shows; {@link AgentSessionLoggingLevel#INFO} when not given
  */
 public record AgentSessionAttributes(@NotNull UUID sessionId,
-                                @Nullable AgentContext agentContext,
-                                @Nullable String actorAccountId,
-                                AgentSessionLoggingLevel loggingLevel) {
+                                     @Nullable AgentContext agentContext,
+                                     @Nullable String actorAccountId,
+                                     AgentSessionLoggingLevel loggingLevel,
+                                     long createdAt) {
 
     public AgentSessionAttributes {
         if (loggingLevel == null) {

@@ -7,6 +7,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -15,12 +16,13 @@ import java.util.UUID;
  */
 @Serdeable
 public record StartAgentSessionRequest(UUID sessionId,
-                                @NotNull AiAgent agent,
-                                @Nullable AgentContext agentContext,
-                                String actorAccountId,
-                                AgentSessionLoggingLevel loggingLevel) {
+                                       @NotNull AiAgent agent,
+                                       @Nullable AgentContext agentContext,
+                                       String actorAccountId,
+                                       AgentSessionLoggingLevel loggingLevel,
+                                       long createdAt) {
 
     public StartAgentSessionRequest(UUID sessionId, AiAgent agent, @Nullable AgentContext agentContext, String actorAccountId) {
-        this(sessionId, agent, agentContext, actorAccountId, AgentSessionLoggingLevel.INFO);
+        this(sessionId, agent, agentContext, actorAccountId, AgentSessionLoggingLevel.INFO, Instant.now().toEpochMilli());
     }
 }
