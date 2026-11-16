@@ -62,7 +62,7 @@ class AgentContextTest {
 
         InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class, () -> new AgentContext(List.of(
                 new StringAgentContextItem("a", half), new StringAgentContextItem("b", half + "xxxxxxxx"))));
-        assertEquals("Agent context too large: 65538 bytes of names and values, at most 65536", e.getMessage());
+        assertEquals("Agent context too large: 65538 bytes of names, values and descriptions, at most 65536", e.getMessage());
         // counted in UTF-8 bytes: "é" takes two
         assertThrows(InvalidAgentContextException.class,
                 () -> new AgentContext(List.of(new StringAgentContextItem("a", "é".repeat(AgentContext.MAX_BYTES / 2 + 1)))));
@@ -73,14 +73,17 @@ class AgentContextTest {
         AgentContext context = ObjectMapper.getDefault().readValue("""
                 {"items": [
                   {"type": "GITHUB_REPOSITORY", "value": "https://github.com/acme/kn-challenge.git", "primary": true},
-                  {"type": "FILE", "name": "requirements.md", "value": "https://storage.example/requirements.md"},
+                  {"type": "FILE", "name": "requirements.md", "value": "https://storage.example/requirements.md",
+                   "description": "acceptance criteria"},
                   {"type": "STRING", "name": "focus", "value": "security"}]}""", AgentContext.class);
 
         assertNotNull(context);
         GithubRepositoryAgentContextItem repository = assertInstanceOf(GithubRepositoryAgentContextItem.class, context.items().getFirst());
         assertEquals("acme/kn-challenge", repository.getName());
         assertTrue(repository.isPrimary());
-        assertInstanceOf(FileAgentContextItem.class, context.items().get(1));
+        FileAgentContextItem file = assertInstanceOf(FileAgentContextItem.class, context.items().get(1));
+        assertEquals(Optional.of("acceptance criteria"), file.getDescription());
+        assertEquals(Optional.empty(), repository.getDescription());
         assertEquals("security", assertInstanceOf(StringAgentContextItem.class, context.items().get(2)).getValue());
     }
 

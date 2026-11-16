@@ -2,6 +2,8 @@ package com.comagents.agentproxy.domain.agent_context;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -54,6 +56,13 @@ class AgentContextItemTest {
         assertEquals(new FileAgentContextItem("a.md", "x").hashCode(), new FileAgentContextItem("A.MD", "y").hashCode());
         assertTrue(new StringAgentContextItem("Note", "a").isNamed("note"));
         assertFalse(new StringAgentContextItem("Note", "a").isNamed(null));
+    }
+
+    @Test
+    void descriptionIsOptional() {
+        assertEquals(Optional.of("main concern"), new StringAgentContextItem("focus", "security", "  main concern ").getDescription());
+        assertEquals(Optional.empty(), new StringAgentContextItem("focus", "security", " ").getDescription());
+        assertEquals(Optional.empty(), new StringAgentContextItem("focus", "security").getDescription());
     }
 
     @Test

@@ -39,7 +39,7 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
 {"sessionId": "…", "agent": "CODE_REVIEW", "actorAccountId": "Maks", "loggingLevel": "INFO",
  "agentContext": {"items": [
    {"type": "GITHUB_REPOSITORY", "value": "https://github.com/<org>/kn-challenge.git", "primary": true},
-   {"type": "FILE", "name": "requirements.md", "value": "<S3 download URL>"},
+   {"type": "FILE", "name": "requirements.md", "value": "<S3 download URL>", "description": "acceptance criteria"},
    {"type": "STRING", "name": "focus", "value": "security"}]}}
 ```
 
@@ -52,7 +52,8 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
 - `GITHUB_REPOSITORY`: the clone URL as `value` (`https://github.com/<owner>/<repo>[.git]`, checked on arrival), named `<owner>/<repo>` after it (`…/acme/kn-challenge.git` → `acme/kn-challenge`), cloned into a folder named `<repo>`,
   and optionally `"primary": true`.
 
-Every item needs a value, and items are unique by type and name. One repository is cloned as the session's working
+Every item needs a value and can have a `description` of what it is for, shown to the agent with the item. Items are
+unique by type and name. One repository is cloned as the session's working
 directory: the only one, or the primary one when there are several (at most one primary; several repositories
 without one are rejected). Without a repository nothing is cloned. The agent's `agent.json` can list
 `requiredItems` by `type` and/or `name` (an omitted one matches any): a context without a matching item is

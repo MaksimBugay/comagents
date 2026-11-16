@@ -17,16 +17,16 @@ class AgentContextPromptTest {
     @Test
     void listsEveryItemButTheClonedRepository() {
         AgentContext context = new AgentContext(List.of(
-                new StringAgentContextItem("focus", "security"),
-                new FileAgentContextItem("requirements.md", "https://storage.example/requirements.md"),
+                new StringAgentContextItem("focus", "security", "the review's main concern"),
+                new FileAgentContextItem("requirements.md", "https://storage.example/requirements.md", "acceptance criteria"),
                 new GithubRepositoryAgentContextItem("https://github.com/acme/docs.git"),
                 new GithubRepositoryAgentContextItem("https://github.com/acme/sources.git", true)));
 
         assertEquals(Optional.of("""
                 Context of this session, besides the working directory. These items are not available locally; use one \
                 only if it helps:
-                - text "focus": security
-                - file "requirements.md" (not downloaded), download URL: https://storage.example/requirements.md
+                - text "focus" (the review's main concern): security
+                - file "requirements.md" (acceptance criteria; not downloaded), download URL: https://storage.example/requirements.md
                 - repository "acme/docs" (not cloned): https://github.com/acme/docs.git"""),
                 AgentContextPrompt.render(context));
     }

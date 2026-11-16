@@ -7,6 +7,7 @@ import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContex
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * A session's {@link AgentContext} as a section of the kick-off prompt, for the agent to use only if useful. The
@@ -40,11 +41,18 @@ public final class AgentContextPrompt {
                 + "locally; use one only if it helps:\n" + String.join("\n", lines));
     }
 
+    // e.g. - file "requirements.md" (acceptance criteria; not downloaded), download URL: https://...
     private static String line(AgentContextItem item) {
         return switch (item.type()) {
-            case GITHUB_REPOSITORY -> "- repository \"" + item.getName() + "\" (not cloned): " + item.getValue();
-            case FILE -> "- file \"" + item.getName() + "\" (not downloaded), download URL: " + item.getValue();
-            case STRING -> "- text \"" + item.getName() + "\": " + item.getValue();
+            case GITHUB_REPOSITORY -> "- repository \"" + item.getName() + "\"" + notes(item, "not cloned") + ": " + item.getValue();
+            case FILE -> "- file \"" + item.getName() + "\"" + notes(item, "not downloaded") + ", download URL: " + item.getValue();
+            case STRING -> "- text \"" + item.getName() + "\"" + notes(item, null) + ": " + item.getValue();
         };
+    }
+
+    // " (<description>; <status>)", either part optional
+    private static String notes(AgentContextItem item, String status) {
+        List<String> notes = Stream.concat(item.getDescription().stream(), Stream.ofNullable(status)).toList();
+        return notes.isEmpty() ? "" : " (" + String.join("; ", notes) + ")";
     }
 }

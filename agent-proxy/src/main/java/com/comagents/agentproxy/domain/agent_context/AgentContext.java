@@ -19,7 +19,7 @@ import java.util.Set;
 public record AgentContext(@Nullable List<AgentContextItem> items) {
 
     /**
-     * Most bytes (UTF-8) of all item names and values together. The context goes into the kick-off prompt, which
+     * Most bytes (UTF-8) of all item names, values and descriptions together. The context goes into the kick-off prompt, which
      * Claude Code gets as a single command-line argument, and Linux caps one argument at 128 KiB: half of it is left
      * for the context, the rest for the agent's own prompt and the list's wording.
      */
@@ -60,10 +60,11 @@ public record AgentContext(@Nullable List<AgentContextItem> items) {
 
     private static void requireAtMostMaxBytes(List<AgentContextItem> items) {
         long bytes = items.stream()
-                .mapToLong(item -> utf8Length(item.getName()) + utf8Length(item.getValue()))
+                .mapToLong(item -> utf8Length(item.getName()) + utf8Length(item.getValue())
+                        + item.getDescription().map(AgentContext::utf8Length).orElse(0))
                 .sum();
         if (bytes > MAX_BYTES) {
-            throw new InvalidAgentContextException("Agent context too large: " + bytes + " bytes of names and values, "
+            throw new InvalidAgentContextException("Agent context too large: " + bytes + " bytes of names, values and descriptions, "
                     + "at most " + MAX_BYTES);
         }
     }

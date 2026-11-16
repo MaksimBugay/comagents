@@ -2,11 +2,13 @@ package com.comagents.agentproxy.domain.agent_context;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * One item of an {@link AgentContext}, in JSON {@code {"type": "STRING" | "FILE" | "GITHUB_REPOSITORY", ...}}. Items are
@@ -23,17 +25,21 @@ public abstract sealed class AgentContextItem permits StringAgentContextItem, Fi
     private final AgentContextItemType type;
     private final String name;
     private final String value;
+    private final String description;
 
     /**
-     * @param type the subclass's own type, passed in rather than asked for, so construction never calls an overridable
-     *             method
+     * @param type        the subclass's own type, passed in rather than asked for, so construction never calls an
+     *                    overridable method
+     * @param description what the item is for, e.g. "acceptance criteria of the feature"; shown to the agent with the
+     *                    item. Optional: none when null or blank
      * @throws InvalidAgentContextException when the name or the value is blank
      */
-    protected AgentContextItem(AgentContextItemType type, String name, String value) {
+    protected AgentContextItem(AgentContextItemType type, String name, String value, @Nullable String description) {
         this.type = Objects.requireNonNull(type, "type");
         // surrounding whitespace is no part of a name: " focus" is "focus"
         this.name = requireNotBlank(type, name, "name", name).strip();
         this.value = requireNotBlank(type, value, "value", name);
+        this.description = StringUtils.isBlank(description) ? null : description.strip();
     }
 
     public final AgentContextItemType type() {
@@ -46,6 +52,10 @@ public abstract sealed class AgentContextItem permits StringAgentContextItem, Fi
 
     public String getValue() {
         return value;
+    }
+
+    public Optional<String> getDescription() {
+        return Optional.ofNullable(description);
     }
 
     private static String requireNotBlank(AgentContextItemType type, String text, String what, String itemName) {
