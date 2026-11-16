@@ -3,6 +3,7 @@ package com.comagents.agentproxy.agent_setup.claude;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
 import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.json.tree.JsonNode;
@@ -211,6 +212,23 @@ class ClaudeAgentSessionRegistryTest {
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
         assertEquals(List.of("Review it", "", "Context: focus on security", "", "Return your final answer as JSON matching this schema:"),
                 args.subList(1, 6));
+    }
+
+    @Test
+    void answerLargerThanARequestContextIsKept() throws Exception {
+        // a start request's context is limited to fit into the kick-off prompt; the final answer is not
+        String report = "x".repeat(AgentContextValidator.MAX_BYTES + 1);
+        Files.writeString(scripts.resolve("result.json"),
+                "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"" + report + "\"}\n");
+        registry = registry(fakeClaude("cat \"$(dirname \"$0\")/result.json\""), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"kickOffPrompt": "Review it"}""");
+
+        ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
+
+        assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
+        assertEquals(report, responseText(session.getResponseFile()));
     }
 
     @Test

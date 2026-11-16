@@ -56,16 +56,9 @@ class AgentContextTest {
     }
 
     @Test
-    void namesAndValuesTogetherAreLimited() {
-        String half = "x".repeat(AgentContext.MAX_BYTES / 2 - 4);
-        assertDoesNotThrow(() -> new AgentContext(List.of(new StringAgentContextItem("a", half), new StringAgentContextItem("b", half))));
-
-        InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class, () -> new AgentContext(List.of(
-                new StringAgentContextItem("a", half), new StringAgentContextItem("b", half + "xxxxxxxx"))));
-        assertEquals("Agent context too large: 65538 bytes of names, values and descriptions, at most 65536", e.getMessage());
-        // counted in UTF-8 bytes: "é" takes two
-        assertThrows(InvalidAgentContextException.class,
-                () -> new AgentContext(List.of(new StringAgentContextItem("a", "é".repeat(AgentContext.MAX_BYTES / 2 + 1)))));
+    void sizeIsNotLimited() {
+        // an agent's response is a context too; only a start request's context is limited (AgentContextValidator)
+        assertDoesNotThrow(() -> new AgentContext(List.of(new StringAgentContextItem("a", "x".repeat(AgentContextValidator.MAX_BYTES + 1)))));
     }
 
     @Test

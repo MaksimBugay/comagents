@@ -62,6 +62,20 @@ class AgentContextValidatorTest {
                 new GithubRepositoryAgentContextItem("https://github.com/acme/code_review.git"))), Set.of()));
     }
 
+    @Test
+    void namesAndValuesTogetherAreLimited() {
+        String half = "x".repeat(AgentContextValidator.MAX_BYTES / 2 - 4);
+        assertDoesNotThrow(() -> validator.validate(AiAgent.CODE_REVIEW, new AgentContext(List.of(
+                new StringAgentContextItem("a", half), new StringAgentContextItem("b", half))), Set.of()));
+
+        InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class, () -> validator.validate(AiAgent.CODE_REVIEW,
+                new AgentContext(List.of(new StringAgentContextItem("a", half), new StringAgentContextItem("b", half + "xxxxxxxx"))), Set.of()));
+        assertEquals("Agent context too large: 65538 bytes of names, values and descriptions, at most 65536", e.getMessage());
+        // counted in UTF-8 bytes: "é" takes two
+        assertThrows(InvalidAgentContextException.class, () -> validator.validate(AiAgent.CODE_REVIEW,
+                new AgentContext(List.of(new StringAgentContextItem("a", "é".repeat(AgentContextValidator.MAX_BYTES / 2 + 1)))), Set.of()));
+    }
+
     private static RequiredAgentContextItem required(AgentContextItemType type, String name) {
         return new RequiredAgentContextItem(type, name);
     }

@@ -4,10 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="new agent response format">
-      <change afterPath="$PROJECT_DIR$/build_and_run.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="new agent request/response API">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContextValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/AgentContextValidator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentSessionRegistryTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextValidatorTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextValidatorTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tmp.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tmp.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -50,22 +53,22 @@
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
       <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0" />
-      <entry key="S2" value="1.0" />
-      <entry key="S5" value="1.0" />
-      <entry key="S10" value="1.0" />
-      <entry key="S30" value="1.0" />
-      <entry key="S60" value="1.0" />
-      <entry key="M2" value="1.0" />
-      <entry key="M5" value="1.0000000000000269" />
-      <entry key="M10" value="1.0000004986942244" />
-      <entry key="M15" value="1.000140038442463" />
-      <entry key="M30" value="1.0427430761442311" />
-      <entry key="H1" value="1.9212329109592616" />
-      <entry key="H2" value="6.675567546836454" />
-      <entry key="H4" value="17.175130282748928" />
-      <entry key="D1" value="54.817113786564505" />
-      <entry key="W1" value="196.59296958106384" />
+      <entry key="MS500" value="1.0005445232762071" />
+      <entry key="S2" value="1.2501180983058646" />
+      <entry key="S5" value="1.868739073440589" />
+      <entry key="S10" value="2.3176332959256176" />
+      <entry key="S30" value="2.74022476869328" />
+      <entry key="S60" value="2.875307094147476" />
+      <entry key="M2" value="3.0304906681622175" />
+      <entry key="M5" value="3.3687022748574784" />
+      <entry key="M10" value="3.6156927882383156" />
+      <entry key="M15" value="3.72540357630935" />
+      <entry key="M30" value="3.8890634232058656" />
+      <entry key="H1" value="4.776316536915127" />
+      <entry key="H2" value="9.42189576866479" />
+      <entry key="H4" value="19.846583287499797" />
+      <entry key="D1" value="57.6411529674293" />
+      <entry key="W1" value="199.50273033841833" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -73,37 +76,37 @@
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
       <entry key="S10" value="0.0" />
-      <entry key="S30" value="7.865741561282862E-154" />
-      <entry key="S60" value="3.9688522394021125E-77" />
-      <entry key="M2" value="9.098840323257447E-39" />
-      <entry key="M5" value="1.0434195868478495E-15" />
-      <entry key="M10" value="5.4195169408128096E-8" />
-      <entry key="M15" value="2.068225729392125E-5" />
-      <entry key="M30" value="0.009621309352108776" />
-      <entry key="H1" value="0.4046252712834863" />
-      <entry key="H2" value="3.9506369957474354" />
-      <entry key="H4" value="13.484659430795682" />
-      <entry key="D1" value="43.350863922180665" />
-      <entry key="W1" value="126.53023216174849" />
+      <entry key="S30" value="7.526235842112515E-158" />
+      <entry key="S60" value="3.8822545311558214E-79" />
+      <entry key="M2" value="8.999027545387842E-40" />
+      <entry key="M5" value="4.1356406931332583E-16" />
+      <entry key="M10" value="3.41194864452462E-8" />
+      <entry key="M15" value="1.5192382107869727E-5" />
+      <entry key="M30" value="0.008246091468371162" />
+      <entry key="H1" value="0.3745932852350258" />
+      <entry key="H2" value="3.8011991078420193" />
+      <entry key="H4" value="13.227163702537418" />
+      <entry key="D1" value="43.21178578381271" />
+      <entry key="W1" value="126.47216169945506" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.8827029962906549" />
-      <entry key="MS500" value="0.9753554615276419" />
-      <entry key="S2" value="0.9937810933225548" />
-      <entry key="S5" value="0.9975077808975293" />
-      <entry key="S10" value="0.9987531130852756" />
-      <entry key="S30" value="0.9995841981612189" />
-      <entry key="S60" value="0.9997920774647191" />
-      <entry key="M2" value="0.9998960333278251" />
-      <entry key="M5" value="0.9999584120339978" />
-      <entry key="M10" value="0.9999797583997772" />
-      <entry key="M15" value="1.0001467828642547" />
-      <entry key="M30" value="1.0523412036213318" />
-      <entry key="H1" value="2.325590087587713" />
-      <entry key="H2" value="10.62508199488282" />
-      <entry key="H4" value="30.657957618487544" />
-      <entry key="D1" value="98.16700007116833" />
-      <entry key="W1" value="323.122771679192" />
+      <entry key="MS100" value="0.9726549474122855" />
+      <entry key="MS500" value="0.9950114939690595" />
+      <entry key="S2" value="1.248348924275029" />
+      <entry key="S5" value="1.8676462498437392" />
+      <entry key="S10" value="2.316946408234961" />
+      <entry key="S30" value="2.739951583075854" />
+      <entry key="S60" value="2.875161922369864" />
+      <entry key="M2" value="3.030407086595747" />
+      <entry key="M5" value="3.368656044653384" />
+      <entry key="M10" value="3.6156647853390202" />
+      <entry key="M15" value="3.7253985507194134" />
+      <entry key="M30" value="3.897284648323986" />
+      <entry key="H1" value="5.150659124936866" />
+      <entry key="H2" value="13.222013539596322" />
+      <entry key="H4" value="33.071949254040476" />
+      <entry key="D1" value="100.85196414583027" />
+      <entry key="W1" value="325.9744621567298" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -233,6 +236,7 @@
     <MESSAGE value="Agent context was introduced" />
     <MESSAGE value="renamed to StartAgentSessionRequest.java" />
     <MESSAGE value="new agent response format" />
-    <option name="LAST_COMMIT_MESSAGE" value="new agent response format" />
+    <MESSAGE value="new agent request/response API" />
+    <option name="LAST_COMMIT_MESSAGE" value="new agent request/response API" />
   </component>
 </project>

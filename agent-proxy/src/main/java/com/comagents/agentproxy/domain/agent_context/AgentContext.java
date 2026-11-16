@@ -3,7 +3,6 @@ package com.comagents.agentproxy.domain.agent_context;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -19,17 +18,14 @@ import java.util.Set;
 public record AgentContext(@Nullable List<AgentContextItem> items) {
 
     /**
-     * Most bytes (UTF-8) of all item names, values and descriptions together. The context goes into the kick-off prompt, which
-     * Claude Code gets as a single command-line argument, and Linux caps one argument at 128 KiB: half of it is left
-     * for the context, the rest for the agent's own prompt and the list's wording.
+     * Not limited in size: an agent's response is a context too. A start request's context is limited by
+     * {@link AgentContextValidator}.
+     *
+     * @throws InvalidAgentContextException when items repeat, or the repository to clone is ambiguous
      */
-    public static final int MAX_BYTES = 64 * 1024;
-
-    /** @throws InvalidAgentContextException when items repeat, are too large, or the repository to clone is ambiguous */
     public AgentContext {
         items = items == null ? List.of() : List.copyOf(items);
         requireUniqueItems(items);
-        requireAtMostMaxBytes(items);
         requireUnambiguousRepositoryToClone(repositories(items));
     }
 
@@ -56,21 +52,6 @@ public record AgentContext(@Nullable List<AgentContextItem> items) {
                 throw new InvalidAgentContextException("Duplicate item " + item);
             }
         }
-    }
-
-    private static void requireAtMostMaxBytes(List<AgentContextItem> items) {
-        long bytes = items.stream()
-                .mapToLong(item -> utf8Length(item.getName()) + utf8Length(item.getValue())
-                        + item.getDescription().map(AgentContext::utf8Length).orElse(0))
-                .sum();
-        if (bytes > MAX_BYTES) {
-            throw new InvalidAgentContextException("Agent context too large: " + bytes + " bytes of names, values and descriptions, "
-                    + "at most " + MAX_BYTES);
-        }
-    }
-
-    private static int utf8Length(String text) {
-        return text.getBytes(StandardCharsets.UTF_8).length;
     }
 
     private static void requireUnambiguousRepositoryToClone(List<GithubRepositoryAgentContextItem> repositories) {
