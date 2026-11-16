@@ -36,9 +36,20 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
 ```
 
 ```json
-{"sessionId": "…", "agent": "CODE_REVIEW", "cloneSourceUrl": "https://github.com/<org>/<repo>.git",
- "actorAccountId": "Maks", "loggingLevel": "INFO"}
+{"sessionId": "…", "agent": "CODE_REVIEW", "actorAccountId": "Maks", "loggingLevel": "INFO",
+ "agentContext": {"items": [
+   {"attributes": {"type": "REPOSITORY", "name": "sources", "required": true}, "value": "https://github.com/<org>/<repo>.git"},
+   {"attributes": {"type": "FILE", "name": "requirements.md", "required": false}, "value": "<S3 download URL>"},
+   {"attributes": {"type": "STRING", "name": "focus", "required": false}, "value": "security"}]}}
 ```
+
+### Agent context
+
+`agentContext` is optional. Its required `REPOSITORY` item (at most one) is cloned as the session's working
+directory; without one nothing is cloned. Every item with a value is appended to the agent's kick-off prompt as a
+"Context of this session" list: other repositories and `FILE` items (name = file name, value = download URL in
+S3-compatible object storage) are listed by URL only, not cloned or downloaded, for the agent to fetch if useful;
+`STRING` items are given as text. A required item must have a value; an invalid context is rejected with **400**.
 
 ### Questions to the expert (`ask_expert`)
 

@@ -146,16 +146,25 @@ public class ClaudeAgentSessionRegistry {
 
         /** {@link #start(AiAgent, Path)} with the session's options, which its archive keeps for a resume. */
         public ClaudeAgentSession start(AiAgent agent, Path workingDirectory, ClaudeSessionOptions options) {
-            return startRun(agent, workingDirectory, false, null, options);
+            return startRun(agent, workingDirectory, false, null, null, options);
         }
 
-        // prompt: null for the agent's own kick-off or resume prompt
+        /**
+         * {@link #start(AiAgent, Path, ClaudeSessionOptions)} with {@code promptContext} (e.g. the session's context)
+         * appended to the agent's kick-off prompt; null for none.
+         */
+        public ClaudeAgentSession start(AiAgent agent, Path workingDirectory, ClaudeSessionOptions options,
+                                        @Nullable String promptContext) {
+            return startRun(agent, workingDirectory, false, null, promptContext, options);
+        }
+
+        // prompt: null for the agent's own kick-off or resume prompt; promptContext: appended to the kick-off prompt
         private ClaudeAgentSession startRun(AiAgent agent, Path workingDirectory, boolean resume, @Nullable String prompt,
-                                            ClaudeSessionOptions options) {
+                                            @Nullable String promptContext, ClaudeSessionOptions options) {
             if (started || closed) {
                 throw new IllegalStateException("Slot for session " + sessionId + " was already " + (started ? "started" : "closed"));
             }
-            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume, prompt, options);
+            ClaudeAgentSession session = launch(sessionId, agent, workingDirectory, resume, prompt, promptContext, options);
             sessions.put(sessionId, session);
             reservedSessionIds.remove(sessionId);
             started = true;
@@ -177,14 +186,15 @@ public class ClaudeAgentSessionRegistry {
     }
 
     private ClaudeAgentSession launch(UUID sessionId, AiAgent agent, Path workingDirectory, boolean resume,
-                                      @Nullable String prompt, ClaudeSessionOptions options) {
+                                      @Nullable String prompt, @Nullable String promptContext,
+                                      ClaudeSessionOptions options) {
         Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
         ClaudeAgentConfig config = readConfig(agent, agentFolder);
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume,
                 options);
-        ProcessBuilder processBuilder = new ProcessBuilder(command(config, session, prompt));
+        ProcessBuilder processBuilder = new ProcessBuilder(command(config, session, prompt, promptContext));
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
         processBuilder.environment().put("CLAUDE_CONFIG_DIR", agentFolder.resolve(CLAUDE_STATE_FOLDER).toString());
@@ -328,7 +338,7 @@ public class ClaudeAgentSessionRegistry {
             }
         }
         try (SessionSlot slot = reserve(sessionId)) {
-            ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true, prompt,
+            ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true, prompt, null,
                     archive.options());
             deleteArchive(stateFile, sessionId);
             return resumed;
@@ -482,11 +492,12 @@ public class ClaudeAgentSessionRegistry {
     }
 
     // a new run creates Claude Code's session under our id; a resumed run continues it
-    private List<String> command(ClaudeAgentConfig config, ClaudeAgentSession session, @Nullable String prompt) {
+    private List<String> command(ClaudeAgentConfig config, ClaudeAgentSession session, @Nullable String prompt,
+                                 @Nullable String promptContext) {
         boolean resume = session.isResumed();
         String sessionId = session.getSessionId().toString();
         List<String> command = new ArrayList<>(List.of(
-                claudeExecutable, "-p", prompt != null ? prompt : resume ? config.resumePrompt() : config.kickOffPrompt(),
+                claudeExecutable, "-p", prompt != null ? prompt : resume ? config.resumePrompt() : kickOffPrompt(config, promptContext),
                 resume ? "--resume" : "--session-id", sessionId,
                 "--output-format", "stream-json", "--verbose",
                 // nobody can answer Claude Code's built-in question tool in a headless run: ask_expert does it instead
@@ -503,6 +514,10 @@ public class ClaudeAgentSessionRegistry {
         command.addAll(config.allowedTools());
         command.addAll(mcpServer.allowedTools());
         return command;
+    }
+
+    private static String kickOffPrompt(ClaudeAgentConfig config, @Nullable String promptContext) {
+        return promptContext == null ? config.kickOffPrompt() : config.kickOffPrompt() + "\n\n" + promptContext;
     }
 
     private ClaudeAgentConfig readConfig(AiAgent agent, Path agentFolder) {

@@ -1,5 +1,9 @@
 package com.comagents.agentproxy.agent_setup;
 
+import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import com.comagents.agentproxy.domain.agent_context.AgentContextItem;
+import com.comagents.agentproxy.domain.agent_context.AgentContextItemAttributes;
+import com.comagents.agentproxy.domain.agent_context.AgentContextItemType;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.request.StartAgentRequest;
 import io.micronaut.serde.ObjectMapper;
@@ -11,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,7 +120,12 @@ class AgentFilesTest {
         var request = new StartAgentRequest(
                 UUID.randomUUID(),
                 AiAgent.CODE_REVIEW,
-                "https://github.com/MaksimBugay/dynamic-captcha.git",
+                new AgentContext(Set.of(
+                        new AgentContextItem(new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "sources", true),
+                                "https://github.com/MaksimBugay/dynamic-captcha.git"),
+                        new AgentContextItem(AgentContextItemType.FILE, "requirements.md",
+                                "https://storage.example/bucket/requirements.md?X-Amz-Signature=…"),
+                        new AgentContextItem(AgentContextItemType.STRING, "focus", "security"))),
                 "Maks"
         );
         ObjectMapper objectMapper = ObjectMapper.getDefault();

@@ -1,5 +1,7 @@
 package com.comagents.agentproxy.domain.agent_context;
 
+import io.micronaut.core.annotation.Creator;
+import io.micronaut.serde.annotation.Serdeable;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Objects;
@@ -7,10 +9,13 @@ import java.util.Objects;
 /**
  * Items are equal by type and name; whether they are required does not count.
  *
- * @param value must not be blank when the item is required
+ * @param value the text of a {@code STRING} item, the clone URL of a {@code REPOSITORY}, the download URL (S3-compatible
+ *              object storage) of a {@code FILE} named by its file name; must not be blank when the item is required
  */
+@Serdeable
 public record AgentContextItem(AgentContextItemAttributes attributes, String value) {
 
+    @Creator
     public AgentContextItem {
         Objects.requireNonNull(attributes, "attributes");
         if (attributes.required() && StringUtils.isBlank(value)) {

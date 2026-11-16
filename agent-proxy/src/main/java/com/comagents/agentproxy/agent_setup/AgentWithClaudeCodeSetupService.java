@@ -9,10 +9,11 @@ import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.domain.AiHarnessProvider;
+import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import com.comagents.agentproxy.domain.agent_context.AgentContextItem;
 import com.comagents.agentproxy.vcs.VcsService;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
-import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
 
 import java.nio.file.Files;
@@ -70,7 +71,8 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                 });
                 agentSessionWsClientRegistry.openConnection(sessionId, agent, attributes.actorAccountId());
                 slot.start(agent, workingDirectory, new ClaudeSessionOptions(
-                        attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG, attributes.actorAccountId()));
+                        attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG, attributes.actorAccountId()),
+                        AgentContextPrompt.render(attributes.agentContext()).orElse(null));
             } catch (RuntimeException e) {
                 // the folder did not exist before and the slot holds the id, so it belongs to this failed setup
                 FileTrees.deleteIfExists(sessionFolders.of(sessionId));
@@ -89,10 +91,13 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         }
     }
 
-    // Claude Code runs in the cloned repository, or in the agent folder when there is nothing to clone
+    // Claude Code runs in the context's required repository, cloned, or in the agent folder when there is none
     private Path prepareWorkingDirectory(AiAgentAttributes attributes, Path agentFolder) {
-        if (StringUtils.isNotEmpty(attributes.cloneSourceUrl())) {
-            return vcsService.clone(attributes.cloneSourceUrl(), sessionFolders.of(attributes.sessionId()));
+        Optional<String> cloneSourceUrl = Optional.ofNullable(attributes.agentContext())
+                .flatMap(AgentContext::requiredRepository)
+                .map(AgentContextItem::value);
+        if (cloneSourceUrl.isPresent()) {
+            return vcsService.clone(cloneSourceUrl.get(), sessionFolders.of(attributes.sessionId()));
         }
         return agentFolder;
     }

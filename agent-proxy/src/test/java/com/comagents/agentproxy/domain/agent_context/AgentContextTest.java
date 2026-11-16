@@ -2,6 +2,7 @@ package com.comagents.agentproxy.domain.agent_context;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -31,6 +32,15 @@ class AgentContextTest {
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
                 () -> new AgentContext(Set.of(repository("sources", true), repository("docs", true))));
         assertEquals("At most one required repository item is allowed, got 2", e.getMessage());
+    }
+
+    @Test
+    void requiredRepositoryIsTheOneToClone() {
+        AgentContextItem sources = repository("sources", true);
+
+        assertEquals(Optional.of(sources), new AgentContext(Set.of(NOTE, repository("docs", false), sources)).requiredRepository());
+        assertEquals(Optional.empty(), new AgentContext(Set.of(NOTE, repository("docs", false))).requiredRepository());
+        assertEquals(Optional.empty(), new AgentContext(null).requiredRepository());
     }
 
     private static AgentContextItem repository(String name, boolean required) {

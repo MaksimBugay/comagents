@@ -1,5 +1,8 @@
 package com.comagents.agentproxy.domain.agent_context;
 
+import io.micronaut.serde.annotation.Serdeable;
+
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -8,10 +11,18 @@ import java.util.Set;
  * @param items at most one required {@link AgentContextItemType#REPOSITORY} item; repositories that are not required
  *              are not limited
  */
+@Serdeable
 public record AgentContext(Set<AgentContextItem> items) {
 
     public AgentContext {
         requireAtMostOneRequiredRepository(items);
+    }
+
+    /** The required repository: the one cloned as the session's working directory. */
+    public Optional<AgentContextItem> requiredRepository() {
+        return items == null ? Optional.empty() : items.stream()
+                .filter(item -> item.attributes().type() == AgentContextItemType.REPOSITORY && item.attributes().required())
+                .findFirst();
     }
 
     private static void requireAtMostOneRequiredRepository(Set<AgentContextItem> items) {

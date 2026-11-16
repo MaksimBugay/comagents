@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -53,6 +54,17 @@ class AgentControllerTest {
     @Test
     void startRejectsMissingAgentInRequest() {
         assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start", Map.of()));
+    }
+
+    @Test
+    void startRejectsContextWithTwoRequiredRepositories() {
+        Map<String, Object> repository = Map.of("attributes", Map.of("type", "REPOSITORY", "name", "a", "required", true),
+                "value", "https://github.com/acme/a.git");
+        Map<String, Object> secondRepository = Map.of("attributes", Map.of("type", "REPOSITORY", "name", "b", "required", true),
+                "value", "https://github.com/acme/b.git");
+
+        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start", Map.of("sessionId", UUID.randomUUID().toString(),
+                "agent", "CODE_REVIEW", "agentContext", Map.of("items", List.of(repository, secondRepository)))));
     }
 
     @Test

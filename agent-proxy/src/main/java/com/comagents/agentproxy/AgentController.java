@@ -60,7 +60,7 @@ public class AgentController {
                 startAgentRequest.agent(),
                 new AiAgentAttributes(
                         startAgentRequest.sessionId(),
-                        startAgentRequest.cloneSourceUrl(),
+                        startAgentRequest.agentContext(),
                         startAgentRequest.actorAccountId(),
                         startAgentRequest.loggingLevel()
                 )

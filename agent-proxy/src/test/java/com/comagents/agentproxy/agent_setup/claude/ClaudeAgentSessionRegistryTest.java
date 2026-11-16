@@ -154,6 +154,20 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
+    void appendsPromptContextToTheKickOffPrompt() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+
+        try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
+            slot.start(AiAgent.CODE_REVIEW, workingDirectory, ClaudeSessionOptions.DEFAULT, "Context: focus on security")
+                    .awaitFinished(WAIT);
+        }
+
+        List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
+        assertEquals(List.of(KICK_OFF_PROMPT, "", "Context: focus on security"), args.subList(1, 4));
+    }
+
+    @Test
     void passesAllowedToolsFromAgentConfig() throws Exception {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
         UUID sessionId = newSessionId();
