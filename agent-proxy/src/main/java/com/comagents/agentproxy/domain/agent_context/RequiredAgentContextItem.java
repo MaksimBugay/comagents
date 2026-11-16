@@ -11,6 +11,20 @@ import io.micronaut.serde.annotation.Serdeable;
 @Serdeable
 public record RequiredAgentContextItem(@Nullable AgentContextItemType type, @Nullable String name) {
 
+    /**
+     * @throws IllegalArgumentException when neither type nor name is given (it would match any item), or the name is
+     *                                  blank (it would match none): a mistake in the agent's {@code agent.json}, not in
+     *                                  a request
+     */
+    public RequiredAgentContextItem {
+        if (name != null && name.isBlank()) {
+            throw new IllegalArgumentException("A required item's name must not be blank");
+        }
+        if (type == null && name == null) {
+            throw new IllegalArgumentException("A required item needs a type, a name, or both");
+        }
+    }
+
     public boolean matches(AgentContextItem item) {
         return (type == null || type == item.type()) && (name == null || item.isNamed(name));
     }

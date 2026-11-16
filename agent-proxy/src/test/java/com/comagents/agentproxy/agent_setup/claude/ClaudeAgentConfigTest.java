@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ClaudeAgentConfigTest {
 
@@ -28,6 +29,16 @@ class ClaudeAgentConfigTest {
     void noRequiredItemsByDefault() throws IOException {
         assertEquals(Set.of(), read("""
                 {"kickOffPrompt": "Review it"}""").requiredItems());
+    }
+
+    @Test
+    void requiredItemNeedsTypeOrName() {
+        assertThrows(IOException.class, () -> read("""
+                {"kickOffPrompt": "Review it", "requiredItems": [{}]}"""), "would match any item");
+        assertThrows(IOException.class, () -> read("""
+                {"kickOffPrompt": "Review it", "requiredItems": [{"type": "FILE", "name": " "}]}"""), "would match none");
+        assertEquals("A required item needs a type, a name, or both",
+                assertThrows(IllegalArgumentException.class, () -> new RequiredAgentContextItem(null, null)).getMessage());
     }
 
     private static ClaudeAgentConfig read(String json) throws IOException {
