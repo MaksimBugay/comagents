@@ -12,11 +12,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Base64;
 import java.util.List;
 
 /**
  * Hands every agent response to one agent orchestrator as soon as it is on disk: the {@link AgentSessionResponse}, as
- * {@code GET /agent-response} returns it, goes from the session's Pushca client as a find-any broadcast to the
+ * {@code GET /agent-response} returns it, as JSON in a base64 string, goes from the session's Pushca client as a
+ * find-any broadcast to the
  * orchestrators' clients, so only one of them gets it. Once sent, the session's files are deleted after
  * {@code agent-response.cleanup-delay}, as after a first fetch. When it can't be sent, the response stays to be fetched
  * until {@code agent-response.retention}.
@@ -54,7 +56,7 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         String agentName = event.agent().getAgentName();
         try {
             agentResponseService.readResponse(event.agent(), event.sessionId()).ifPresent(response -> {
-                if (agentSessionWsClientRegistry.broadcast(event.sessionId(), ORCHESTRATOR, toJson(response))) {
+                if (agentSessionWsClientRegistry.broadcast(event.sessionId(), ORCHESTRATOR, toBase64Json(response))) {
                     LOG.info("[{} {}] response sent to {}", agentName, event.sessionId(), ACCOUNT_DOMAIN);
                     agentResponseService.scheduleCleanup(event.agent(), event.sessionId());
                 }
@@ -64,9 +66,10 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         }
     }
 
-    private String toJson(AgentSessionResponse response) {
+    // the JSON (UTF-8) as a standard base64 string
+    private String toBase64Json(AgentSessionResponse response) {
         try {
-            return jsonMapper.writeValueAsString(response);
+            return Base64.getEncoder().encodeToString(jsonMapper.writeValueAsBytes(response));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

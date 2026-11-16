@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -85,8 +86,9 @@ class AgentResponseBroadcastTest {
         assertEquals("agent-orchestrator@comagents.com", broadcasts.getFirst().receivers().accountId);
         assertEquals("AGENT_ORCHESTRATOR", broadcasts.getFirst().receivers().applicationId);
         assertTrue(broadcasts.getFirst().receivers().findAny, "only one orchestrator gets it");
-        AgentSessionResponse response = Objects.requireNonNull(
-                ObjectMapper.getDefault().readValue(broadcasts.getFirst().message(), AgentSessionResponse.class));
+        // JSON in a base64 string
+        byte[] json = Base64.getDecoder().decode(broadcasts.getFirst().message());
+        AgentSessionResponse response = Objects.requireNonNull(ObjectMapper.getDefault().readValue(json, AgentSessionResponse.class));
         assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());
