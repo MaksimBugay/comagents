@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.domain.agent_context;
 
+import com.comagents.agentproxy.domain.AiAgent;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -19,32 +20,46 @@ class AgentContextValidatorTest {
 
     @Test
     void acceptsAnythingWhenNothingIsRequired() {
-        assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of()));
-        assertDoesNotThrow(() -> validator.validate(null, Set.of()));
+        assertDoesNotThrow(() -> validator.validate(AiAgent.CODE_REVIEW, CONTEXT, Set.of()));
+        assertDoesNotThrow(() -> validator.validate(AiAgent.CODE_REVIEW, null, Set.of()));
     }
 
     @Test
     void requiredItemMatchesByTypeAndName() {
-        assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "acme/kn-challenge"))));
-        assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "ACME/KN-Challenge"),
+        assertDoesNotThrow(() -> validator.validate(AiAgent.CODE_REVIEW, CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "acme/kn-challenge"))));
+        assertDoesNotThrow(() -> validator.validate(AiAgent.CODE_REVIEW, CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "ACME/KN-Challenge"),
                 required(AgentContextItemType.STRING, "Focus"))), "names ignore case");
 
         InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class,
-                () -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "other/kn-challenge"))));
+                () -> validator.validate(AiAgent.CODE_REVIEW, CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, "other/kn-challenge"))));
         assertEquals("Required GITHUB_REPOSITORY item other/kn-challenge is missing", e.getMessage());
         assertThrows(InvalidAgentContextException.class,
-                () -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.FILE, "focus"))));
+                () -> validator.validate(AiAgent.CODE_REVIEW, CONTEXT, Set.of(required(AgentContextItemType.FILE, "focus"))));
     }
 
     @Test
     void omittedTypeOrNameMatchesAny() {
-        assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, null))));
-        assertDoesNotThrow(() -> validator.validate(CONTEXT, Set.of(required(null, "focus"))));
+        assertDoesNotThrow(() -> validator.validate(AiAgent.CODE_REVIEW, CONTEXT, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, null))));
+        assertDoesNotThrow(() -> validator.validate(AiAgent.CODE_REVIEW, CONTEXT, Set.of(required(null, "focus"))));
 
         assertEquals("Required FILE item is missing", assertThrows(InvalidAgentContextException.class,
-                () -> validator.validate(CONTEXT, Set.of(required(AgentContextItemType.FILE, null)))).getMessage());
+                () -> validator.validate(AiAgent.CODE_REVIEW, CONTEXT, Set.of(required(AgentContextItemType.FILE, null)))).getMessage());
         assertThrows(InvalidAgentContextException.class,
-                () -> validator.validate(null, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, null))));
+                () -> validator.validate(AiAgent.CODE_REVIEW, null, Set.of(required(AgentContextItemType.GITHUB_REPOSITORY, null))));
+    }
+
+    @Test
+    void repositoryToCloneMustNotBeNamedLikeTheAgent() {
+        AgentContext sameName = new AgentContext(List.of(new GithubRepositoryAgentContextItem("https://github.com/acme/Code_Review.git")));
+
+        InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class,
+                () -> validator.validate(AiAgent.CODE_REVIEW, sameName, Set.of()));
+        assertEquals("Repository acme/Code_Review can't be cloned for agent code_review: its folder Code_Review is the "
+                + "agent's own folder", e.getMessage());
+        // only the cloned repository lands in the session folder
+        assertDoesNotThrow(() -> validator.validate(AiAgent.CODE_REVIEW, new AgentContext(List.of(
+                new GithubRepositoryAgentContextItem("https://github.com/acme/kn-challenge.git", true),
+                new GithubRepositoryAgentContextItem("https://github.com/acme/code_review.git"))), Set.of()));
     }
 
     private static RequiredAgentContextItem required(AgentContextItemType type, String name) {

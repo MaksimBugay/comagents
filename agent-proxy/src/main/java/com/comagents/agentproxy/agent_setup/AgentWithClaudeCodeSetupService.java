@@ -79,7 +79,8 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                 Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
                 AtomicReference<Path> preparedDirectory = new AtomicReference<>();
                 vcsService.cloneComAgentsSources(comAgentsSources -> {
-                    validateContext(attributes, readConfig(comAgentsSources, agent));
+                    agentContextValidator.validate(agent, attributes.agentContext(),
+                            readConfig(comAgentsSources, agent).requiredItems());
                     Path directory = prepareWorkingDirectory(attributes, agentFolder);
                     AgentFiles.copyInto(directory, comAgentsSources, agent, CLAUDE_CODE_FILES);
                     AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
@@ -106,10 +107,6 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         if (Files.exists(sessionFolder)) {
             throw new ClaudeSessionExistsException(sessionId, "already has data in " + sessionFolder);
         }
-    }
-
-    private void validateContext(AiAgentAttributes attributes, ClaudeAgentConfig config) {
-        agentContextValidator.validate(attributes.agentContext(), config.requiredItems());
     }
 
     private ClaudeAgentConfig readConfig(Path comAgentsSources, AiAgent agent) {
