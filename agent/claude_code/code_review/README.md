@@ -4,7 +4,7 @@ Read-only Java 25 / Spring Boot code reviewer, built from `agent/claude_code/tem
 
 ```
 code_review/
-├── agent.json                                 # agent-proxy run settings: model, effort, allowed tools, kick-off prompt
+├── agent.json                                 # agent-proxy run settings: model, effort, allowed tools, kick-off prompt, response schema
 ├── CLAUDE.md                                  # role, workflow, hard constraints
 └── .claude/
     ├── settings.json                          # deny rules: shell, Edit and Write (allowed tools are in agent.json)
@@ -36,3 +36,8 @@ To run it by hand, copy `CLAUDE.md` and `.claude/` into the project root the sam
 No MCP servers are configured by the agent itself. agent-proxy adds its own MCP server to every run, and `agent.json` allows its
 `mcp__agentproxy__ask_expert` tool: the kick-off prompt first asks the expert in the session chat "What color is your mood?"
 and cancels the review unless the answer is green.
+
+## Response
+
+`agent.json` sets a `responseSchema`: the final answer is an agent context with exactly one `STRING` item named
+`review`, holding the complete review report (or the cancellation message when the mood is not green).
