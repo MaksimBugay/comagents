@@ -11,6 +11,8 @@ import com.comagents.agentproxy.domain.agent_context.AgentContext;
 import com.comagents.agentproxy.domain.agent_context.AgentContextItem;
 import com.comagents.agentproxy.domain.agent_context.AgentContextItemAttributes;
 import com.comagents.agentproxy.domain.agent_context.AgentContextItemType;
+import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
+import com.comagents.agentproxy.domain.agent_context.InvalidAgentContextException;
 import com.comagents.agentproxy.vcs.VcsGithubService;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.serde.ObjectMapper;
@@ -25,6 +27,8 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -53,14 +57,15 @@ class AgentWithClaudeCodeSetupServiceTest {
                 Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
                 new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)));
         setupService = new AgentWithClaudeCodeSetupService(
-                new VcsGithubService(new AgentProxyConf("https://github.com/example/comagents.git", "token", "key",
+                // not a GitHub URL: downloading the agent's files, the first setup step, fails without network access
+                new VcsGithubService(new AgentProxyConf("https://gitlab.com/example/comagents.git", "token", "key",
                         "https://pushca.example", "pushca-key"), null),
-                registry, sessionFolders, wsClientRegistry);
+                registry, sessionFolders, wsClientRegistry, new AgentContextValidator(), ObjectMapper.getDefault());
     }
 
     @Test
     void failedSetupFreesSlotAndDeletesSessionFolder() {
-        // not a GitHub URL: the clone step fails after the slot was reserved
+        // the download of the agent's files fails after the slot was reserved
         assertThrows(IllegalArgumentException.class,
                 () -> setupService.setup(AiAgent.CODE_REVIEW, new AiAgentAttributes(sessionId, repository("https://gitlab.com/a/b"), "Maks", null)));
 
@@ -106,6 +111,21 @@ class AgentWithClaudeCodeSetupServiceTest {
         assertTrue(Files.exists(otherSetupsFile), "the folder belongs to the setup that holds the id");
     }
 
+    @Test
+    void primaryRepositoryNameMustMatchItsCloneUrl() {
+        assertDoesNotThrow(() -> AgentWithClaudeCodeSetupService.requireNameMatchesCloneUrl(
+                primaryKnChallenge("https://github.com/acme/kn-challenge.git")));
+
+        InvalidAgentContextException e = assertThrows(InvalidAgentContextException.class,
+                () -> AgentWithClaudeCodeSetupService.requireNameMatchesCloneUrl(
+                        primaryKnChallenge("https://github.com/acme/other-repo.git")));
+        assertEquals("Repository item kn-challenge has the clone URL of repository other-repo", e.getMessage());
+    }
+
+    private static AgentContextItem primaryKnChallenge(String cloneUrl) {
+        return new AgentContextItem(new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "kn-challenge", true), cloneUrl);
+    }
+
     private void assertSlotFreed() {
         try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(UUID.randomUUID())) {
             assertNotNull(slot, "the rejected or failed setup freed its slot");
@@ -113,7 +133,8 @@ class AgentWithClaudeCodeSetupServiceTest {
     }
 
     private static AgentContext repository(String cloneSourceUrl) {
-        return new AgentContext(Set.of(new AgentContextItem(
-                new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "sources", true), cloneSourceUrl)));
+        AgentContextItem sources = new AgentContextItem(
+                new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "sources", true), cloneSourceUrl);
+        return new AgentContext(Set.of(sources));
     }
 }

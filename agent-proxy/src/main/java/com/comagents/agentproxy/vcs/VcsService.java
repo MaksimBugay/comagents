@@ -26,7 +26,12 @@ public sealed interface VcsService permits VcsGithubService {
         return destination;
     }
 
-    private static String repoName(String sourcesRepoUrl) {
+    /**
+     * The repository name in a clone URL: its last path segment without {@code .git}.
+     *
+     * @throws IllegalArgumentException when the URL has none
+     */
+    static String repoName(String sourcesRepoUrl) {
         String path = sourcesRepoUrl.replaceAll("/+$", "");
         String repoName = path.substring(path.lastIndexOf('/') + 1).replaceAll("\\.git$", "");
         if (repoName.isEmpty() || repoName.equals(".") || repoName.equals("..")) {

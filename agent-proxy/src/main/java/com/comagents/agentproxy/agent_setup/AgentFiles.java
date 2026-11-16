@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup;
 
+import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.FileTrees;
 
@@ -37,6 +38,15 @@ final class AgentFiles {
                 FileTrees.copy(from, to);
             }
         }
+    }
+
+    /**
+     * The agent's {@code agent.json} in the comagents sources.
+     *
+     * @throws IllegalStateException when the agent folder or its {@code README.md} is missing
+     */
+    static Path agentConfigFile(Path comAgentsSources, AiAgent agent) {
+        return agentFolder(comAgentsSources, agent).resolve(ClaudeAgentConfig.FILE_NAME);
     }
 
     private static Path agentFolder(Path comAgentsSources, AiAgent agent) {

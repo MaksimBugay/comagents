@@ -5,46 +5,19 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AgentContextTest {
 
-    private static final AgentContextItem NOTE = new AgentContextItem(AgentContextItemType.STRING, "note", "text");
-
     @Test
-    void acceptsNoRepository() {
-        assertDoesNotThrow(() -> new AgentContext(Set.of(NOTE)));
-        assertDoesNotThrow(() -> new AgentContext(Set.of()));
-    }
+    void primaryRepositoryIsTheOneToClone() {
+        AgentContextItem note = new AgentContextItem(AgentContextItemType.STRING, "note", "text");
+        AgentContextItem sources = new AgentContextItem(
+                new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "sources", true), "https://github.com/acme/sources.git");
+        AgentContextItem docs = new AgentContextItem(AgentContextItemType.REPOSITORY, "docs", "https://github.com/acme/docs.git");
 
-    @Test
-    void acceptsOneRequiredRepositoryWithAnyOptionalOnes() {
-        assertDoesNotThrow(() -> new AgentContext(Set.of(NOTE, repository("sources", true))));
-        assertDoesNotThrow(() -> new AgentContext(Set.of(repository("sources", true), repository("docs", false),
-                repository("examples", false))));
-        assertDoesNotThrow(() -> new AgentContext(Set.of(repository("docs", false), repository("examples", false))));
-    }
-
-    @Test
-    void rejectsSecondRequiredRepository() {
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> new AgentContext(Set.of(repository("sources", true), repository("docs", true))));
-        assertEquals("At most one required repository item is allowed, got 2", e.getMessage());
-    }
-
-    @Test
-    void requiredRepositoryIsTheOneToClone() {
-        AgentContextItem sources = repository("sources", true);
-
-        assertEquals(Optional.of(sources), new AgentContext(Set.of(NOTE, repository("docs", false), sources)).requiredRepository());
-        assertEquals(Optional.empty(), new AgentContext(Set.of(NOTE, repository("docs", false))).requiredRepository());
-        assertEquals(Optional.empty(), new AgentContext(null).requiredRepository());
-    }
-
-    private static AgentContextItem repository(String name, boolean required) {
-        return new AgentContextItem(new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, name, required),
-                "https://github.com/acme/" + name + ".git");
+        assertEquals(Optional.of(sources), new AgentContext(Set.of(note, sources, docs)).primaryRepository());
+        assertEquals(Optional.empty(), new AgentContext(Set.of(note, docs)).primaryRepository());
+        assertEquals(Optional.empty(), new AgentContext(null).primaryRepository());
     }
 }

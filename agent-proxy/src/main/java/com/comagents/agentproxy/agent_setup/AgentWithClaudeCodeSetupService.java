@@ -11,16 +11,21 @@ import com.comagents.agentproxy.domain.AiAgentAttributes;
 import com.comagents.agentproxy.domain.AiHarnessProvider;
 import com.comagents.agentproxy.domain.agent_context.AgentContext;
 import com.comagents.agentproxy.domain.agent_context.AgentContextItem;
+import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
+import com.comagents.agentproxy.domain.agent_context.InvalidAgentContextException;
 import com.comagents.agentproxy.vcs.VcsService;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import io.micronaut.json.JsonMapper;
 import jakarta.inject.Singleton;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 // non-sealed, not final: method validation (@NotNull on setup) needs a generated subclass proxy
 @Singleton
@@ -41,21 +46,29 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
 
     private final AgentSessionWsClientRegistry agentSessionWsClientRegistry;
 
+    private final AgentContextValidator agentContextValidator;
+
+    private final JsonMapper jsonMapper;
+
     public AgentWithClaudeCodeSetupService(VcsService vcsService, ClaudeAgentSessionRegistry claudeAgentSessionRegistry,
                                            SessionFolders sessionFolders,
-                                           AgentSessionWsClientRegistry agentSessionWsClientRegistry) {
+                                           AgentSessionWsClientRegistry agentSessionWsClientRegistry,
+                                           AgentContextValidator agentContextValidator, JsonMapper jsonMapper) {
         this.vcsService = vcsService;
         this.claudeAgentSessionRegistry = claudeAgentSessionRegistry;
         this.sessionFolders = sessionFolders;
         this.agentSessionWsClientRegistry = agentSessionWsClientRegistry;
+        this.agentContextValidator = agentContextValidator;
+        this.jsonMapper = jsonMapper;
     }
 
 
     /**
      * Reserves a session slot first, so a busy service or a session id already in use (in memory or on disk) is
      * rejected before any download; a failed setup frees the slot and leaves no half-prepared session folder or
-     * chat behind. The session's Pushca chat is opened last, right before the run starts, so it gets all output;
-     * without Pushca the session runs without a chat.
+     * chat behind. The request's agent context is checked against the agent's {@code agent.json} before anything is
+     * cloned for the session ({@link InvalidAgentContextException}). The session's Pushca chat is opened last, right
+     * before the run starts, so it gets all output; without Pushca the session runs without a chat.
      */
     @Override
     public void setup(AiAgent agent, AiAgentAttributes attributes) {
@@ -64,11 +77,15 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
             requireNoSessionFolder(sessionId);
             try {
                 Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
-                Path workingDirectory = prepareWorkingDirectory(attributes, agentFolder);
+                AtomicReference<Path> preparedDirectory = new AtomicReference<>();
                 vcsService.cloneComAgentsSources(comAgentsSources -> {
-                    AgentFiles.copyInto(workingDirectory, comAgentsSources, agent, CLAUDE_CODE_FILES);
+                    validateContext(attributes, readConfig(comAgentsSources, agent));
+                    Path directory = prepareWorkingDirectory(attributes, agentFolder);
+                    AgentFiles.copyInto(directory, comAgentsSources, agent, CLAUDE_CODE_FILES);
                     AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
+                    preparedDirectory.set(directory);
                 });
+                Path workingDirectory = preparedDirectory.get();
                 agentSessionWsClientRegistry.openConnection(sessionId, agent, attributes.actorAccountId());
                 slot.start(agent, workingDirectory, new ClaudeSessionOptions(
                         attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG, attributes.actorAccountId()),
@@ -91,10 +108,35 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         }
     }
 
-    // Claude Code runs in the context's required repository, cloned, or in the agent folder when there is none
+    private void validateContext(AiAgentAttributes attributes, ClaudeAgentConfig config) {
+        AgentContext context = attributes.agentContext();
+        agentContextValidator.validate(context == null ? null : context.items(), config.requiredItems());
+        Optional.ofNullable(context).flatMap(AgentContext::primaryRepository)
+                .ifPresent(AgentWithClaudeCodeSetupService::requireNameMatchesCloneUrl);
+    }
+
+    // the clone lands in <session folder>/<repo name from the URL>: the item's name must be that name
+    static void requireNameMatchesCloneUrl(AgentContextItem repository) {
+        String repoName = VcsService.repoName(repository.value());
+        if (!repoName.equals(repository.attributes().name())) {
+            throw new InvalidAgentContextException("Repository item " + repository.attributes().name()
+                    + " has the clone URL of repository " + repoName);
+        }
+    }
+
+    private ClaudeAgentConfig readConfig(Path comAgentsSources, AiAgent agent) {
+        Path configFile = AgentFiles.agentConfigFile(comAgentsSources, agent);
+        try {
+            return jsonMapper.readValue(Files.readAllBytes(configFile), ClaudeAgentConfig.class);
+        } catch (IOException e) {
+            throw new IllegalStateException("Agent " + agent.getAgentName() + " has no readable " + configFile, e);
+        }
+    }
+
+    // Claude Code runs in the context's primary repository, cloned, or in the agent folder when there is none
     private Path prepareWorkingDirectory(AiAgentAttributes attributes, Path agentFolder) {
         Optional<String> cloneSourceUrl = Optional.ofNullable(attributes.agentContext())
-                .flatMap(AgentContext::requiredRepository)
+                .flatMap(AgentContext::primaryRepository)
                 .map(AgentContextItem::value);
         if (cloneSourceUrl.isPresent()) {
             return vcsService.clone(cloneSourceUrl.get(), sessionFolders.of(attributes.sessionId()));

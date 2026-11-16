@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * A session's {@link AgentContext} as a section of the kick-off prompt. Only the required repository is local (the
+ * A session's {@link AgentContext} as a section of the kick-off prompt. Only the primary repository is local (the
  * working directory); other repositories and files are listed by URL, for the agent to fetch only if useful.
  */
 public final class AgentContextPrompt {
@@ -24,7 +24,7 @@ public final class AgentContextPrompt {
 
     /** The prompt section, or empty when the context has no item with a value. */
     public static Optional<String> render(AgentContext context) {
-        List<String> lines = context == null || context.items() == null ? List.of() : context.items().stream()
+        List<String> lines = context == null ? List.of() : context.items().stream()
                 .filter(item -> StringUtils.isNotBlank(item.value()))
                 .sorted(ORDER)
                 .map(AgentContextPrompt::line)
@@ -39,7 +39,7 @@ public final class AgentContextPrompt {
     private static String line(AgentContextItem item) {
         AgentContextItemAttributes attributes = item.attributes();
         return switch (attributes.type()) {
-            case REPOSITORY -> attributes.required()
+            case REPOSITORY -> attributes.primary()
                     ? "- repository \"" + attributes.name() + "\", cloned into the working directory: " + item.value()
                     : "- repository \"" + attributes.name() + "\" (not cloned): " + item.value();
             case FILE -> "- file \"" + attributes.name() + "\" (not downloaded), download URL: " + item.value();

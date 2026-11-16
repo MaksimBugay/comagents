@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.domain.agent_context;
 
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
 import java.util.Optional;
@@ -8,32 +9,21 @@ import java.util.Set;
 /**
  * What an agent session gets to work with.
  *
- * @param items at most one required {@link AgentContextItemType#REPOSITORY} item; repositories that are not required
- *              are not limited
+ * @param items the context's items, with at most one primary {@link AgentContextItemType#REPOSITORY}: the one
+ *              cloned as the session's working directory. Empty when null
  */
 @Serdeable
-public record AgentContext(Set<AgentContextItem> items) {
+public record AgentContext(@Nullable Set<AgentContextItem> items) {
 
     public AgentContext {
-        requireAtMostOneRequiredRepository(items);
+        items = items == null ? Set.of() : Set.copyOf(items);
     }
 
-    /** The required repository: the one cloned as the session's working directory. */
-    public Optional<AgentContextItem> requiredRepository() {
-        return items == null ? Optional.empty() : items.stream()
-                .filter(item -> item.attributes().type() == AgentContextItemType.REPOSITORY && item.attributes().required())
-                .findFirst();
+    /**
+     * The primary repository: the one cloned as the session's working directory.
+     */
+    public Optional<AgentContextItem> primaryRepository() {
+        return items.stream().filter(AgentContextItem::isPrimaryRepository).findFirst();
     }
 
-    private static void requireAtMostOneRequiredRepository(Set<AgentContextItem> items) {
-        if (items == null) {
-            return;
-        }
-        long requiredRepositories = items.stream()
-                .filter(item -> item.attributes().type() == AgentContextItemType.REPOSITORY && item.attributes().required())
-                .count();
-        if (requiredRepositories > 1) {
-            throw new IllegalArgumentException("At most one required repository item is allowed, got " + requiredRepositories);
-        }
-    }
 }

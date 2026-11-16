@@ -6,6 +6,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AiAgentAttributes;
+import com.comagents.agentproxy.domain.agent_context.InvalidAgentContextException;
 import com.comagents.agentproxy.request.StartAgentRequest;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpRequest;
@@ -71,6 +72,11 @@ public class AgentController {
     @Error(exception = ClaudeSessionLimitException.class)
     public HttpResponse<JsonError> sessionLimitReached(HttpRequest<?> ignoredRequest, ClaudeSessionLimitException e) {
         return HttpResponse.<JsonError>status(HttpStatus.TOO_MANY_REQUESTS).body(new JsonError(e.getMessage()));
+    }
+
+    @Error(exception = InvalidAgentContextException.class)
+    public HttpResponse<JsonError> invalidAgentContext(HttpRequest<?> ignoredRequest, InvalidAgentContextException e) {
+        return HttpResponse.<JsonError>status(HttpStatus.BAD_REQUEST).body(new JsonError(e.getMessage()));
     }
 
     @Error(exception = ClaudeSessionExistsException.class)

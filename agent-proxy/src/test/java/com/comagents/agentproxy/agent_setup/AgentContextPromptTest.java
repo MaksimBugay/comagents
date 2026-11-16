@@ -15,12 +15,15 @@ class AgentContextPromptTest {
 
     @Test
     void listsEveryItemWithAValue() {
+        AgentContextItem sources = new AgentContextItem(
+                new AgentContextItemAttributes(AgentContextItemType.REPOSITORY, "sources", true), "https://github.com/acme/sources.git");
+        AgentContextItem focus = item(AgentContextItemType.STRING, "focus", "security");
         AgentContext context = new AgentContext(Set.of(
-                item(AgentContextItemType.STRING, "focus", "security", true),
-                item(AgentContextItemType.FILE, "requirements.md", "https://storage.example/requirements.md", false),
-                item(AgentContextItemType.REPOSITORY, "docs", "https://github.com/acme/docs.git", false),
-                item(AgentContextItemType.REPOSITORY, "sources", "https://github.com/acme/sources.git", true),
-                item(AgentContextItemType.STRING, "empty", " ", false)));
+                focus,
+                item(AgentContextItemType.FILE, "requirements.md", "https://storage.example/requirements.md"),
+                item(AgentContextItemType.REPOSITORY, "docs", "https://github.com/acme/docs.git"),
+                sources,
+                item(AgentContextItemType.STRING, "empty", " ")));
 
         assertEquals(Optional.of("""
                 Context of this session. Only the working directory is available locally; the other items are listed \
@@ -39,7 +42,7 @@ class AgentContextPromptTest {
         assertEquals(Optional.empty(), AgentContextPrompt.render(new AgentContext(null)));
     }
 
-    private static AgentContextItem item(AgentContextItemType type, String name, String value, boolean required) {
-        return new AgentContextItem(new AgentContextItemAttributes(type, name, required), value);
+    private static AgentContextItem item(AgentContextItemType type, String name, String value) {
+        return new AgentContextItem(type, name, value);
     }
 }

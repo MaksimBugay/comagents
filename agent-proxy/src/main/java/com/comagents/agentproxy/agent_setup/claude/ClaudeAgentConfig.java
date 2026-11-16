@@ -1,9 +1,11 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.agentproxy.domain.agent_context.AgentContextItemAttributes;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * How agent-proxy runs a Claude Code agent: the agent's {@code agent.json}, kept with its other files in the
@@ -17,10 +19,13 @@ import java.util.List;
  *                      never trusts its folder, so Claude Code ignores (and warns about) a project's allow rules
  * @param kickOffPrompt the first instruction of every session
  * @param resumePrompt  the instruction when an archived session is resumed; {@link #DEFAULT_RESUME_PROMPT} if null
+ * @param requiredItems the agent context items the agent can't work without (type, name, primary): a start request
+ *                      without them is rejected; none if null
  */
 @Serdeable
 public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
-                                String kickOffPrompt, @Nullable String resumePrompt) {
+                                String kickOffPrompt, @Nullable String resumePrompt,
+                                @Nullable Set<AgentContextItemAttributes> requiredItems) {
 
     public static final String FILE_NAME = "agent.json";
 
@@ -30,5 +35,6 @@ public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort,
     public ClaudeAgentConfig {
         allowedTools = allowedTools == null ? List.of() : List.copyOf(allowedTools);
         resumePrompt = resumePrompt == null || resumePrompt.isBlank() ? DEFAULT_RESUME_PROMPT : resumePrompt;
+        requiredItems = requiredItems == null ? Set.of() : Set.copyOf(requiredItems);
     }
 }

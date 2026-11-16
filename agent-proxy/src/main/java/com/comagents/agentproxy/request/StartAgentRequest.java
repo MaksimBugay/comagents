@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 /**
- * @param agentContext what the session works with: its required repository is cloned as the working directory, and
+ * @param agentContext what the session works with: its primary repository is cloned as the working directory, and
  *                     all its items are added to the kick-off prompt; without one nothing is cloned
  */
 @Serdeable
