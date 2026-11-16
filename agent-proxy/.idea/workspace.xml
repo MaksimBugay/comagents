@@ -5,17 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="Agent context was introduced">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/AgentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/AgentController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/GithubRepositoryUrl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/GithubRepositoryUrlTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/GithubRepositoryAgentContextItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/domain/agent_context/GithubRepositoryAgentContextItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsGithubService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsGithubService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/comagents/agentproxy/vcs/VcsService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/AgentControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentContextPromptTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/AgentContextPromptTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentConfigTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/agent_setup/claude/ClaudeAgentConfigTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextItemTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextItemTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextValidatorTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/comagents/agentproxy/domain/agent_context/AgentContextValidatorTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../agent/claude_code/template/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../agent/claude_code/template/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tmp.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tmp.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

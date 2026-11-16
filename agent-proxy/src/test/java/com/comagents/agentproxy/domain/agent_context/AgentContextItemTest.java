@@ -30,8 +30,6 @@ class AgentContextItemTest {
         assertEquals("acme/kn-challenge", repository.getName());
         assertEquals("https://github.com/acme/kn-challenge.git", repository.getValue());
         assertFalse(repository.isPrimary());
-        assertEquals("acme/kn-challenge", GithubRepositoryAgentContextItem.repositoryName("https://github.com/acme/kn-challenge/"));
-        assertEquals("kn-challenge", GithubRepositoryAgentContextItem.repositoryFolderName("https://github.com/acme/kn-challenge.git"));
     }
 
     @Test

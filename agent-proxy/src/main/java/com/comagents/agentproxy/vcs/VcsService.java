@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.vcs;
 
-import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
+import com.comagents.agentproxy.domain.GithubRepositoryUrl;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
@@ -34,6 +34,6 @@ public sealed interface VcsService permits VcsGithubService {
      * @throws IllegalArgumentException when the URL has none
      */
     static String repoName(String sourcesRepoUrl) {
-        return GithubRepositoryAgentContextItem.repositoryFolderName(sourcesRepoUrl);
+        return GithubRepositoryUrl.parse(sourcesRepoUrl).repository();
     }
 }

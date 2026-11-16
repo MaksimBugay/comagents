@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.vcs;
 
 import com.comagents.agentproxy.conf.AgentProxyConf;
-import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
+import com.comagents.agentproxy.domain.GithubRepositoryUrl;
 import com.comagents.agentproxy.workspace.FileTrees;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
@@ -18,8 +18,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -32,8 +30,6 @@ import java.util.zip.ZipInputStream;
 public final class VcsGithubService implements VcsService {
 
     private static final String GITHUB_API_URL = "https://api.github.com";
-
-    private static final Pattern REPO_URL = GithubRepositoryAgentContextItem.GITHUB_REPOSITORY_URL;
 
     private final String accessToken;
 
@@ -50,11 +46,7 @@ public final class VcsGithubService implements VcsService {
 
     @Override
     public void clone(String sourcesRepoUrl, String destinationPath) {
-        Matcher repo = REPO_URL.matcher(sourcesRepoUrl);
-        if (!repo.matches()) {
-            throw new IllegalArgumentException("Not a GitHub repository URL: " + sourcesRepoUrl);
-        }
-        String repoPath = repo.group(1) + "/" + repo.group(2);
+        String repoPath = GithubRepositoryUrl.parse(sourcesRepoUrl).fullName();
         Path destination = Path.of(destinationPath).toAbsolutePath().normalize();
 
         // the API answers with a redirect to codeload.github.com; the client follows it and drops
