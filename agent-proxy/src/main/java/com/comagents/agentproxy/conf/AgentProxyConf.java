@@ -11,17 +11,20 @@ public class AgentProxyConf {
     private final String anthropicApiKey;
     private final String pushcaApiUrl;
     private final String pushcaApiKey;
+    private final String deviceId;
 
     public AgentProxyConf(@Value("${clone.comagents.sources.url}") String sourcesUrl,
                           @Value("${sources.repo.access-token}") String sourcesRepoAccessToken,
                           @Value("${anthropic.api-key}") String anthropicApiKey,
                           @Value("${pushca.api-url}") String pushcaApiUrl,
-                          @Value("${pushca.api-key}") String pushcaApiKey) {
+                          @Value("${pushca.api-key}") String pushcaApiKey,
+                          DeviceIdExtractor deviceIdExtractor) {
         this.sourcesUrl = sourcesUrl;
         this.sourcesRepoAccessToken = sourcesRepoAccessToken;
         this.anthropicApiKey = anthropicApiKey;
         this.pushcaApiUrl = pushcaApiUrl;
         this.pushcaApiKey = pushcaApiKey;
+        this.deviceId = deviceIdExtractor.extract();
     }
 
     public String getComAgentsSourcesUrl() {
@@ -42,5 +45,9 @@ public class AgentProxyConf {
 
     public String getPushcaApiKey() {
         return pushcaApiKey;
+    }
+
+    public String getDeviceId() {
+        return deviceId;
     }
 }

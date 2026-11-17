@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @MicronautTest
 @Property(name = "agent-response.cleanup-delay", value = "1s")
 @Property(name = "claude.executable", value = "false")
+@Property(name = "agent-proxy.device-id", value = "proxy-device-1")
 class AgentResponseControllerTest {
 
     private static final AgentContext ALL_GOOD = new AgentContext(List.of(new StringAgentContextItem("response", "# Report\n\nAll good")));
@@ -79,6 +80,7 @@ class AgentResponseControllerTest {
         assertEquals(ALL_GOOD, response.agentContext());
         assertEquals("# Report\n\nAll good", response.agentContext().items().getFirst().getValue());
         assertTrue(response.createdAt() >= before, "built when fetched");
+        assertEquals("proxy-device-1", response.executorDeviceId());
 
         // a second fetch within the delay still works and does not schedule another cleanup
         assertEquals(ALL_GOOD, client.toBlocking().retrieve(uri(), AgentSessionResponse.class).agentContext());

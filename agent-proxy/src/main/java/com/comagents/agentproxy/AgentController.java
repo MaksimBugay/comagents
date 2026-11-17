@@ -4,7 +4,7 @@ import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
-import com.comagents.agentproxy.conf.DeviceIdExtractor;
+import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
@@ -38,10 +38,10 @@ public class AgentController {
     private final AgentSetupServices agentSetupServices;
 
     public AgentController(@Value("${agent-proxy.version:unknown}") String version,
-                           DeviceIdExtractor deviceIdExtractor,
+                           AgentProxyConf agentProxyConf,
                            AgentSetupServices agentSetupServices) {
         this.version = version;
-        this.deviceId = deviceIdExtractor.extract();
+        this.deviceId = agentProxyConf.getDeviceId();
         this.agentSetupServices = agentSetupServices;
     }
 

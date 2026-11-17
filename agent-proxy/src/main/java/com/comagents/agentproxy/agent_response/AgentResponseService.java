@@ -2,6 +2,7 @@ package com.comagents.agentproxy.agent_response;
 
 import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
+import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AgentSessionState;
@@ -44,15 +45,18 @@ public class AgentResponseService {
     private final SessionFolders sessionFolders;
     private final TaskScheduler taskScheduler;
     private final Duration cleanupDelay;
+    private final String deviceId;
     private final Set<UUID> scheduledCleanups = ConcurrentHashMap.newKeySet();
 
     public AgentResponseService(AgentSetupServices agentSetupServices, SessionFolders sessionFolders,
                                 @Named(TaskExecutors.SCHEDULED) TaskScheduler taskScheduler,
-                                @Value("${agent-response.cleanup-delay:5m}") Duration cleanupDelay) {
+                                @Value("${agent-response.cleanup-delay:5m}") Duration cleanupDelay,
+                                AgentProxyConf agentProxyConf) {
         this.agentSetupServices = agentSetupServices;
         this.sessionFolders = sessionFolders;
         this.taskScheduler = taskScheduler;
         this.cleanupDelay = cleanupDelay;
+        this.deviceId = agentProxyConf.getDeviceId();
     }
 
     /**
@@ -75,7 +79,7 @@ public class AgentResponseService {
         try {
             AgentContext response = JsonUtility.fromJson(Files.readAllBytes(responseFile), AgentContext.class);
             return Optional.of(new AgentSessionResponse(request(agent, attributes.get()), response,
-                    Instant.now().toEpochMilli()));
+                    Instant.now().toEpochMilli(), deviceId));
         } catch (NoSuchFileException e) {
             return Optional.empty();
         } catch (IOException e) {

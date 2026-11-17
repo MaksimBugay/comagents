@@ -5,6 +5,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.conf.AgentProxyConf;
+import com.comagents.agentproxy.conf.DeviceIdExtractor;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
 import com.comagents.agentproxy.vcs.VcsGithubService;
@@ -59,7 +60,7 @@ class AgentWithClaudeCodeSetupServiceTest {
         setupService = new AgentWithClaudeCodeSetupService(
                 // not a GitHub URL: downloading the agent's files, the first setup step, fails without network access
                 new VcsGithubService(new AgentProxyConf("https://gitlab.com/example/comagents.git", "token", "key",
-                        "https://pushca.example", "pushca-key"), null),
+                        "https://pushca.example", "pushca-key", new DeviceIdExtractor("test-device", "host")), null),
                 registry, sessionFolders, wsClientRegistry, new AgentContextValidator());
     }
 
