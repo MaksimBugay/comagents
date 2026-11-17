@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="new agent request/response API">
+    <list default="true" id="ac713ace-74bf-4f74-82fe-9467b5fe512b" name="Changes" comment="group id renamed to com.comagents">
       <change beforePath="$PROJECT_DIR$/tmp.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tmp.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -46,23 +46,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0005445232762071" />
-      <entry key="S2" value="1.2501180983058646" />
-      <entry key="S5" value="1.868739073440589" />
-      <entry key="S10" value="2.3176332959256176" />
-      <entry key="S30" value="2.74022476869328" />
-      <entry key="S60" value="2.875307094147476" />
-      <entry key="M2" value="3.0304906681622175" />
-      <entry key="M5" value="3.3687022748574784" />
-      <entry key="M10" value="3.6156927882383156" />
-      <entry key="M15" value="3.72540357630935" />
-      <entry key="M30" value="3.8890634232058656" />
-      <entry key="H1" value="4.776316536915127" />
-      <entry key="H2" value="9.42189576866479" />
-      <entry key="H4" value="19.846583287499797" />
-      <entry key="D1" value="57.6411529674293" />
-      <entry key="W1" value="199.50273033841833" />
+      <entry key="MS100" value="1.0026520882153387" />
+      <entry key="MS500" value="1.4093556239757135" />
+      <entry key="S2" value="3.1006576196034183" />
+      <entry key="S5" value="4.436269059809192" />
+      <entry key="S10" value="5.124672000460782" />
+      <entry key="S30" value="5.684123313506268" />
+      <entry key="S60" value="5.8388112492430135" />
+      <entry key="M2" value="5.918573937852435" />
+      <entry key="M5" value="5.967227471938202" />
+      <entry key="M10" value="5.983579841544463" />
+      <entry key="M15" value="5.989045679920121" />
+      <entry key="M30" value="5.994519063390109" />
+      <entry key="H1" value="5.997344106414523" />
+      <entry key="H2" value="6.038497285928841" />
+      <entry key="H4" value="7.2903258698155655" />
+      <entry key="D1" value="42.55431831907513" />
+      <entry key="W1" value="192.93590218555468" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -70,37 +70,37 @@
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
       <entry key="S10" value="0.0" />
-      <entry key="S30" value="7.526235842112515E-158" />
-      <entry key="S60" value="3.8822545311558214E-79" />
-      <entry key="M2" value="8.999027545387842E-40" />
-      <entry key="M5" value="4.1356406931332583E-16" />
-      <entry key="M10" value="3.41194864452462E-8" />
-      <entry key="M15" value="1.5192382107869727E-5" />
-      <entry key="M30" value="0.008246091468371162" />
-      <entry key="H1" value="0.3745932852350258" />
-      <entry key="H2" value="3.8011991078420193" />
-      <entry key="H4" value="13.227163702537418" />
-      <entry key="D1" value="43.21178578381271" />
-      <entry key="W1" value="126.47216169945506" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="3.4955438097262245E-182" />
+      <entry key="M5" value="4.490249439347086E-73" />
+      <entry key="M10" value="1.1242588614159115E-36" />
+      <entry key="M15" value="1.5614752230166549E-24" />
+      <entry key="M30" value="2.6436427066566182E-12" />
+      <entry key="H1" value="6.707138798451148E-6" />
+      <entry key="H2" value="0.016084563199108157" />
+      <entry key="H4" value="0.8604211057825247" />
+      <entry key="D1" value="27.403725097121484" />
+      <entry key="W1" value="118.50559475057561" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9726549474122855" />
-      <entry key="MS500" value="0.9950114939690595" />
-      <entry key="S2" value="1.248348924275029" />
-      <entry key="S5" value="1.8676462498437392" />
-      <entry key="S10" value="2.316946408234961" />
-      <entry key="S30" value="2.739951583075854" />
-      <entry key="S60" value="2.875161922369864" />
-      <entry key="M2" value="3.030407086595747" />
-      <entry key="M5" value="3.368656044653384" />
-      <entry key="M10" value="3.6156647853390202" />
-      <entry key="M15" value="3.7253985507194134" />
-      <entry key="M30" value="3.897284648323986" />
-      <entry key="H1" value="5.150659124936866" />
-      <entry key="H2" value="13.222013539596322" />
-      <entry key="H4" value="33.071949254040476" />
-      <entry key="D1" value="100.85196414583027" />
-      <entry key="W1" value="325.9744621567298" />
+      <entry key="MS100" value="0.9819820792156299" />
+      <entry key="MS500" value="1.4026288465503818" />
+      <entry key="S2" value="3.0965432025381783" />
+      <entry key="S5" value="4.433806823199604" />
+      <entry key="S10" value="5.123222669178029" />
+      <entry key="S30" value="5.683580034707259" />
+      <entry key="S60" value="5.8385312164931715" />
+      <entry key="M2" value="5.918431751519621" />
+      <entry key="M5" value="5.967170067167729" />
+      <entry key="M10" value="5.983551049987081" />
+      <entry key="M15" value="5.989026465672865" />
+      <entry key="M30" value="5.99450944631633" />
+      <entry key="H1" value="5.997345998035348" />
+      <entry key="H2" value="6.054574867373081" />
+      <entry key="H4" value="8.150628830447772" />
+      <entry key="D1" value="69.95742514771236" />
+      <entry key="W1" value="311.44109410483867" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -115,27 +115,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;JUnit.AgentControllerTest.executor&quot;: &quot;Run&quot;,
-    &quot;JUnit.AgentFilesTest.requestSample.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/mbugai/work/comagents/agent-proxy&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "JUnit.AgentControllerTest.executor": "Run",
+    "JUnit.AgentFilesTest.requestSample.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/mbugai/work/comagents/agent-proxy",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.jshint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.jshint": "",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "vcs.Git"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
       <recent name="com.comagents.agentproxy.source" />
@@ -231,6 +232,7 @@
     <MESSAGE value="renamed to StartAgentSessionRequest.java" />
     <MESSAGE value="new agent response format" />
     <MESSAGE value="new agent request/response API" />
-    <option name="LAST_COMMIT_MESSAGE" value="new agent request/response API" />
+    <MESSAGE value="group id renamed to com.comagents" />
+    <option name="LAST_COMMIT_MESSAGE" value="group id renamed to com.comagents" />
   </component>
 </project>
