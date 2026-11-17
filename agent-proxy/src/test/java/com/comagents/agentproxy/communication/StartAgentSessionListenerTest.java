@@ -40,7 +40,7 @@ class StartAgentSessionListenerTest {
 
     @Test
     void rejectsAnInvalidRequest() {
-        assertThrows(ConstraintViolationException.class, () -> listener.consumePayload(
+        assertThrows(ConstraintViolationException.class, () -> listener.consumePayload("sequence-1",
                 new StartAgentSessionRequest(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, " ", "MBugai")));
 
         assertNothingDelivered();
@@ -49,7 +49,7 @@ class StartAgentSessionListenerTest {
     @Test
     void rejectsAnAgentWithoutSetupService() {
         // IMAGE_GENERATOR runs on CODEX, which has no AgentSetupService yet
-        assertThrows(NoAgentSetupServiceException.class, () -> listener.consumePayload(new StartAgentSessionRequest(
+        assertThrows(NoAgentSetupServiceException.class, () -> listener.consumePayload("sequence-1", new StartAgentSessionRequest(
                 UUID.randomUUID(), AiAgent.IMAGE_GENERATOR, null, "orchestrator-device-1", "MBugai")));
 
         assertNothingDelivered();
@@ -60,7 +60,7 @@ class StartAgentSessionListenerTest {
         UUID sessionId = UUID.randomUUID();
         Files.createDirectories(sessionFolders.of(sessionId));
         try {
-            assertThrows(ClaudeSessionExistsException.class, () -> listener.consumePayload(new StartAgentSessionRequest(
+            assertThrows(ClaudeSessionExistsException.class, () -> listener.consumePayload("sequence-1", new StartAgentSessionRequest(
                     sessionId, AiAgent.CODE_REVIEW, null, "orchestrator-device-1", "MBugai")));
 
             assertNothingDelivered();

@@ -25,6 +25,7 @@ class ComagentsMessageDispatcherTest {
         private final Class<T> payloadClass;
         private final List<T> payloads = new ArrayList<>();
         private final List<ComagentsError> errors = new ArrayList<>();
+        private final List<String> sequenceIds = new ArrayList<>();
 
         RecordingListener(Class<T> payloadClass) {
             this.payloadClass = payloadClass;
@@ -36,12 +37,14 @@ class ComagentsMessageDispatcherTest {
         }
 
         @Override
-        public void consumePayload(T payload) {
+        public void consumePayload(String sequenceId, T payload) {
+            sequenceIds.add(sequenceId);
             payloads.add(payload);
         }
 
         @Override
-        public void consumeError(ComagentsError error) {
+        public void consumeError(String sequenceId, ComagentsError error) {
+            sequenceIds.add(sequenceId);
             errors.add(error);
         }
 
@@ -51,6 +54,10 @@ class ComagentsMessageDispatcherTest {
 
         List<ComagentsError> errors() {
             return errors;
+        }
+
+        List<String> sequenceIds() {
+            return sequenceIds;
         }
     }
 
@@ -63,7 +70,7 @@ class ComagentsMessageDispatcherTest {
         }
 
         @Override
-        public void consumePayload(Task payload) {
+        public void consumePayload(String sequenceId, Task payload) {
             throw new AssertionError("an error message has no payload");
         }
     }
@@ -78,11 +85,13 @@ class ComagentsMessageDispatcherTest {
         }
 
         @Override
-        public void consumePayload(T payload) {
-            super.consumePayload(payload);
+        public void consumePayload(String sequenceId, T payload) {
+            super.consumePayload(sequenceId, payload);
             throw new IllegalStateException(error);
         }
     }
+
+    private static final String SEQUENCE_ID = "sequence-1";
 
     private final RecordingListener<Task> taskListener = new RecordingListener<>(Task.class);
     private final RecordingListener<Task> secondTaskListener = new RecordingListener<>(Task.class);
@@ -94,7 +103,7 @@ class ComagentsMessageDispatcherTest {
     void payloadGoesToEveryListenerOfItsClass() {
         Task task = new Task("review", 1);
 
-        dispatcher.dispatch(ComagentsMessage.ofPayload(task, Task.class).toString());
+        dispatcher.dispatch(ComagentsMessage.ofPayload(SEQUENCE_ID, task, Task.class).toString());
 
         assertEquals(List.of(task), taskListener.payloads());
         assertEquals(List.of(task), secondTaskListener.payloads());
@@ -105,7 +114,8 @@ class ComagentsMessageDispatcherTest {
     void errorGoesToEveryListenerOfItsClassInPlaceOfThePayload() {
         ComagentsError error = new ComagentsError(new IllegalStateException("agent failed"));
 
-        dispatcher.dispatch(ComagentsMessage.ofError(Task.class, new IllegalStateException("agent failed")).toString());
+        dispatcher.dispatch(
+                ComagentsMessage.ofError(SEQUENCE_ID, Task.class, new IllegalStateException("agent failed")).toString());
 
         assertEquals(List.of(error), taskListener.errors());
         assertEquals(List.of(error), secondTaskListener.errors());
@@ -114,9 +124,22 @@ class ComagentsMessageDispatcherTest {
     }
 
     @Test
+    void listenersGetTheMessageIdAsSequenceId() {
+        ComagentsMessage payloadMessage = ComagentsMessage.ofPayload("sequence-1", new Task("review", 1), Task.class);
+        ComagentsMessage errorMessage =
+                ComagentsMessage.ofError("sequence-2", Task.class, new IllegalStateException("agent failed"));
+
+        dispatcher.dispatch(payloadMessage.toString());
+        dispatcher.dispatch(errorMessage.toString());
+
+        assertEquals(List.of("sequence-1", "sequence-2"), taskListener.sequenceIds());
+        assertEquals(List.of("sequence-1", "sequence-2"), secondTaskListener.sequenceIds());
+    }
+
+    @Test
     void errorIsIgnoredByListenerThatDoesNotHandleErrors() {
         ComagentsMessageDispatcher payloadOnly = new ComagentsMessageDispatcher(List.of(new PayloadOnlyListener()));
-        String message = ComagentsMessage.ofError(Task.class, new IllegalStateException("x")).toString();
+        String message = ComagentsMessage.ofError(SEQUENCE_ID, Task.class, new IllegalStateException("x")).toString();
 
         assertDoesNotThrow(() -> payloadOnly.dispatch(message));
     }
@@ -127,9 +150,9 @@ class ComagentsMessageDispatcherTest {
         Note first = new Note("first");
         Note second = new Note("second");
 
-        dispatcher.dispatch(ComagentsMessage.ofPayload(first, Note.class).toString());
-        dispatcher.dispatch(ComagentsMessage.ofPayload(task, Task.class).toString());
-        dispatcher.dispatch(ComagentsMessage.ofPayload(second, Note.class).toString());
+        dispatcher.dispatch(ComagentsMessage.ofPayload(SEQUENCE_ID, first, Note.class).toString());
+        dispatcher.dispatch(ComagentsMessage.ofPayload(SEQUENCE_ID, task, Task.class).toString());
+        dispatcher.dispatch(ComagentsMessage.ofPayload(SEQUENCE_ID, second, Note.class).toString());
 
         assertEquals(List.of(first, second), noteListener.payloads());
         assertEquals(List.of(task), taskListener.payloads());
@@ -137,7 +160,7 @@ class ComagentsMessageDispatcherTest {
 
     @Test
     void messageWithoutListenersIsIgnored() {
-        assertDoesNotThrow(() -> dispatcher.dispatch(ComagentsMessage.ofPayload("nobody", String.class).toString()));
+        assertDoesNotThrow(() -> dispatcher.dispatch(ComagentsMessage.ofPayload(SEQUENCE_ID, "nobody", String.class).toString()));
 
         assertTrue(taskListener.payloads().isEmpty());
         assertTrue(noteListener.payloads().isEmpty());
@@ -145,7 +168,7 @@ class ComagentsMessageDispatcherTest {
 
     @Test
     void messageOfClassUnknownHereIsIgnored() {
-        String message = Base64Converter.toBase64String("{\"payloadString\":\"com.comagents.elsewhere.Missing::{}\","
+        String message = Base64Converter.toBase64String("{\"id\":\"message-1\",\"payloadString\":\"com.comagents.elsewhere.Missing::{}\","
                 + "\"payloadClassName\":\"com.comagents.elsewhere.Missing\"}");
 
         assertDoesNotThrow(() -> dispatcher.dispatch(message));
@@ -162,7 +185,7 @@ class ComagentsMessageDispatcherTest {
         Task task = new Task("review", 1);
 
         IllegalStateException failure = assertThrows(IllegalStateException.class,
-                () -> failingDispatcher.dispatch(ComagentsMessage.ofPayload(task, Task.class).toString()));
+                () -> failingDispatcher.dispatch(ComagentsMessage.ofPayload(SEQUENCE_ID, task, Task.class).toString()));
 
         assertEquals(List.of(task), firstFailing.payloads());
         assertEquals(List.of(task), taskListener.payloads());
@@ -177,7 +200,8 @@ class ComagentsMessageDispatcherTest {
     void dispatcherWithoutListenersIgnoresMessages() {
         ComagentsMessageDispatcher empty = new ComagentsMessageDispatcher(List.of());
 
-        assertDoesNotThrow(() -> empty.dispatch(ComagentsMessage.ofPayload(new Task("t", 1), Task.class).toString()));
+        assertDoesNotThrow(
+                () -> empty.dispatch(ComagentsMessage.ofPayload(SEQUENCE_ID, new Task("t", 1), Task.class).toString()));
     }
 
     @Test

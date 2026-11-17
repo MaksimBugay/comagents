@@ -41,7 +41,7 @@ public class ComagentsMessageDispatcher {
         RuntimeException failure = null;
         for (ComagentsMessageListener<T> listener : route.listeners()) {
             try {
-                deliver(listener, payload, error);
+                deliver(listener, message.id(), payload, error);
             } catch (RuntimeException e) {
                 failure = withSuppressed(failure, e);
             }
@@ -57,11 +57,12 @@ public class ComagentsMessageDispatcher {
         return (T) message.comagentsMessagePayload().payload();
     }
 
-    private static <T> void deliver(ComagentsMessageListener<T> listener, T payload, ComagentsError error) {
+    private static <T> void deliver(ComagentsMessageListener<T> listener, String sequenceId, T payload,
+                                    ComagentsError error) {
         if (error != null) {
-            listener.consumeError(error);
+            listener.consumeError(sequenceId, error);
         } else {
-            listener.consumePayload(payload);
+            listener.consumePayload(sequenceId, payload);
         }
     }
 

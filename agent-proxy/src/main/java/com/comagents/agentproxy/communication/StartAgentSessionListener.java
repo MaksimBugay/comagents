@@ -24,7 +24,7 @@ public class StartAgentSessionListener implements ComagentsMessageListener<Start
     }
 
     @Override
-    public void consumePayload(StartAgentSessionRequest request) {
+    public void consumePayload(String sequenceId, StartAgentSessionRequest request) {
         responseDeliveryService.deliverToOrchestrator(request.orchestratorDeviceId(), agentSessionStarter.start(request));
     }
 }

@@ -7,13 +7,15 @@ import org.apache.commons.lang3.Validate;
 import java.util.Objects;
 
 /**
- * Either the {@link ComagentsMessagePayload} string or the error that took its place, never both, for the payload
- * class named by {@code payloadClassName}. Class names are kept as names, so a message is read without loading any
- * class; the payload is read only by {@link #comagentsMessagePayload()}.
+ * A message with the {@code id} its sender gives it: either the {@link ComagentsMessagePayload} string or the error
+ * that took its place, never both, for the payload class named by {@code payloadClassName}. Class names are kept as
+ * names, so a message is read without loading any class; the payload is read only by
+ * {@link #comagentsMessagePayload()}.
  */
-public record ComagentsMessage(String payloadString, String payloadClassName, ComagentsError error) {
+public record ComagentsMessage(String id, String payloadString, String payloadClassName, ComagentsError error) {
 
     public ComagentsMessage {
+        Validate.notBlank(id, "id must not be blank");
         Validate.notBlank(payloadClassName, "payloadClassName must not be blank");
         Validate.isTrue((payloadString == null) != (error == null), "exactly one of payload and error must be set");
         if (payloadString != null) {
@@ -23,21 +25,22 @@ public record ComagentsMessage(String payloadString, String payloadClassName, Co
         }
     }
 
-    private <P> ComagentsMessage(P payload, Class<P> payloadClass, Throwable error) {
+    private <P> ComagentsMessage(String id, P payload, Class<P> payloadClass, Throwable error) {
         Validate.notNull(payloadClass, "payloadClass must not be null");
         this(
+                id,
                 Objects.nonNull(payload) ? (new ComagentsMessagePayload<>(payload, payloadClass)).toString() : null,
                 payloadClass.getName(),
                 Objects.nonNull(error) ? new ComagentsError(error) : null
         );
     }
 
-    public static <P> ComagentsMessage ofPayload(P payload, Class<P> payloadClass) {
-        return new ComagentsMessage(payload, payloadClass, null);
+    public static <P> ComagentsMessage ofPayload(String id, P payload, Class<P> payloadClass) {
+        return new ComagentsMessage(id, payload, payloadClass, null);
     }
 
-    public static ComagentsMessage ofError(Class<?> payloadClass, Throwable error) {
-        return new ComagentsMessage(null, payloadClass, error);
+    public static ComagentsMessage ofError(String id, Class<?> payloadClass, Throwable error) {
+        return new ComagentsMessage(id, null, payloadClass, error);
     }
 
     /**
