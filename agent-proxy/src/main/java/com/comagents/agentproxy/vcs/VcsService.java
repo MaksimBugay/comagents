@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.vcs;
 
-import com.comagents.agentproxy.domain.GithubRepositoryUrl;
+import com.comagents.commons.domain.GithubRepositoryUrl;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;

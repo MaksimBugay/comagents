@@ -2,10 +2,10 @@ package com.comagents.agentproxy;
 
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
-import com.comagents.agentproxy.domain.AgentSessionState;
-import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.response.AgentStatus;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.response.AgentStatus;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.client.HttpClient;

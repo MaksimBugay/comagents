@@ -1,9 +1,7 @@
-package com.comagents.agentproxy.domain;
+package com.comagents.commons.domain;
 
-import io.micronaut.core.annotation.Introspected;
 
 /** Lifecycle of an agent run, whatever harness runs it. */
-@Introspected
 public enum AgentSessionState {
     RUNNING,
     /**

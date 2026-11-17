@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.domain;
 
-import com.comagents.agentproxy.agent_setup.AgentSessionLoggingLevel;
-import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.AgentSessionLoggingLevel;
+import com.comagents.commons.domain.agent_context.AgentContext;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;

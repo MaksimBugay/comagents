@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.workspace;
 
-import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.commons.domain.AiAgent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

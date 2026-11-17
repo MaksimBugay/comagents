@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.domain.agent_context;
+package com.comagents.commons.domain.agent_context;
 
 import org.junit.jupiter.api.Test;
 
@@ -72,7 +72,6 @@ class AgentContextItemTest {
         assertEquals("focus", padded.getName());
         assertEquals(new StringAgentContextItem("focus", "other"), padded);
         assertTrue(padded.isNamed("focus"));
-        assertTrue(new RequiredAgentContextItem(AgentContextItemType.STRING, " Focus ").matches(padded));
     }
 
     @Test

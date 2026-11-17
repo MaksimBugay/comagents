@@ -2,8 +2,8 @@ package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
-import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.domain.AiAgent;
 import io.micronaut.context.event.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,9 +1,8 @@
-package com.comagents.agentproxy.response;
+package com.comagents.commons.response;
 
-import com.comagents.agentproxy.domain.AgentSessionState;
-import com.comagents.agentproxy.domain.AiAgent;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.Nullable;
+import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AiAgent;
+import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -12,7 +11,6 @@ import java.util.UUID;
  * @param finishedAt        when it ended, in epoch millis; null while running
  * @param responseAvailable whether {@code GET /agent-response/{agentName}/{sessionId}} has a response to return
  */
-@Introspected
 public record AgentStatus(AiAgent aiAgent, UUID sessionId, AgentSessionState state,
                           long startedAt, @Nullable Long finishedAt, boolean responseAvailable) {
 }

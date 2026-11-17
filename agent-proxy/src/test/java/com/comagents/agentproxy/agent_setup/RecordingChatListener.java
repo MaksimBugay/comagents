@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.commons.domain.AiAgent;
 
 import java.util.List;
 import java.util.UUID;

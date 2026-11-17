@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.domain;
+package com.comagents.commons.domain;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

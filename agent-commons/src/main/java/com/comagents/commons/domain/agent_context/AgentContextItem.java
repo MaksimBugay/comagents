@@ -1,10 +1,9 @@
-package com.comagents.agentproxy.domain.agent_context;
+package com.comagents.commons.domain.agent_context;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Locale;
 import java.util.Objects;
@@ -14,7 +13,6 @@ import java.util.Optional;
  * One item of an {@link AgentContext}, in JSON {@code {"type": "STRING" | "FILE" | "GITHUB_REPOSITORY", ...}}. Items are
  * unique by type and name, names ignoring case; every item has a name and a value.
  */
-@Introspected
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = StringAgentContextItem.class, name = "STRING"),

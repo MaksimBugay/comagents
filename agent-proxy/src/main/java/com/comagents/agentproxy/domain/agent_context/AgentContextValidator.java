@@ -1,7 +1,11 @@
 package com.comagents.agentproxy.domain.agent_context;
 
-import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.GithubRepositoryUrl;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.GithubRepositoryUrl;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.agent_context.AgentContextItem;
+import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextItem;
+import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
 import io.micronaut.core.annotation.Nullable;
 import jakarta.inject.Singleton;
 

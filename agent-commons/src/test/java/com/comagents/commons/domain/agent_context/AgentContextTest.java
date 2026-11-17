@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.domain.agent_context;
+package com.comagents.commons.domain.agent_context;
 
 import com.comagents.commons.serialization.JsonUtility;
 import org.junit.jupiter.api.Test;
@@ -56,8 +56,8 @@ class AgentContextTest {
 
     @Test
     void sizeIsNotLimited() {
-        // an agent's response is a context too; only a start request's context is limited (AgentContextValidator)
-        assertDoesNotThrow(() -> new AgentContext(List.of(new StringAgentContextItem("a", "x".repeat(AgentContextValidator.MAX_BYTES + 1)))));
+        // an agent's response is a context too; only a start request's context is limited (agent-proxy's AgentContextValidator, at most 64 KiB)
+        assertDoesNotThrow(() -> new AgentContext(List.of(new StringAgentContextItem("a", "x".repeat(64 * 1024 + 1)))));
     }
 
     @Test

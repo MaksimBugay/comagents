@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
 import com.comagents.agentproxy.domain.agent_context.RequiredAgentContextItem;
-import com.comagents.agentproxy.domain.agent_context.AgentContextItemType;
+import com.comagents.commons.domain.agent_context.AgentContextItemType;
 import com.comagents.commons.serialization.JsonUtility;
 import com.comagents.commons.serialization.SerializationException;
 import org.junit.jupiter.api.Test;

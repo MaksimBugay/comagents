@@ -1,6 +1,5 @@
 package com.comagents.agentproxy.agent_response;
 
-import com.comagents.agentproxy.agent_setup.AgentSessionLoggingLevel;
 import com.comagents.agentproxy.agent_setup.AgentSessionWsClientRegistry;
 import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
 import com.comagents.agentproxy.agent_setup.PushcaConnector;
@@ -9,14 +8,15 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
-import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.agent_context.AgentContext;
-import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
-import com.comagents.agentproxy.request.StartAgentSessionRequest;
-import com.comagents.agentproxy.response.AgentSessionResponse;
 import com.comagents.agentproxy.workspace.SessionFolders;
-import io.micronaut.context.annotation.Property;
+import com.comagents.commons.domain.AgentSessionLoggingLevel;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.agent_context.StringAgentContextItem;
+import com.comagents.commons.request.StartAgentSessionRequest;
+import com.comagents.commons.response.AgentSessionResponse;
 import com.comagents.commons.serialization.JsonUtility;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;

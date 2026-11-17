@@ -1,18 +1,17 @@
 package com.comagents.agentproxy.mcp;
 
 import com.comagents.agentproxy.agent_setup.AgentSessionWsClientRegistry;
-import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
 import com.comagents.agentproxy.agent_setup.ExpertAnswers;
+import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSession;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
-import com.comagents.agentproxy.domain.AgentSessionState;
-import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
-import io.micronaut.context.event.ApplicationEventPublisher;
-import tools.jackson.databind.JsonNode;
+import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.serialization.JsonUtility;
+import io.micronaut.context.event.ApplicationEventPublisher;
 import io.modelcontextprotocol.common.McpTransportContext;
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
 import io.modelcontextprotocol.spec.McpSchema.TextContent;
@@ -20,6 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.nio.file.Files;

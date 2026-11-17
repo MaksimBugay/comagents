@@ -2,13 +2,13 @@ package com.comagents.agentproxy.agent_response;
 
 import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
-import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
-import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.agent_context.AgentContext;
-import com.comagents.agentproxy.request.StartAgentSessionRequest;
-import com.comagents.agentproxy.response.AgentSessionResponse;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.request.StartAgentSessionRequest;
+import com.comagents.commons.response.AgentSessionResponse;
 import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.scheduling.TaskExecutors;

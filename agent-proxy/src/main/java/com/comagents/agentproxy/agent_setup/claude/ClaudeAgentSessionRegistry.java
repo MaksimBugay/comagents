@@ -1,12 +1,12 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
 import com.comagents.agentproxy.domain.AgentResponseReady;
-import com.comagents.agentproxy.domain.AgentSessionState;
-import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.agent_context.AgentContext;
-import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import com.comagents.commons.serialization.JsonUtility;
 import com.comagents.commons.serialization.SerializationException;
 import io.micronaut.context.annotation.Value;

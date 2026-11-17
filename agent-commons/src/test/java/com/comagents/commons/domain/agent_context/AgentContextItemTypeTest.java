@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.domain.agent_context;
+package com.comagents.commons.domain.agent_context;
 
 import com.comagents.commons.serialization.JsonUtility;
 import com.fasterxml.jackson.annotation.JsonSubTypes;

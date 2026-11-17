@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.domain;
+package com.comagents.commons.domain;
 
 import org.junit.jupiter.api.Test;
 

@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.AiHarnessProvider;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.AiHarnessProvider;
 import jakarta.inject.Singleton;
 
 import java.util.List;

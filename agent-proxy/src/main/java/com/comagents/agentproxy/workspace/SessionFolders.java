@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.workspace;
 
-import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.commons.domain.AiAgent;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 

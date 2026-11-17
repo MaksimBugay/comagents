@@ -3,7 +3,7 @@ package com.comagents.agentproxy.agent_response;
 import bmv.org.pushca.client.model.ClientFilter;
 import com.comagents.agentproxy.agent_setup.AgentSessionWsClientRegistry;
 import com.comagents.agentproxy.domain.AgentResponseReady;
-import com.comagents.agentproxy.response.AgentSessionResponse;
+import com.comagents.commons.response.AgentSessionResponse;
 import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.event.ApplicationEventListener;
 import jakarta.inject.Singleton;

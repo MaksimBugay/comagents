@@ -1,5 +1,7 @@
 package com.comagents.agentproxy.domain;
 
+import com.comagents.commons.domain.AgentSessionState;
+
 import java.time.Instant;
 import java.util.Optional;
 

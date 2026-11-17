@@ -1,7 +1,4 @@
-package com.comagents.agentproxy.domain.agent_context;
-
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.Nullable;
+package com.comagents.commons.domain.agent_context;
 
 import java.util.HashSet;
 import java.util.List;
@@ -14,12 +11,12 @@ import java.util.Set;
  *
  * @param items the context's items; empty when null
  */
-@Introspected
-public record AgentContext(@Nullable List<AgentContextItem> items) {
+// items isn't @Nullable: that would mark the accessor nullable too, and items() is never null
+public record AgentContext(List<AgentContextItem> items) {
 
     /**
      * Not limited in size: an agent's response is a context too. A start request's context is limited by
-     * {@link AgentContextValidator}.
+     * agent-proxy's {@code AgentContextValidator}.
      *
      * @throws InvalidAgentContextException when items repeat, or the repository to clone is ambiguous
      */

@@ -1,8 +1,8 @@
 package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
-import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.FileTrees;
+import com.comagents.commons.domain.AiAgent;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

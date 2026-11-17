@@ -1,17 +1,15 @@
-package com.comagents.agentproxy.domain.agent_context;
+package com.comagents.commons.domain.agent_context;
 
-import com.comagents.agentproxy.domain.GithubRepositoryUrl;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.comagents.commons.domain.GithubRepositoryUrl;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.Nullable;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A GitHub repository, given by its clone URL (the value); its name is {@code <owner>/<repository>} from that URL,
  * so repositories of the same name under different owners are different items. The primary one is
  * cloned as the session's working directory when the context has several.
  */
-@Introspected
 public final class GithubRepositoryAgentContextItem extends AgentContextItem {
 
     private final boolean primary;

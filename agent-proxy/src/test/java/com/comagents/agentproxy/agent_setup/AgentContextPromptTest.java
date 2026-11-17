@@ -1,9 +1,9 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.domain.agent_context.AgentContext;
-import com.comagents.agentproxy.domain.agent_context.FileAgentContextItem;
-import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
-import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.agent_context.FileAgentContextItem;
+import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextItem;
+import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;

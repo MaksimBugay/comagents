@@ -1,9 +1,9 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.domain.AgentSessionStatus;
-import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
-import com.comagents.agentproxy.domain.AiHarnessProvider;
+import com.comagents.agentproxy.domain.AgentSessionStatus;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.AiHarnessProvider;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Optional;

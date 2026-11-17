@@ -1,8 +1,8 @@
 package com.comagents.agentproxy.vcs;
 
 import com.comagents.agentproxy.conf.AgentProxyConf;
-import com.comagents.agentproxy.domain.GithubRepositoryUrl;
 import com.comagents.agentproxy.workspace.FileTrees;
+import com.comagents.commons.domain.GithubRepositoryUrl;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.StreamingHttpClient;

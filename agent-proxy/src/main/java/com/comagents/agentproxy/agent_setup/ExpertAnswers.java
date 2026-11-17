@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
-import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.commons.domain.AiAgent;
 import io.micronaut.context.BeanProvider;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;

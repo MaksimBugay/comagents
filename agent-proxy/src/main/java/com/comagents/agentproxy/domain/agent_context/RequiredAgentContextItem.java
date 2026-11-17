@@ -1,5 +1,7 @@
 package com.comagents.agentproxy.domain.agent_context;
 
+import com.comagents.commons.domain.agent_context.AgentContextItem;
+import com.comagents.commons.domain.agent_context.AgentContextItemType;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 

@@ -1,12 +1,10 @@
-package com.comagents.agentproxy.domain;
+package com.comagents.commons.domain;
 
-import io.micronaut.core.annotation.Introspected;
 
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
-@Introspected
 public enum AiAgent {
     // how each agent runs (model, effort, kick-off prompt) is in its agent.json in the comagents sources
     CODE_REVIEW(AiHarnessProvider.CLAUDE_CODE),

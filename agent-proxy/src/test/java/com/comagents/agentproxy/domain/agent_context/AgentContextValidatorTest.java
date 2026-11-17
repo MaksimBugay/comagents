@@ -1,6 +1,11 @@
 package com.comagents.agentproxy.domain.agent_context;
 
-import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.agent_context.AgentContextItemType;
+import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextItem;
+import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
+import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

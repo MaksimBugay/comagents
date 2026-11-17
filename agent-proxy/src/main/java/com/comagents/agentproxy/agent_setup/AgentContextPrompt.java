@@ -1,8 +1,8 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.domain.agent_context.AgentContext;
-import com.comagents.agentproxy.domain.agent_context.AgentContextItem;
-import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.agent_context.AgentContextItem;
+import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextItem;
 
 import java.util.Comparator;
 import java.util.List;

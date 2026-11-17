@@ -2,10 +2,10 @@ package com.comagents.agentproxy;
 
 import com.comagents.agentproxy.agent_response.AgentResponseService;
 import com.comagents.agentproxy.agent_status.AgentStatusService;
-import com.comagents.agentproxy.domain.AgentSessionState;
-import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.response.AgentResponseUnavailable;
-import com.comagents.agentproxy.response.AgentStatus;
+import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.response.AgentResponseUnavailable;
+import com.comagents.commons.response.AgentStatus;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;

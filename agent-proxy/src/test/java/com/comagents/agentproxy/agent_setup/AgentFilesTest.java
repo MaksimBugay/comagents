@@ -1,11 +1,11 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.domain.AiAgent;
-import com.comagents.agentproxy.domain.agent_context.AgentContext;
-import com.comagents.agentproxy.domain.agent_context.FileAgentContextItem;
-import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
-import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
-import com.comagents.agentproxy.request.StartAgentSessionRequest;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.agent_context.FileAgentContextItem;
+import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextItem;
+import com.comagents.commons.domain.agent_context.StringAgentContextItem;
+import com.comagents.commons.request.StartAgentSessionRequest;
 import com.comagents.commons.serialization.JsonUtility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

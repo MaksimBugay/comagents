@@ -2,7 +2,7 @@ package com.comagents.agentproxy.agent_setup;
 
 import bmv.org.pushca.client.model.ClientFilter;
 import com.comagents.agentproxy.agent_setup.FakePushcaConnector.FakeConnection;
-import com.comagents.agentproxy.domain.AiAgent;
+import com.comagents.commons.domain.AiAgent;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
