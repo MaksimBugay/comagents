@@ -1,5 +1,7 @@
 package com.comagents.agentproxy.conf;
 
+import com.comagents.commons.communication.ComagentsError;
+import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
@@ -17,9 +19,9 @@ import com.comagents.commons.response.AgentStatus;
 import io.micronaut.core.annotation.Introspected;
 
 /**
- * Bean introspections of the agent-commons request/response types, which can't carry {@code @Introspected}
- * themselves: agent-commons doesn't depend on Micronaut. Request validation ({@code @Valid}) and the native image
- * ({@link IntrospectedTypesReflectionFeature}) need them.
+ * Bean introspections of the agent-commons request/response and Pushca message types, which can't carry
+ * {@code @Introspected} themselves: agent-commons doesn't depend on Micronaut. Request validation ({@code @Valid}) and
+ * the native image ({@link IntrospectedTypesReflectionFeature}) need them.
  */
 @SuppressWarnings("unused") // read by Micronaut's annotation processor, never referenced in code
 @Introspected(classes = {
@@ -36,7 +38,9 @@ import io.micronaut.core.annotation.Introspected;
         AgentContextItemType.class,
         StringAgentContextItem.class,
         FileAgentContextItem.class,
-        GithubRepositoryAgentContextItem.class})
+        GithubRepositoryAgentContextItem.class,
+        ComagentsMessage.class,
+        ComagentsError.class})
 final class AgentCommonsIntrospections {
 
     private AgentCommonsIntrospections() {
