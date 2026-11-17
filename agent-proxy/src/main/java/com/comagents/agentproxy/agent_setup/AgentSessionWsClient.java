@@ -87,18 +87,6 @@ final class AgentSessionWsClient {
         }
     }
 
-    /**
-     * Sends {@code message} to the clients matching {@code receivers} right away, not after the chat's queued output.
-     *
-     * @throws IllegalStateException when the connection is closed, or Pushca refuses the message
-     */
-    synchronized void broadcast(ClientFilter receivers, String message) {
-        if (connection == null) {
-            throw new IllegalStateException("not connected");
-        }
-        connection.broadcastMessage(receivers, message);
-    }
-
     /** Closes the connection; the chat stays, and {@link #connect} opens it again. */
     synchronized void close() {
         if (connection != null) {

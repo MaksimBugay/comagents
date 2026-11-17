@@ -214,21 +214,6 @@ class AgentSessionWsClientRegistryTest {
     }
 
     @Test
-    void broadcastsFromTheSessionsClient() {
-        ClientFilter receivers = new ClientFilter("comagents-main", "agent-orchestrator@comagents.com", null, "AGENT_ORCHESTRATOR", true, List.of());
-        assertFalse(registry.broadcast(sessionId, receivers, "{}"), "no client yet");
-
-        registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks");
-
-        assertTrue(registry.broadcast(sessionId, receivers, "{\"items\":[]}"));
-        assertEquals(List.of(new FakePushcaConnector.Broadcast(receivers, "{\"items\":[]}")), onlyConnection().broadcasts);
-        assertTrue(onlyConnection().messages.isEmpty(), "not posted to the chat");
-
-        onlyConnection().broadcastFailure = new IllegalStateException("Web socket connection is broken");
-        assertFalse(registry.broadcast(sessionId, receivers, "{}"));
-    }
-
-    @Test
     void sessionRunsWithoutChatWhenPushcaIsUnavailable() {
         connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
 

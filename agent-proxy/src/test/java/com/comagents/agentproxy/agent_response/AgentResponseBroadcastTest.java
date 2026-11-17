@@ -1,11 +1,11 @@
 package com.comagents.agentproxy.agent_response;
 
-import com.comagents.agentproxy.agent_setup.AgentSessionWsClientRegistry;
 import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
 import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
+import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -22,6 +22,7 @@ import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @MicronautTest
 @Property(name = "agent-response.cleanup-delay", value = "1s")
 @Property(name = "claude.executable", value = "false")
+@Property(name = "agent-proxy.device-id", value = "executor-device-1")
 class AgentResponseBroadcastTest {
 
     private static final AgentContext ALL_GOOD = new AgentContext(List.of(new StringAgentContextItem("response", "# Report\n\nAll good")));
@@ -53,7 +55,7 @@ class AgentResponseBroadcastTest {
     AgentResponseBroadcast broadcast;
 
     @Inject
-    AgentSessionWsClientRegistry chats;
+    AgentExecutorPushcaClient executorClient;
 
     @Inject
     ClaudeAgentSessionRegistry registry;
@@ -66,6 +68,13 @@ class AgentResponseBroadcastTest {
         return connector;
     }
 
+    // the executor's client connected on startup, through another test's connector; closed, as after a failed startup
+    // connect, the delivery connects through this test's connector
+    @BeforeEach
+    void closeExecutorClient() {
+        executorClient.close();
+    }
+
     @AfterEach
     void deleteSessionFolder() {
         registry.cleanAllSessionData(sessionId);
@@ -74,12 +83,17 @@ class AgentResponseBroadcastTest {
     @Test
     void sendsTheResponseToTheOrchestratorDeviceAndDeletesSessionFilesAfterDelay() throws Exception {
         startSession();
-        chats.openConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai");
         writeAllGoodResponse();
 
         broadcast.send(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId));
 
-        List<FakePushcaConnector.Broadcast> broadcasts = connector.connections.getFirst().broadcasts;
+        // from the executor's own client, not the session's chat client
+        assertEquals(1, connector.connections.size());
+        FakePushcaConnector.FakeConnection executor = connector.connections.getFirst();
+        assertEquals("comagents-main", executor.client.workSpaceId);
+        assertEquals("executor-device-1", executor.client.deviceId);
+        assertEquals("EXECUTOR", executor.client.applicationId);
+        List<FakePushcaConnector.Broadcast> broadcasts = executor.broadcasts;
         assertEquals(1, broadcasts.size());
         assertEquals("comagents-main", broadcasts.getFirst().receivers().workSpaceId);
         assertEquals("agent-orchestrator@comagents.com", broadcasts.getFirst().receivers().accountId);
@@ -100,9 +114,9 @@ class AgentResponseBroadcastTest {
 
     @Test
     void responseThatCannotBeSentStaysToBeFetched() throws Exception {
-        // no Pushca client: the session runs without a chat
         startSession();
         writeAllGoodResponse();
+        connector.connectFailure = new IllegalStateException("Pushca unreachable");
 
         broadcast.send(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId));
 

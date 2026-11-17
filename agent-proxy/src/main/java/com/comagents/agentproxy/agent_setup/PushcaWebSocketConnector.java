@@ -7,6 +7,7 @@ import bmv.org.pushca.client.model.PClient;
 import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
 import com.comagents.agentproxy.conf.AgentProxyConf;
+import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 
@@ -16,6 +17,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /** Connections to the Pushca server ({@code pushca.api-url}) with the organization's API key ({@code pushca.api-key}). */
+// @Primary for the IDE, which doesn't know @Replaces and also sees the tests' FakePushcaConnector
+@Primary
 @Singleton
 public class PushcaWebSocketConnector implements PushcaConnector {
 

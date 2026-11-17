@@ -3,7 +3,10 @@ package com.comagents.agentproxy.agent_setup;
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.core.PChannel;
 
-/** The part of a Pushca connection that a session's chat uses. Commands are blocking and throw on failure. */
+/**
+ * The part of a Pushca connection that agent-proxy uses: session chats (channels) and the executor's deliveries to
+ * the orchestrator (broadcasts). Commands are blocking and throw on failure.
+ */
 public interface PushcaConnection extends AutoCloseable {
 
     /**
