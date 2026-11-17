@@ -7,6 +7,7 @@ import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.communication.ResponseDeliveryService;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.communication.ComagentsMessage;
+import com.comagents.commons.communication.WithSequenceId;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import jakarta.annotation.PreDestroy;
@@ -17,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The agent executor's own Pushca client: one per executor (not per session), signed in to the orchestrators'
@@ -59,7 +61,9 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
         open();
     }
 
-    /** Opens the connection unless it is open; when Pushca can't be reached, the next delivery tries again. */
+    /**
+     * Opens the connection unless it is open; when Pushca can't be reached, the next delivery tries again.
+     */
     synchronized void open() {
         try {
             if (connection == null) {
@@ -72,17 +76,17 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
     }
 
     /**
-     * Sends {@code response}, wrapped into a {@link ComagentsMessage} with the id {@code sequenceId}, to the
-     * orchestrator device {@code orchestratorDeviceId}; blocks until Pushca has taken it.
+     * Sends {@code response}, wrapped into a {@link ComagentsMessage}, to the orchestrator device
+     * {@code orchestratorDeviceId}; blocks until Pushca has taken it. The message id is the response's
+     * {@link WithSequenceId#sequenceId()}, or a new random UUID when it has none.
      *
-     * @throws IllegalArgumentException when the sequence or device id is blank, or the response null or blank
+     * @throws IllegalArgumentException when the device id is blank, or the response null or blank
      * @throws IllegalStateException    when Pushca can't be reached or refuses the message
      */
     @Override
-    public synchronized <T> void deliverToOrchestrator(String sequenceId, String orchestratorDeviceId, T response) {
-        Validate.notBlank(sequenceId, "sequenceId must not be blank");
+    public synchronized <T> void deliverToOrchestrator(String orchestratorDeviceId, T response) {
         Validate.notBlank(orchestratorDeviceId, "orchestratorDeviceId must not be blank");
-        String message = comagentsMessage(sequenceId, response).toString();
+        String message = comagentsMessage(response).toString();
         ClientFilter orchestrator = orchestrator(orchestratorDeviceId);
         boolean reused = connection != null;
         try {
@@ -98,7 +102,9 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
         }
     }
 
-    /** Closes the connection; the next delivery opens a new one. */
+    /**
+     * Closes the connection; the next delivery opens a new one.
+     */
     @PreDestroy
     public synchronized void close() {
         closeConnection();
@@ -111,8 +117,9 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> ComagentsMessage comagentsMessage(String sequenceId, T response) {
+    private static <T> ComagentsMessage comagentsMessage(T response) {
         Validate.notNull(response, "response must not be null");
+        String sequenceId = (response instanceof WithSequenceId responseWithInstanceId) ? responseWithInstanceId.sequenceId() : UUID.randomUUID().toString();
         // the payload's runtime class: the orchestrator reads the message by that class name
         return ComagentsMessage.ofPayload(sequenceId, response, (Class<T>) response.getClass());
     }

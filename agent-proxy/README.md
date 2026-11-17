@@ -15,7 +15,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 
 ```console
 $ curl localhost:8080/code_review/info
-{"name":"code_review","version":"0.1","deviceId":"cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3"}
+{"name":"code_review","version":"0.1","deviceId":"cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3","sequenceId":"3f1c9a52-7d4e-4b8a-9c21-5e6f7a8b9c0d"}
 ```
 
 ### Session chat

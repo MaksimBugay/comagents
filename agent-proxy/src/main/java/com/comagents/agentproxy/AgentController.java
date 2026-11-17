@@ -8,6 +8,7 @@ import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
 import com.comagents.commons.request.StartAgentSessionRequest;
+import com.comagents.commons.response.AgentInfo;
 import io.micronaut.core.convert.exceptions.ConversionErrorException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -27,6 +28,7 @@ import jakarta.validation.constraints.NotBlank;
 import tools.jackson.core.JacksonException;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Controller("/{agentName}")
 public class AgentController {
@@ -44,7 +46,8 @@ public class AgentController {
 
     @Get("/info")
     public AgentInfo info(@PathVariable String agentName) {
-        return new AgentInfo(agentName, version, deviceId);
+        // answers no start request: a sequence id of its own
+        return new AgentInfo(agentName, version, deviceId, UUID.randomUUID().toString());
     }
 
     /**

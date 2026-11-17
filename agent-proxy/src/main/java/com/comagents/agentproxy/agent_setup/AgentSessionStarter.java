@@ -1,10 +1,10 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.AgentInfo;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.StartAgentSessionRequest;
+import com.comagents.commons.response.AgentInfo;
 import jakarta.inject.Singleton;
 import jakarta.validation.Valid;
 
@@ -25,7 +25,7 @@ public class AgentSessionStarter {
     /**
      * Prepares the session and starts the agent in the background.
      *
-     * @return this agent-proxy, which runs the session
+     * @return this agent-proxy, which runs the session, with the request's sequence id
      * @throws jakarta.validation.ConstraintViolationException when the request is invalid
      * @throws NoAgentSetupServiceException                    when the agent's harness has no setup service yet
      */
@@ -43,7 +43,7 @@ public class AgentSessionStarter {
                         request.createdAt()
                 )
         );
-        return new AgentInfo(request.agent().getAgentName(), version, deviceId);
+        return new AgentInfo(request.agent().getAgentName(), version, deviceId, request.sequenceId());
     }
 
     private AgentSetupService setupServiceFor(AiAgent agent) {

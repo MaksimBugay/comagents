@@ -26,7 +26,6 @@ public class StartAgentSessionListener implements ComagentsMessageListener<Start
     // the message's sequence id is the request's: ComagentsMessageDispatcher checked it
     @Override
     public void consumePayload(String sequenceId, StartAgentSessionRequest request) {
-        responseDeliveryService.deliverToOrchestrator(request.sequenceId(), request.orchestratorDeviceId(),
-                agentSessionStarter.start(request));
+        responseDeliveryService.deliverToOrchestrator(request.orchestratorDeviceId(), agentSessionStarter.start(request));
     }
 }
