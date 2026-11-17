@@ -13,11 +13,12 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * Hands every agent response to one agent orchestrator as soon as it is on disk: the {@link AgentSessionResponse}, as
- * {@code GET /agent-response} returns it, as a {@link ComagentsMessage} string, goes from the session's Pushca client as
- * a find-any broadcast to the orchestrators' clients, so only one of them gets it. Once sent, the session's files are deleted after
- * {@code agent-response.cleanup-delay}, as after a first fetch. When it can't be sent, the response stays to be fetched
- * until {@code agent-response.retention}.
+ * Hands every agent response to the orchestrator device that started the session as soon as it is on disk: the
+ * {@link AgentSessionResponse}, as {@code GET /agent-response} returns it, as a {@link ComagentsMessage} string, goes
+ * from the session's Pushca client as a broadcast to the device named by the start request's
+ * {@code orchestratorDeviceId}. Once sent, the session's files are deleted after {@code agent-response.cleanup-delay},
+ * as after a first fetch. When it can't be sent, the response stays to be fetched until
+ * {@code agent-response.retention}.
  */
 @Singleton
 public class AgentResponseBroadcast implements ApplicationEventListener<AgentResponseReady> {
@@ -26,8 +27,10 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
     static final String APPLICATION_ID = "AGENT_ORCHESTRATOR";
     static final String ACCOUNT_DOMAIN = "agent-orchestrator@comagents.com";
 
-    // any device of the orchestrator account, only one of them
-    static final ClientFilter ORCHESTRATOR = new ClientFilter(WORKSPACE_ID, ACCOUNT_DOMAIN, null, APPLICATION_ID, true, List.of());
+    // the orchestrator device that started the session; one client of it, should it be connected more than once
+    static ClientFilter orchestrator(String orchestratorDeviceId) {
+        return new ClientFilter(WORKSPACE_ID, ACCOUNT_DOMAIN, orchestratorDeviceId, APPLICATION_ID, true, List.of());
+    }
 
     private static final Logger LOG = LoggerFactory.getLogger(AgentResponseBroadcast.class);
 
@@ -51,8 +54,11 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         try {
             agentResponseService.readResponse(event.agent(), event.sessionId()).ifPresent(response -> {
                 var comagentsMessage = new ComagentsMessage<>(AgentSessionResponse.class, response);
-                if (agentSessionWsClientRegistry.broadcast(event.sessionId(), ORCHESTRATOR, comagentsMessage.toString())) {
-                    LOG.info("[{} {}] response sent to {}", agentName, event.sessionId(), ACCOUNT_DOMAIN);
+                String orchestratorDeviceId = response.request().orchestratorDeviceId();
+                if (agentSessionWsClientRegistry.broadcast(event.sessionId(), orchestrator(orchestratorDeviceId),
+                        comagentsMessage.toString())) {
+                    LOG.info("[{} {}] response sent to {} device {}", agentName, event.sessionId(), ACCOUNT_DOMAIN,
+                            orchestratorDeviceId);
                     agentResponseService.scheduleCleanup(event.agent(), event.sessionId());
                 }
             });

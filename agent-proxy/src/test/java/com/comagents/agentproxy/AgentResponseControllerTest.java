@@ -48,7 +48,7 @@ class AgentResponseControllerTest {
 
     private final UUID sessionId = UUID.randomUUID();
     private final AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId,
-            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "MBugai",
+            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "orchestrator-device-1", "MBugai",
             AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
 
     @Inject
@@ -74,7 +74,7 @@ class AgentResponseControllerTest {
 
         AgentSessionResponse response = client.toBlocking().retrieve(uri(), AgentSessionResponse.class);
 
-        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "MBugai",
+        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "orchestrator-device-1", "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());
         assertEquals("# Report\n\nAll good", response.agentContext().items().getFirst().getValue());

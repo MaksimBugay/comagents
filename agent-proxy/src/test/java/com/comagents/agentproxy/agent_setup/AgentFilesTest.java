@@ -124,6 +124,7 @@ class AgentFilesTest {
                         new FileAgentContextItem("requirements.md",
                                 "https://storage.example/bucket/requirements.md?X-Amz-Signature=…"),
                         new StringAgentContextItem("focus", "security"))),
+                "orchestrator-device-1",
                 "Maks"
         );
         String json = JsonUtility.toJson(request);

@@ -45,7 +45,7 @@ class AgentResponseBroadcastTest {
 
     private final UUID sessionId = UUID.randomUUID();
     private final AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId,
-            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "MBugai",
+            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "orchestrator-device-1", "MBugai",
             AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
     private final FakePushcaConnector connector = new FakePushcaConnector();
 
@@ -72,7 +72,7 @@ class AgentResponseBroadcastTest {
     }
 
     @Test
-    void sendsTheResponseToOneOrchestratorAndDeletesSessionFilesAfterDelay() throws Exception {
+    void sendsTheResponseToTheOrchestratorDeviceAndDeletesSessionFilesAfterDelay() throws Exception {
         startSession();
         chats.openConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai");
         writeAllGoodResponse();
@@ -83,13 +83,14 @@ class AgentResponseBroadcastTest {
         assertEquals(1, broadcasts.size());
         assertEquals("comagents-main", broadcasts.getFirst().receivers().workSpaceId);
         assertEquals("agent-orchestrator@comagents.com", broadcasts.getFirst().receivers().accountId);
+        assertEquals("orchestrator-device-1", broadcasts.getFirst().receivers().deviceId);
         assertEquals("AGENT_ORCHESTRATOR", broadcasts.getFirst().receivers().applicationId);
-        assertTrue(broadcasts.getFirst().receivers().findAny, "only one orchestrator gets it");
+        assertTrue(broadcasts.getFirst().receivers().findAny, "one client of the device gets it");
         // a ComagentsMessage, read as the orchestrator reads it
         String message = broadcasts.getFirst().message();
         assertEquals(AgentSessionResponse.class.getName(), ComagentsMessage.payloadClassName(message));
         AgentSessionResponse response = ComagentsMessage.fromMessageString(message, AgentSessionResponse.class).payload();
-        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "MBugai",
+        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "orchestrator-device-1", "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());
 

@@ -66,6 +66,7 @@ public class AgentController {
                 new AgentSessionAttributes(
                         startAgentRequest.sessionId(),
                         startAgentRequest.agentContext(),
+                        startAgentRequest.orchestratorDeviceId(),
                         startAgentRequest.actorAccountId(),
                         startAgentRequest.loggingLevel(),
                         startAgentRequest.createdAt()
