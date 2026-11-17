@@ -1,0 +1,22 @@
+package com.comagents.agentproxy.conf;
+
+import com.comagents.commons.communication.ComagentsError;
+import com.comagents.commons.communication.ComagentsMessage;
+import com.comagents.commons.response.AgentSessionResponse;
+import io.micronaut.core.beans.BeanIntrospector;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+// the native image registers only introspected types for reflection, which Jackson needs for records
+class AgentCommonsIntrospectionsTest {
+
+    @Test
+    void typesSentOverPushcaAreIntrospected() {
+        for (Class<?> type : List.of(ComagentsMessage.class, ComagentsError.class, AgentSessionResponse.class)) {
+            assertTrue(BeanIntrospector.SHARED.findIntrospection(type).isPresent(), type.getName());
+        }
+    }
+}
