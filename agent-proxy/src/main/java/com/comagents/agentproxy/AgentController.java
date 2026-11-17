@@ -9,7 +9,6 @@ import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
 import com.comagents.commons.request.StartAgentSessionRequest;
-import io.micronaut.context.annotation.Value;
 import io.micronaut.core.convert.exceptions.ConversionErrorException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -37,10 +36,9 @@ public class AgentController {
     private final String deviceId;
     private final AgentSetupServices agentSetupServices;
 
-    public AgentController(@Value("${agent-proxy.version:unknown}") String version,
-                           AgentProxyConf agentProxyConf,
+    public AgentController(AgentProxyConf agentProxyConf,
                            AgentSetupServices agentSetupServices) {
-        this.version = version;
+        this.version = agentProxyConf.getVersion();
         this.deviceId = agentProxyConf.getDeviceId();
         this.agentSetupServices = agentSetupServices;
     }

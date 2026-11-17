@@ -22,7 +22,7 @@ class AgentExecutorPushcaClientTest {
 
     private final FakePushcaConnector connector = new FakePushcaConnector();
     private final AgentExecutorPushcaClient client = new AgentExecutorPushcaClient(connector,
-            new AgentProxyConf("https://github.com/acme/comagents.git", "token", "key", "https://pushca.example",
+            new AgentProxyConf("0.1", "https://github.com/acme/comagents.git", "token", "key", "https://pushca.example",
                     "pushca-key", AiHarnessProvider.CLAUDE_CODE, new DeviceIdExtractor("executor-device-1", "host")));
 
     @Test
