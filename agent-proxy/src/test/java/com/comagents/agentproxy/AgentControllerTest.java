@@ -48,7 +48,7 @@ class AgentControllerTest {
     @Test
     void startRejectsUnknownAgentInPath() {
         assertEquals(HttpStatus.NOT_FOUND, startStatus("/unknown_agent/start",
-                Map.of("agent", "CODE_REVIEW", "orchestratorDeviceId", "orchestrator-device-1")));
+                Map.of("agent", "CODE_REVIEW", "sequenceId", "sequence-1", "orchestratorDeviceId", "orchestrator-device-1")));
     }
 
     @Test
@@ -58,9 +58,18 @@ class AgentControllerTest {
 
     @Test
     void startRejectsMissingOrchestratorDeviceId() {
-        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start", Map.of("agent", "CODE_REVIEW")));
         assertEquals(HttpStatus.BAD_REQUEST,
-                startStatus("/code_review/start", Map.of("agent", "CODE_REVIEW", "orchestratorDeviceId", " ")));
+                startStatus("/code_review/start", Map.of("agent", "CODE_REVIEW", "sequenceId", "sequence-1")));
+        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start",
+                Map.of("agent", "CODE_REVIEW", "sequenceId", "sequence-1", "orchestratorDeviceId", " ")));
+    }
+
+    @Test
+    void startRejectsMissingSequenceId() {
+        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start",
+                Map.of("agent", "CODE_REVIEW", "orchestratorDeviceId", "orchestrator-device-1")));
+        assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start",
+                Map.of("agent", "CODE_REVIEW", "sequenceId", " ", "orchestratorDeviceId", "orchestrator-device-1")));
     }
 
     @Test
@@ -75,7 +84,7 @@ class AgentControllerTest {
     // the 400 message for a start request with these context items
     private String startError(String items) {
         String body = "{\"sessionId\": \"" + UUID.randomUUID() + "\", \"agent\": \"CODE_REVIEW\", "
-                + "\"orchestratorDeviceId\": \"orchestrator-device-1\", \"agentContext\": {\"items\": " + items + "}}";
+                + "\"sequenceId\": \"sequence-1\", \"orchestratorDeviceId\": \"orchestrator-device-1\", \"agentContext\": {\"items\": " + items + "}}";
         HttpClientResponseException e = assertThrows(HttpClientResponseException.class, () -> client.toBlocking()
                 .exchange(HttpRequest.POST("/code_review/start", body).contentType(MediaType.APPLICATION_JSON_TYPE)));
         assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
@@ -85,13 +94,13 @@ class AgentControllerTest {
     @Test
     void startRejectsUnknownAgentInRequest() {
         assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start",
-                Map.of("agent", "UNKNOWN_AGENT", "orchestratorDeviceId", "orchestrator-device-1")));
+                Map.of("agent", "UNKNOWN_AGENT", "sequenceId", "sequence-1", "orchestratorDeviceId", "orchestrator-device-1")));
     }
 
     @Test
     void startRejectsDifferentAgentsInPathAndRequest() {
         assertEquals(HttpStatus.BAD_REQUEST, startStatus("/code_review/start",
-                Map.of("agent", "IMAGE_GENERATOR", "orchestratorDeviceId", "orchestrator-device-1")));
+                Map.of("agent", "IMAGE_GENERATOR", "sequenceId", "sequence-1", "orchestratorDeviceId", "orchestrator-device-1")));
     }
 
     @Test
@@ -101,7 +110,7 @@ class AgentControllerTest {
         Files.writeString(earlierSessionsFile, "kept");
         try {
             assertEquals(HttpStatus.CONFLICT, startStatus("/code_review/start",
-                    Map.of("sessionId", sessionId.toString(), "agent", "CODE_REVIEW", "orchestratorDeviceId", "orchestrator-device-1")));
+                    Map.of("sessionId", sessionId.toString(), "agent", "CODE_REVIEW", "sequenceId", "sequence-1", "orchestratorDeviceId", "orchestrator-device-1")));
             assertTrue(Files.exists(earlierSessionsFile), "the earlier session's data is not deleted");
         } finally {
             FileTrees.deleteIfExists(sessionFolders.of(sessionId));
@@ -112,7 +121,7 @@ class AgentControllerTest {
     void startReportsAgentWithoutSetupService() {
         // IMAGE_GENERATOR runs on CODEX, which has no AgentSetupService yet
         assertEquals(HttpStatus.NOT_IMPLEMENTED, startStatus("/image_generator/start",
-                Map.of("agent", "IMAGE_GENERATOR", "orchestratorDeviceId", "orchestrator-device-1")));
+                Map.of("agent", "IMAGE_GENERATOR", "sequenceId", "sequence-1", "orchestratorDeviceId", "orchestrator-device-1")));
     }
 
     private HttpStatus startStatus(String uri, Map<String, Object> body) {

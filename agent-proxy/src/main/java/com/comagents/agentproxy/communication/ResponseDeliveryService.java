@@ -2,5 +2,5 @@ package com.comagents.agentproxy.communication;
 
 public interface ResponseDeliveryService {
 
-    <T> void deliverToOrchestrator(String orchestratorDeviceId, T response);
+    <T> void deliverToOrchestrator(String sequenceId, String orchestratorDeviceId, T response);
 }

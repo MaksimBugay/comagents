@@ -2,6 +2,7 @@ package com.comagents.commons.communication;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toUnmodifiableMap;
@@ -25,6 +26,9 @@ public class ComagentsMessageDispatcher {
      * Passes the payload to every listener of the message's payload class, or the error the message carries in place
      * of it; the payload of a message nobody listens to is not read. A failing listener does not stop the others: once
      * all have run, the first failure is rethrown with the rest as suppressed exceptions.
+     *
+     * @throws IllegalArgumentException when a {@link WithSequenceId} payload does not carry the message's id; no
+     *                                  listener gets it then
      */
     public void dispatch(String comagentsMessageString) {
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(comagentsMessageString);
@@ -38,6 +42,9 @@ public class ComagentsMessageDispatcher {
         ComagentsError error = message.error();
         // read once for all listeners
         T payload = error == null ? payload(message) : null;
+        if (payload instanceof WithSequenceId payloadWithSequenceId) {
+            requireSameSequenceId(message.id(), payloadWithSequenceId);
+        }
         RuntimeException failure = null;
         for (ComagentsMessageListener<T> listener : route.listeners()) {
             try {
@@ -55,6 +62,13 @@ public class ComagentsMessageDispatcher {
     private static <T> T payload(ComagentsMessage message) {
         // the route was found by the class the message names, and the payload is read as that class: a T
         return (T) message.comagentsMessagePayload().payload();
+    }
+
+    private static void requireSameSequenceId(String sequenceId, WithSequenceId payloadWithSequenceId) {
+        if (!Objects.equals(sequenceId, payloadWithSequenceId.sequenceId())) {
+            throw new IllegalArgumentException("Message sequence id " + sequenceId
+                    + " is not the payload object's sequence id " + payloadWithSequenceId.sequenceId());
+        }
     }
 
     private static <T> void deliver(ComagentsMessageListener<T> listener, String sequenceId, T payload,

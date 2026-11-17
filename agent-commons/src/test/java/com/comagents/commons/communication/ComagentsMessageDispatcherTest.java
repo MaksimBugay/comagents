@@ -20,6 +20,9 @@ class ComagentsMessageDispatcherTest {
     record Note(String text) {
     }
 
+    record SequencedTask(String sequenceId, String title) implements WithSequenceId {
+    }
+
     static class RecordingListener<T> implements ComagentsMessageListener<T> {
 
         private final Class<T> payloadClass;
@@ -134,6 +137,32 @@ class ComagentsMessageDispatcherTest {
 
         assertEquals(List.of("sequence-1", "sequence-2"), taskListener.sequenceIds());
         assertEquals(List.of("sequence-1", "sequence-2"), secondTaskListener.sequenceIds());
+    }
+
+    @Test
+    void payloadWithTheMessageSequenceIdIsDelivered() {
+        RecordingListener<SequencedTask> listener = new RecordingListener<>(SequencedTask.class);
+        SequencedTask task = new SequencedTask("sequence-1", "review");
+
+        new ComagentsMessageDispatcher(List.of(listener))
+                .dispatch(ComagentsMessage.ofPayload("sequence-1", task, SequencedTask.class).toString());
+
+        assertEquals(List.of(task), listener.payloads());
+    }
+
+    @Test
+    void payloadWithAnotherSequenceIdThanItsMessageIsRejected() {
+        RecordingListener<SequencedTask> listener = new RecordingListener<>(SequencedTask.class);
+        String message = ComagentsMessage.ofPayload("sequence-1", new SequencedTask("sequence-2", "review"),
+                SequencedTask.class).toString();
+        ComagentsMessageDispatcher sequencedDispatcher = new ComagentsMessageDispatcher(List.of(listener));
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> sequencedDispatcher.dispatch(message));
+
+        assertEquals("Message sequence id sequence-1 is not the payload object's sequence id sequence-2",
+                e.getMessage());
+        assertTrue(listener.payloads().isEmpty());
     }
 
     @Test

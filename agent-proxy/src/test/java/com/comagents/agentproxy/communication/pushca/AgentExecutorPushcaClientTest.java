@@ -30,8 +30,8 @@ class AgentExecutorPushcaClientTest {
         client.open();
 
         assertEquals(1, connector.connections.size(), "opened at startup");
-        client.deliverToOrchestrator("orchestrator-device-1", RESPONSE);
-        client.deliverToOrchestrator("orchestrator-device-1", RESPONSE);
+        client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE);
+        client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE);
 
         assertEquals(1, connector.connections.size(), "never opened again while it works");
         assertEquals(2, connector.connections.getFirst().broadcasts.size());
@@ -44,7 +44,7 @@ class AgentExecutorPushcaClientTest {
         assertTrue(connector.connections.isEmpty());
 
         connector.connectFailure = null;
-        client.deliverToOrchestrator("orchestrator-device-1", RESPONSE);
+        client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE);
 
         assertEquals(1, connector.connections.size());
         assertEquals(1, connector.connections.getFirst().broadcasts.size());
@@ -52,34 +52,35 @@ class AgentExecutorPushcaClientTest {
 
     @Test
     void reconnectsOnceWhenTheKeptConnectionBroke() {
-        client.deliverToOrchestrator("orchestrator-device-1", RESPONSE);
+        client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE);
         FakePushcaConnector.FakeConnection broken = connector.connections.getFirst();
         broken.broadcastFailure = new IllegalStateException("Web socket connection is broken");
 
-        client.deliverToOrchestrator("orchestrator-device-1", RESPONSE);
+        client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE);
 
         assertTrue(broken.closed);
         assertEquals(2, connector.connections.size());
         FakePushcaConnector.FakeConnection reconnected = connector.connections.get(1);
         assertEquals(1, reconnected.broadcasts.size());
-        assertEquals(RESPONSE, ComagentsMessage.fromComagentsMessageString(reconnected.broadcasts.getFirst().message())
-                .comagentsMessagePayload().payload());
+        ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(reconnected.broadcasts.getFirst().message());
+        assertEquals("sequence-1", message.id());
+        assertEquals(RESPONSE, message.comagentsMessagePayload().payload());
     }
 
     @Test
     void failsWhenReconnectingFailsTooAndConnectsAgainOnTheNextDelivery() {
-        client.deliverToOrchestrator("orchestrator-device-1", RESPONSE);
+        client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE);
         FakePushcaConnector.FakeConnection broken = connector.connections.getFirst();
         broken.broadcastFailure = new IllegalStateException("Web socket connection is broken");
         IllegalStateException unreachable = new IllegalStateException("Pushca unreachable");
         connector.connectFailure = unreachable;
 
         assertSame(unreachable, assertThrows(IllegalStateException.class,
-                () -> client.deliverToOrchestrator("orchestrator-device-1", RESPONSE)));
+                () -> client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE)));
         assertTrue(broken.closed);
 
         connector.connectFailure = null;
-        client.deliverToOrchestrator("orchestrator-device-1", RESPONSE);
+        client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE);
 
         assertEquals(2, connector.connections.size());
         assertEquals(1, connector.connections.get(1).broadcasts.size());
@@ -89,7 +90,7 @@ class AgentExecutorPushcaClientTest {
     void doesNotRetryWhenTheFirstConnectFails() {
         connector.connectFailure = new IllegalStateException("Pushca unreachable");
 
-        assertThrows(IllegalStateException.class, () -> client.deliverToOrchestrator("orchestrator-device-1", RESPONSE));
+        assertThrows(IllegalStateException.class, () -> client.deliverToOrchestrator("sequence-1", "orchestrator-device-1", RESPONSE));
 
         assertTrue(connector.connections.isEmpty());
     }

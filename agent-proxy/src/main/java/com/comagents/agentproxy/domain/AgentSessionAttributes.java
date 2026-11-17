@@ -10,6 +10,7 @@ import java.util.UUID;
 
 /**
  * @param agentContext         what the session works with (see {@code StartAgentSessionRequest}); null for none
+ * @param sequenceId           the start request's sequence id, which the session's response carries
  * @param orchestratorDeviceId the orchestrator device that gets the session's response
  * @param actorAccountId       the Pushca account that started the session: the only member of the session's chat
  * @param loggingLevel         what the session's chat shows; {@link AgentSessionLoggingLevel#INFO} when not given
@@ -18,6 +19,7 @@ import java.util.UUID;
 @Introspected
 public record AgentSessionAttributes(@NotNull UUID sessionId,
                                      @Nullable AgentContext agentContext,
+                                     @NotNull String sequenceId,
                                      @NotNull String orchestratorDeviceId,
                                      @Nullable String actorAccountId,
                                      AgentSessionLoggingLevel loggingLevel,

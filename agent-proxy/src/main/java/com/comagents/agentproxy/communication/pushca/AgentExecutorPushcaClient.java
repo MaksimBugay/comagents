@@ -72,16 +72,17 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
     }
 
     /**
-     * Sends {@code response}, wrapped into a {@link ComagentsMessage}, to the orchestrator device
-     * {@code orchestratorDeviceId}; blocks until Pushca has taken it.
+     * Sends {@code response}, wrapped into a {@link ComagentsMessage} with the id {@code sequenceId}, to the
+     * orchestrator device {@code orchestratorDeviceId}; blocks until Pushca has taken it.
      *
-     * @throws IllegalArgumentException when the device id is blank, or the response null or blank
+     * @throws IllegalArgumentException when the sequence or device id is blank, or the response null or blank
      * @throws IllegalStateException    when Pushca can't be reached or refuses the message
      */
     @Override
-    public synchronized <T> void deliverToOrchestrator(String orchestratorDeviceId, T response) {
+    public synchronized <T> void deliverToOrchestrator(String sequenceId, String orchestratorDeviceId, T response) {
+        Validate.notBlank(sequenceId, "sequenceId must not be blank");
         Validate.notBlank(orchestratorDeviceId, "orchestratorDeviceId must not be blank");
-        String message = comagentsMessage(response).toString();
+        String message = comagentsMessage(sequenceId, response).toString();
         ClientFilter orchestrator = orchestrator(orchestratorDeviceId);
         boolean reused = connection != null;
         try {
@@ -110,10 +111,10 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> ComagentsMessage comagentsMessage(T response) {
+    private static <T> ComagentsMessage comagentsMessage(String sequenceId, T response) {
         Validate.notNull(response, "response must not be null");
         // the payload's runtime class: the orchestrator reads the message by that class name
-        return ComagentsMessage.ofPayload(response, (Class<T>) response.getClass());
+        return ComagentsMessage.ofPayload(sequenceId, response, (Class<T>) response.getClass());
     }
 
     // over the kept connection; there is none only after an issue (startup connect failed, or it broke)

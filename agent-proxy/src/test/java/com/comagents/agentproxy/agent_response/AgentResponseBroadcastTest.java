@@ -47,7 +47,7 @@ class AgentResponseBroadcastTest {
 
     private final UUID sessionId = UUID.randomUUID();
     private final AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId,
-            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "orchestrator-device-1", "MBugai",
+            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "sequence-1", "orchestrator-device-1", "MBugai",
             AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
     private final FakePushcaConnector connector = new FakePushcaConnector();
 
@@ -102,9 +102,10 @@ class AgentResponseBroadcastTest {
         assertTrue(broadcasts.getFirst().receivers().findAny, "one client of the device gets it");
         // a ComagentsMessage, read as the orchestrator reads it
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(broadcasts.getFirst().message());
+        assertEquals("sequence-1", message.id(), "the start request's sequence id");
         assertEquals(AgentSessionResponse.class.getName(), message.payloadClassName());
         AgentSessionResponse response = (AgentSessionResponse) message.comagentsMessagePayload().payload();
-        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "orchestrator-device-1", "MBugai",
+        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "sequence-1", "orchestrator-device-1", "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());
 

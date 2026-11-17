@@ -70,7 +70,7 @@ class AgentWithClaudeCodeSetupServiceTest {
     void failedSetupFreesSlotAndDeletesSessionFolder() {
         // the download of the agent's files fails after the slot was reserved
         assertThrows(IllegalArgumentException.class,
-                () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "orchestrator-device-1", "Maks", null, Instant.now().toEpochMilli())));
+                () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "sequence-1", "orchestrator-device-1", "Maks", null, Instant.now().toEpochMilli())));
 
         assertFalse(Files.exists(sessionFolders.of(sessionId)));
         assertSlotFreed();
@@ -84,7 +84,7 @@ class AgentWithClaudeCodeSetupServiceTest {
         Files.writeString(earlierSessionsFile, "{}");
 
         ClaudeSessionExistsException e = assertThrows(ClaudeSessionExistsException.class,
-                () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "orchestrator-device-1", "Maks", null, Instant.now().toEpochMilli())));
+                () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "sequence-1", "orchestrator-device-1", "Maks", null, Instant.now().toEpochMilli())));
 
         assertTrue(e.getMessage().contains(sessionId.toString()), e.getMessage());
         assertTrue(Files.exists(earlierSessionsFile), "the earlier session's data is not deleted");
@@ -95,7 +95,7 @@ class AgentWithClaudeCodeSetupServiceTest {
     void busyServiceRejectsBeforeAnySetupWork() {
         try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(UUID.randomUUID())) {
             assertThrows(ClaudeSessionLimitException.class,
-                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "orchestrator-device-1", "Maks", null, Instant.now().toEpochMilli())));
+                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, REPOSITORY_CONTEXT, "sequence-1", "orchestrator-device-1", "Maks", null, Instant.now().toEpochMilli())));
         }
 
         assertFalse(Files.exists(sessionFolders.of(sessionId)), "nothing was downloaded or created");
@@ -108,7 +108,7 @@ class AgentWithClaudeCodeSetupServiceTest {
 
         try (ClaudeAgentSessionRegistry.SessionSlot _ = registry.reserve(sessionId)) {
             assertThrows(ClaudeSessionExistsException.class,
-                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, null, "orchestrator-device-1", "Maks", null, Instant.now().toEpochMilli())));
+                    () -> setupService.setup(AiAgent.CODE_REVIEW, new AgentSessionAttributes(sessionId, null, "sequence-1", "orchestrator-device-1", "Maks", null, Instant.now().toEpochMilli())));
         }
 
         assertTrue(Files.exists(otherSetupsFile), "the folder belongs to the setup that holds the id");
