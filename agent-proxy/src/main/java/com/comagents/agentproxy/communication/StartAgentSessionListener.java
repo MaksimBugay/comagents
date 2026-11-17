@@ -1,19 +1,21 @@
 package com.comagents.agentproxy.communication;
 
-import com.comagents.agentproxy.conf.AgentProxyConf;
+import com.comagents.agentproxy.agent_setup.AgentSessionStarter;
 import com.comagents.commons.communication.ComagentsMessageListener;
 import com.comagents.commons.request.StartAgentSessionRequest;
 import jakarta.inject.Singleton;
 
+/** Start requests from an orchestrator over Pushca; the orchestrator device gets back who runs the session. */
 @Singleton
 public class StartAgentSessionListener implements ComagentsMessageListener<StartAgentSessionRequest> {
 
-    private final String version;
-    private final String deviceId;
+    private final AgentSessionStarter agentSessionStarter;
+    private final ResponseDeliveryService responseDeliveryService;
 
-    public StartAgentSessionListener(AgentProxyConf agentProxyConf) {
-        this.version = agentProxyConf.getVersion();
-        this.deviceId = agentProxyConf.getDeviceId();
+    public StartAgentSessionListener(AgentSessionStarter agentSessionStarter,
+                                     ResponseDeliveryService responseDeliveryService) {
+        this.agentSessionStarter = agentSessionStarter;
+        this.responseDeliveryService = responseDeliveryService;
     }
 
     @Override
@@ -23,6 +25,6 @@ public class StartAgentSessionListener implements ComagentsMessageListener<Start
 
     @Override
     public void consumePayload(StartAgentSessionRequest request) {
-
+        responseDeliveryService.deliverToOrchestrator(request.orchestratorDeviceId(), agentSessionStarter.start(request));
     }
 }

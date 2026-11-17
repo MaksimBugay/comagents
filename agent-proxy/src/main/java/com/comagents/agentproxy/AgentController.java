@@ -1,11 +1,10 @@
 package com.comagents.agentproxy;
 
-import com.comagents.agentproxy.agent_setup.AgentSetupService;
-import com.comagents.agentproxy.agent_setup.AgentSetupServices;
+import com.comagents.agentproxy.agent_setup.AgentSessionStarter;
+import com.comagents.agentproxy.agent_setup.NoAgentSetupServiceException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
 import com.comagents.agentproxy.conf.AgentProxyConf;
-import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
 import com.comagents.commons.request.StartAgentSessionRequest;
@@ -34,13 +33,13 @@ public class AgentController {
 
     private final String version;
     private final String deviceId;
-    private final AgentSetupServices agentSetupServices;
+    private final AgentSessionStarter agentSessionStarter;
 
     public AgentController(AgentProxyConf agentProxyConf,
-                           AgentSetupServices agentSetupServices) {
+                           AgentSessionStarter agentSessionStarter) {
         this.version = agentProxyConf.getVersion();
         this.deviceId = agentProxyConf.getDeviceId();
-        this.agentSetupServices = agentSetupServices;
+        this.agentSessionStarter = agentSessionStarter;
     }
 
     @Get("/info")
@@ -57,18 +56,7 @@ public class AgentController {
     @ExecuteOn(TaskExecutors.BLOCKING)
     public HttpResponse<AgentInfo> start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentSessionRequest startAgentRequest) {
         requireSameAgent(agentName, startAgentRequest.agent());
-        setupServiceFor(startAgentRequest.agent()).setup(
-                startAgentRequest.agent(),
-                new AgentSessionAttributes(
-                        startAgentRequest.sessionId(),
-                        startAgentRequest.agentContext(),
-                        startAgentRequest.orchestratorDeviceId(),
-                        startAgentRequest.actorAccountId(),
-                        startAgentRequest.loggingLevel(),
-                        startAgentRequest.createdAt()
-                )
-        );
-        return HttpResponse.accepted().body(new AgentInfo(startAgentRequest.agent().getAgentName(), version, deviceId));
+        return HttpResponse.accepted().body(agentSessionStarter.start(startAgentRequest));
     }
 
     @Error(exception = ClaudeSessionLimitException.class)
@@ -104,15 +92,14 @@ public class AgentController {
         return Optional.empty();
     }
 
+    @Error(exception = NoAgentSetupServiceException.class)
+    public HttpResponse<JsonError> noSetupService(HttpRequest<?> ignoredRequest, NoAgentSetupServiceException e) {
+        return HttpResponse.<JsonError>status(HttpStatus.NOT_IMPLEMENTED).body(new JsonError(e.getMessage()));
+    }
+
     @Error(exception = ClaudeSessionExistsException.class)
     public HttpResponse<JsonError> sessionExists(HttpRequest<?> ignoredRequest, ClaudeSessionExistsException e) {
         return HttpResponse.<JsonError>status(HttpStatus.CONFLICT).body(new JsonError(e.getMessage()));
-    }
-
-    private AgentSetupService setupServiceFor(AiAgent agent) {
-        // the agent is known but no setup service bean exists for its harness provider yet
-        return agentSetupServices.forAgent(agent).orElseThrow(() -> new HttpStatusException(HttpStatus.NOT_IMPLEMENTED,
-                "No setup service for harness provider " + agent.getAiHarnessProvider() + " (agent " + agent.getAgentName() + ")"));
     }
 
     private static void requireSameAgent(String agentName, AiAgent requestAgent) {

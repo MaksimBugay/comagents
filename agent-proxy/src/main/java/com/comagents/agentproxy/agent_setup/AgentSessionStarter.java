@@ -1,0 +1,51 @@
+package com.comagents.agentproxy.agent_setup;
+
+import com.comagents.agentproxy.AgentInfo;
+import com.comagents.agentproxy.conf.AgentProxyConf;
+import com.comagents.agentproxy.domain.AgentSessionAttributes;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.request.StartAgentSessionRequest;
+import jakarta.inject.Singleton;
+import jakarta.validation.Valid;
+
+/** Starts agent sessions, whoever asks: the HTTP API or an orchestrator over Pushca. */
+@Singleton
+public class AgentSessionStarter {
+
+    private final AgentSetupServices agentSetupServices;
+    private final String version;
+    private final String deviceId;
+
+    public AgentSessionStarter(AgentSetupServices agentSetupServices, AgentProxyConf agentProxyConf) {
+        this.agentSetupServices = agentSetupServices;
+        this.version = agentProxyConf.getVersion();
+        this.deviceId = agentProxyConf.getDeviceId();
+    }
+
+    /**
+     * Prepares the session and starts the agent in the background.
+     *
+     * @return this agent-proxy, which runs the session
+     * @throws jakarta.validation.ConstraintViolationException when the request is invalid
+     * @throws NoAgentSetupServiceException                    when the agent's harness has no setup service yet
+     */
+    // @Valid: Micronaut validates the request before the call, as the controller does for its body
+    public AgentInfo start(@Valid StartAgentSessionRequest request) {
+        setupServiceFor(request.agent()).setup(
+                request.agent(),
+                new AgentSessionAttributes(
+                        request.sessionId(),
+                        request.agentContext(),
+                        request.orchestratorDeviceId(),
+                        request.actorAccountId(),
+                        request.loggingLevel(),
+                        request.createdAt()
+                )
+        );
+        return new AgentInfo(request.agent().getAgentName(), version, deviceId);
+    }
+
+    private AgentSetupService setupServiceFor(AiAgent agent) {
+        return agentSetupServices.forAgent(agent).orElseThrow(() -> new NoAgentSetupServiceException(agent));
+    }
+}
