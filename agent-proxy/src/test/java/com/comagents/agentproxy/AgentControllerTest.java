@@ -37,7 +37,6 @@ class AgentControllerTest {
         AgentInfo info = client.toBlocking().retrieve("/code_review/info", AgentInfo.class);
 
         assertEquals("code_review", info.name());
-        assertEquals("agent-proxy", info.proxy());
     }
 
     @Test

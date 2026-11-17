@@ -15,7 +15,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 
 ```console
 $ curl localhost:8080/code_review/info
-{"name":"code_review","proxy":"agent-proxy","version":"0.1","instance":"agent-proxy-7d9f-x2k"}
+{"name":"code_review","version":"0.1","deviceId":"cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3"}
 ```
 
 ### Session chat
@@ -193,7 +193,7 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 |--------------------------|---------|------------------------|
 | `MICRONAUT_SERVER_PORT`  | `8080`  | HTTP port              |
 | `AGENT_PROXY_VERSION`    | `0.1`   | Reported `version`     |
-| `HOSTNAME`               | `local` | Reported `instance` (pod name in Kubernetes) |
+| `AGENT_PROXY_DEVICE_ID`  | —       | Reported `deviceId` (`agent-proxy.device-id`); when not set: the Docker container id, the Kubernetes pod UID, or `HOSTNAME` (`local` without it) |
 | `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`) |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |
 | `ANTHROPIC_API_KEY`           | — (required) | Claude API key for headless Claude Code (`anthropic.api-key`) |

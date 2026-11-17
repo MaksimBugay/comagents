@@ -4,6 +4,7 @@ import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
+import com.comagents.agentproxy.conf.DeviceIdExtractor;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
@@ -32,24 +33,21 @@ import java.util.Optional;
 @Controller("/{agentName}")
 public class AgentController {
 
-    private final String applicationName;
     private final String version;
-    private final String instance;
+    private final String deviceId;
     private final AgentSetupServices agentSetupServices;
 
-    public AgentController(@Value("${micronaut.application.name}") String applicationName,
-                           @Value("${agent-proxy.version:unknown}") String version,
-                           @Value("${HOSTNAME:local}") String instance,
+    public AgentController(@Value("${agent-proxy.version:unknown}") String version,
+                           DeviceIdExtractor deviceIdExtractor,
                            AgentSetupServices agentSetupServices) {
-        this.applicationName = applicationName;
         this.version = version;
-        this.instance = instance;
+        this.deviceId = deviceIdExtractor.extract();
         this.agentSetupServices = agentSetupServices;
     }
 
     @Get("/info")
     public AgentInfo info(@PathVariable String agentName) {
-        return new AgentInfo(agentName, applicationName, version, instance);
+        return new AgentInfo(agentName, version, deviceId);
     }
 
     /**
@@ -72,7 +70,7 @@ public class AgentController {
                         startAgentRequest.createdAt()
                 )
         );
-        return HttpResponse.accepted().body(new AgentInfo(startAgentRequest.agent().getAgentName(), applicationName, version, instance));
+        return HttpResponse.accepted().body(new AgentInfo(startAgentRequest.agent().getAgentName(), version, deviceId));
     }
 
     @Error(exception = ClaudeSessionLimitException.class)
