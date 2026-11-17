@@ -92,7 +92,7 @@ class AgentResponseBroadcastTest {
         FakePushcaConnector.FakeConnection executor = connector.connections.getFirst();
         assertEquals("comagents-main", executor.client.workSpaceId);
         assertEquals("executor-device-1", executor.client.deviceId);
-        assertEquals("EXECUTOR", executor.client.applicationId);
+        assertEquals("CLAUDE_CODE_EXECUTOR", executor.client.applicationId);
         List<FakePushcaConnector.Broadcast> broadcasts = executor.broadcasts;
         assertEquals(1, broadcasts.size());
         assertEquals("comagents-main", broadcasts.getFirst().receivers().workSpaceId);

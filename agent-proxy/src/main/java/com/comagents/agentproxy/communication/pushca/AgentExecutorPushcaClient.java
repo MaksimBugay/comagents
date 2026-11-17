@@ -20,7 +20,8 @@ import java.util.List;
 
 /**
  * The agent executor's own Pushca client: one per executor (not per session), signed in to the orchestrators'
- * workspace as application {@code EXECUTOR} with the executor's device id ({@link AgentProxyConf#getDeviceId()}).
+ * workspace as application {@code <harness>_EXECUTOR} (e.g. {@code CLAUDE_CODE_EXECUTOR},
+ * {@link AgentProxyConf#getAiHarnessProvider()}) with the executor's device id ({@link AgentProxyConf#getDeviceId()}).
  * It hands responses to the orchestrator device that asked for them, as {@link ComagentsMessage} strings. The
  * connection is opened once, on service startup, and kept. It is opened again only after an issue: when the startup
  * connect failed, or a delivery finds it broken (once per delivery).
@@ -29,7 +30,7 @@ import java.util.List;
 public class AgentExecutorPushcaClient implements ResponseDeliveryService, ApplicationEventListener<StartupEvent> {
 
     static final String WORKSPACE_ID = "comagents-main";
-    static final String APPLICATION_ID = "EXECUTOR";
+    static final String APPLICATION_ID_TEMPLATE = "%s_EXECUTOR";
     static final String ACCOUNT_ID = "agent-executor@comagents.com";
 
     static final String ORCHESTRATOR_APPLICATION_ID = "AGENT_ORCHESTRATOR";
@@ -45,7 +46,12 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
 
     public AgentExecutorPushcaClient(PushcaConnector connector, AgentProxyConf conf) {
         this.connector = connector;
-        this.client = new PClient(WORKSPACE_ID, ACCOUNT_ID, conf.getDeviceId(), APPLICATION_ID);
+        this.client = new PClient(
+                WORKSPACE_ID,
+                ACCOUNT_ID,
+                conf.getDeviceId(),
+                APPLICATION_ID_TEMPLATE.formatted(conf.getAiHarnessProvider().name())
+        );
     }
 
     @Override
