@@ -101,9 +101,9 @@ class AgentResponseBroadcastTest {
         assertEquals("AGENT_ORCHESTRATOR", broadcasts.getFirst().receivers().applicationId);
         assertTrue(broadcasts.getFirst().receivers().findAny, "one client of the device gets it");
         // a ComagentsMessage, read as the orchestrator reads it
-        String message = broadcasts.getFirst().message();
-        assertEquals(AgentSessionResponse.class.getName(), ComagentsMessage.payloadClassName(message));
-        AgentSessionResponse response = ComagentsMessage.fromMessageString(message, AgentSessionResponse.class).payload();
+        ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(broadcasts.getFirst().message());
+        assertEquals(AgentSessionResponse.class.getName(), message.payloadClassName());
+        AgentSessionResponse response = (AgentSessionResponse) message.comagentsMessagePayload().payload();
         assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "orchestrator-device-1", "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());

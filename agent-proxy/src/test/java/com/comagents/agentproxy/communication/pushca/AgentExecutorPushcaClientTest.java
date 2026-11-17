@@ -62,8 +62,8 @@ class AgentExecutorPushcaClientTest {
         assertEquals(2, connector.connections.size());
         FakePushcaConnector.FakeConnection reconnected = connector.connections.get(1);
         assertEquals(1, reconnected.broadcasts.size());
-        assertEquals(RESPONSE, ComagentsMessage.fromMessageString(reconnected.broadcasts.getFirst().message(),
-                AgentContext.class).payload());
+        assertEquals(RESPONSE, ComagentsMessage.fromComagentsMessageString(reconnected.broadcasts.getFirst().message())
+                .comagentsMessagePayload().payload());
     }
 
     @Test

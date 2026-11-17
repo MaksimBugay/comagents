@@ -110,10 +110,10 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> ComagentsMessage<T> comagentsMessage(T response) {
+    private static <T> ComagentsMessage comagentsMessage(T response) {
         Validate.notNull(response, "response must not be null");
         // the payload's runtime class: the orchestrator reads the message by that class name
-        return new ComagentsMessage<>((Class<T>) response.getClass(), response);
+        return ComagentsMessage.ofPayload(response, (Class<T>) response.getClass());
     }
 
     // over the kept connection; there is none only after an issue (startup connect failed, or it broke)

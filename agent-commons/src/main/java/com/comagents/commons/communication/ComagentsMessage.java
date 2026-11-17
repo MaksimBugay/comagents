@@ -2,79 +2,69 @@ package com.comagents.commons.communication;
 
 import com.comagents.commons.converter.Base64Converter;
 import com.comagents.commons.serialization.JsonUtility;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.Validate;
 
-public record ComagentsMessage<T>(Class<T> payloadClass, T payload) {
+import java.util.Objects;
 
-    private static final String PAYLOAD_STRING_DELIMITER = "::";
-    private static final String PAYLOAD_STRING_TEMPLATE = "%s" + PAYLOAD_STRING_DELIMITER + "%s";
+/**
+ * Either the {@link ComagentsMessagePayload} string or the error that took its place, never both, for the payload
+ * class named by {@code payloadClassName}. Class names are kept as names, so a message is read without loading any
+ * class; the payload is read only by {@link #comagentsMessagePayload()}.
+ */
+public record ComagentsMessage(String payloadString, String payloadClassName, ComagentsError error) {
 
     public ComagentsMessage {
+        Validate.notBlank(payloadClassName, "payloadClassName must not be blank");
+        Validate.isTrue((payloadString == null) != (error == null), "exactly one of payload and error must be set");
+        if (payloadString != null) {
+            String payloadStringClassName = ComagentsMessagePayload.payloadClassName(payloadString);
+            Validate.isTrue(payloadClassName.equals(payloadStringClassName), "payload of %s in a message of %s",
+                    payloadStringClassName, payloadClassName);
+        }
+    }
+
+    private <P> ComagentsMessage(P payload, Class<P> payloadClass, Throwable error) {
         Validate.notNull(payloadClass, "payloadClass must not be null");
-        validatePayload(payload);
+        this(
+                Objects.nonNull(payload) ? (new ComagentsMessagePayload<>(payload, payloadClass)).toString() : null,
+                payloadClass.getName(),
+                Objects.nonNull(error) ? new ComagentsError(error) : null
+        );
+    }
+
+    public static <P> ComagentsMessage ofPayload(P payload, Class<P> payloadClass) {
+        return new ComagentsMessage(payload, payloadClass, null);
+    }
+
+    public static ComagentsMessage ofError(Class<?> payloadClass, Throwable error) {
+        return new ComagentsMessage(null, payloadClass, error);
+    }
+
+    /**
+     * Reads the payload as the class {@code payloadClassName} names, which is loaded only now.
+     *
+     * @throws IllegalArgumentException when that class is unknown here
+     */
+    public ComagentsMessagePayload<?> comagentsMessagePayload() {
+        return ComagentsMessagePayload.fromPayloadString(payloadString, payloadClass());
+    }
+
+    private Class<?> payloadClass() {
+        try {
+            return Class.forName(payloadClassName);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("Unknown payload class: " + payloadClassName, e);
+        }
     }
 
     @SuppressWarnings("NullableProblems")
     @Override
     public String toString() {
-        return PAYLOAD_STRING_TEMPLATE.formatted(
-                payloadClass.getName(),
-                Base64Converter.toBase64String(JsonUtility.toJson(payload))
-        );
+        return Base64Converter.toBase64String(JsonUtility.toJson(this));
     }
 
-    public static ComagentsMessage<?> fromMessageString(String message) {
-        return fromMessageString(message, payloadClass(payloadClassName(message)));
-    }
-
-    /**
-     * Parses a message whose payload class the caller already knows, without loading any class by name.
-     */
-    public static <P> ComagentsMessage<P> fromMessageString(String message, Class<P> payloadClass) {
-        Validate.notNull(payloadClass, "payloadClass must not be null");
-        String payloadClassName = payloadClassName(message);
-        if (!payloadClass.getName().equals(payloadClassName)) {
-            throw new IllegalArgumentException("Message payload class " + payloadClassName + " is not "
-                    + payloadClass.getName());
-        }
-        String payloadJson = Base64Converter.fromBase64String(
-                message.substring(payloadClassName.length() + PAYLOAD_STRING_DELIMITER.length()));
-        return new ComagentsMessage<>(payloadClass, JsonUtility.fromJson(payloadJson, payloadClass));
-    }
-
-    /**
-     * The payload class name of a message, read without loading the class or decoding the payload.
-     */
-    public static String payloadClassName(String message) {
-        if (StringUtils.isBlank(message)) {
-            throw new IllegalArgumentException("message must not be blank");
-        }
-        return message.substring(0, delimiterIndex(message));
-    }
-
-    private static void validatePayload(Object payload) {
-        Validate.notNull(payload, "payload must not be null");
-        if (payload instanceof CharSequence text) {
-            Validate.notBlank(text, "payload must not be blank");
-        }
-    }
-
-    private static int delimiterIndex(String message) {
-        int delimiterIndex = Strings.CS.indexOf(message, PAYLOAD_STRING_DELIMITER);
-        if (delimiterIndex <= 0) {
-            throw new IllegalArgumentException("Message is not in the 'payloadClass" + PAYLOAD_STRING_DELIMITER
-                    + "base64Payload' format: " + message);
-        }
-        return delimiterIndex;
-    }
-
-    private static Class<?> payloadClass(String className) {
-        try {
-            return Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("Unknown payload class: " + className, e);
-        }
+    public static ComagentsMessage fromComagentsMessageString(String comagentsMessageString) {
+        Validate.notBlank(comagentsMessageString, "Comagents message must not be blank");
+        return JsonUtility.fromJson(Base64Converter.fromBase64String(comagentsMessageString), ComagentsMessage.class);
     }
 }

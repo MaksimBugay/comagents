@@ -1,11 +1,13 @@
 package com.comagents.commons.communication;
 
+import com.comagents.commons.converter.Base64Converter;
 import com.comagents.commons.serialization.SerializationException;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ComagentsMessageTest {
@@ -13,85 +15,119 @@ class ComagentsMessageTest {
     record Task(String title, List<String> steps, Integer priority) {
     }
 
-    @Test
-    void roundTripKeepsPayloadClassAndPayload() {
-        ComagentsMessage<Task> message = new ComagentsMessage<>(Task.class,
-                new Task("review :: PR", List.of("clone", "review"), null));
+    private static final Task TASK = new Task("review :: PR", List.of("clone", "review"), null);
+    private static final String TASK_CLASS = Task.class.getName();
+    private static final String ERROR_JSON =
+            "{\"code\":0,\"errorMessage\":\"x\",\"errorClassName\":\"com.comagents.elsewhere.AgentFailed\"}";
 
-        assertEquals(message, ComagentsMessage.fromMessageString(message.toString()));
+    @Test
+    void roundTripKeepsPayloadClassNameAndPayload() {
+        ComagentsMessage message = ComagentsMessage.ofPayload(TASK, Task.class);
+
+        ComagentsMessage parsed = ComagentsMessage.fromComagentsMessageString(message.toString());
+
+        assertEquals(message, parsed);
+        assertEquals(TASK_CLASS, parsed.payloadClassName());
+        assertEquals(TASK, parsed.comagentsMessagePayload().payload());
+        assertNull(parsed.error());
     }
 
     @Test
     void roundTripOfStringPayload() {
-        ComagentsMessage<String> message = new ComagentsMessage<>(String.class, "multi\nline ✓");
+        ComagentsMessage message = ComagentsMessage.ofPayload("multi\nline ✓", String.class);
 
-        assertEquals(message, ComagentsMessage.fromMessageString(message.toString()));
+        assertEquals("multi\nline ✓", ComagentsMessage.fromComagentsMessageString(message.toString())
+                .comagentsMessagePayload().payload());
     }
 
     @Test
-    void roundTripWithKnownPayloadClass() {
-        ComagentsMessage<Task> message = new ComagentsMessage<>(Task.class, new Task("review", List.of(), 1));
+    void roundTripOfErrorKeepsPayloadClassName() {
+        ComagentsMessage message = ComagentsMessage.ofError(Task.class, new IllegalStateException("agent failed"));
 
-        ComagentsMessage<Task> parsed = ComagentsMessage.fromMessageString(message.toString(), Task.class);
+        ComagentsMessage parsed = ComagentsMessage.fromComagentsMessageString(message.toString());
 
         assertEquals(message, parsed);
+        assertEquals(TASK_CLASS, parsed.payloadClassName());
+        assertEquals(new ComagentsError(0, "agent failed", IllegalStateException.class.getName()), parsed.error());
+        assertNull(parsed.payloadString());
     }
 
     @Test
-    void payloadClassNameIsReadWithoutLoadingTheClass() {
-        assertEquals("com.comagents.elsewhere.Missing",
-                ComagentsMessage.payloadClassName("com.comagents.elsewhere.Missing::bm90IGRlY29kZWQ="));
-        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.payloadClassName("no delimiter"));
-        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.payloadClassName(" "));
+    void messageOfClassesUnknownHereIsReadWithoutLoadingThem() {
+        ComagentsMessage parsed = ComagentsMessage.fromComagentsMessageString(message(
+                "{\"payloadClassName\":\"com.comagents.elsewhere.Missing\",\"error\":" + ERROR_JSON + "}"));
+
+        assertEquals("com.comagents.elsewhere.Missing", parsed.payloadClassName());
+        assertEquals("com.comagents.elsewhere.AgentFailed", parsed.error().errorClassName());
     }
 
     @Test
-    void knownPayloadClassMustMatchTheMessage() {
-        String message = new ComagentsMessage<>(String.class, "text").toString();
+    void payloadOfClassUnknownHereIsRejected() {
+        ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(message(
+                "{\"payloadString\":\"com.comagents.elsewhere.Missing::{}\","
+                        + "\"payloadClassName\":\"com.comagents.elsewhere.Missing\"}"));
 
-        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.fromMessageString(message, Task.class));
-        assertThrows(NullPointerException.class, () -> ComagentsMessage.fromMessageString(message, null));
+        assertThrows(IllegalArgumentException.class, message::comagentsMessagePayload);
+    }
+
+    @Test
+    void exactlyOneOfPayloadAndErrorIsSet() {
+        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.ofPayload(null, Task.class));
+        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.ofError(Task.class, null));
+        assertThrows(IllegalArgumentException.class, () -> new ComagentsMessage(TASK_CLASS + "::{}", TASK_CLASS,
+                new ComagentsError(new IllegalStateException("agent failed"))));
+    }
+
+    @Test
+    void messageReadWithNeitherOrBothOfPayloadAndErrorIsRejected() {
+        // Jackson wraps the constructor's exception
+        assertThrows(SerializationException.class, () -> ComagentsMessage.fromComagentsMessageString(
+                message("{\"payloadClassName\":\"" + TASK_CLASS + "\"}")));
+        assertThrows(SerializationException.class, () -> ComagentsMessage.fromComagentsMessageString(
+                message("{\"payloadString\":\"" + TASK_CLASS + "::{}\",\"payloadClassName\":\"" + TASK_CLASS
+                        + "\",\"error\":" + ERROR_JSON + "}")));
+    }
+
+    @Test
+    void messageWithoutPayloadClassNameIsRejected() {
+        assertThrows(IllegalArgumentException.class, () -> new ComagentsMessage(null, " ", new ComagentsError(
+                new IllegalStateException("agent failed"))));
+        assertThrows(SerializationException.class, () -> ComagentsMessage.fromComagentsMessageString(
+                message("{\"error\":" + ERROR_JSON + "}")));
+    }
+
+    @Test
+    void payloadStringMustBeOfThePayloadClass() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new ComagentsMessage("java.lang.String::\"text\"", TASK_CLASS, null));
+        assertThrows(SerializationException.class, () -> ComagentsMessage.fromComagentsMessageString(
+                message("{\"payloadString\":\"java.lang.String::\\\"text\\\"\",\"payloadClassName\":\"" + TASK_CLASS
+                        + "\"}")));
     }
 
     @Test
     void nullPayloadClassIsRejected() {
-        assertThrows(NullPointerException.class,
-                () -> new ComagentsMessage<>(null, new Task("review", List.of(), 1)));
-    }
-
-    @Test
-    void nullPayloadIsRejected() {
-        assertThrows(NullPointerException.class, () -> new ComagentsMessage<>(Task.class, null));
-        // JSON null decoded from "bnVsbA=="
-        assertThrows(NullPointerException.class,
-                () -> ComagentsMessage.fromMessageString(Task.class.getName() + "::bnVsbA=="));
+        assertThrows(NullPointerException.class, () -> ComagentsMessage.ofPayload(TASK, null));
+        assertThrows(NullPointerException.class, () -> ComagentsMessage.ofError(null, new IllegalStateException()));
     }
 
     @Test
     void blankTextPayloadIsRejected() {
-        assertThrows(IllegalArgumentException.class, () -> new ComagentsMessage<>(String.class, ""));
-        assertThrows(IllegalArgumentException.class, () -> new ComagentsMessage<>(String.class, " \n"));
-        assertThrows(IllegalArgumentException.class,
-                () -> new ComagentsMessage<>(StringBuilder.class, new StringBuilder(" ")));
+        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.ofPayload(" \n", String.class));
     }
 
     @Test
-    void messageWithoutPayloadClassIsRejected() {
-        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.fromMessageString("no delimiter"));
-        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.fromMessageString("::bnVsbA=="));
-        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.fromMessageString(null));
+    void blankMessageIsRejected() {
+        assertThrows(IllegalArgumentException.class, () -> ComagentsMessage.fromComagentsMessageString(" "));
     }
 
     @Test
-    void unknownPayloadClassIsRejected() {
-        assertThrows(IllegalArgumentException.class,
-                () -> ComagentsMessage.fromMessageString("com.comagents.Missing::bnVsbA=="));
+    void messageThatIsNotJsonIsRejected() {
+        assertThrows(SerializationException.class,
+                () -> ComagentsMessage.fromComagentsMessageString(message("not json")));
     }
 
-    @Test
-    void payloadNotMatchingItsClassIsRejected() {
-        String message = Task.class.getName() + "::" + "WzEsMl0="; // [1,2]
-
-        assertThrows(SerializationException.class, () -> ComagentsMessage.fromMessageString(message));
+    private static String message(String json) {
+        return Base64Converter.toBase64String(json);
     }
 }
