@@ -9,6 +9,7 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.AgentContext;
@@ -26,9 +27,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Base64;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 import static org.awaitility.Awaitility.await;
@@ -86,9 +85,10 @@ class AgentResponseBroadcastTest {
         assertEquals("agent-orchestrator@comagents.com", broadcasts.getFirst().receivers().accountId);
         assertEquals("AGENT_ORCHESTRATOR", broadcasts.getFirst().receivers().applicationId);
         assertTrue(broadcasts.getFirst().receivers().findAny, "only one orchestrator gets it");
-        // JSON in a base64 string
-        byte[] json = Base64.getDecoder().decode(broadcasts.getFirst().message());
-        AgentSessionResponse response = Objects.requireNonNull(JsonUtility.fromJson(json, AgentSessionResponse.class));
+        // a ComagentsMessage, read as the orchestrator reads it
+        String message = broadcasts.getFirst().message();
+        assertEquals(AgentSessionResponse.class.getName(), ComagentsMessage.payloadClassName(message));
+        AgentSessionResponse response = ComagentsMessage.fromMessageString(message, AgentSessionResponse.class).payload();
         assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());

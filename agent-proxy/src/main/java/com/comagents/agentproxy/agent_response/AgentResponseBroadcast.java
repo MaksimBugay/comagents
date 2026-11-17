@@ -3,21 +3,19 @@ package com.comagents.agentproxy.agent_response;
 import bmv.org.pushca.client.model.ClientFilter;
 import com.comagents.agentproxy.agent_setup.AgentSessionWsClientRegistry;
 import com.comagents.agentproxy.domain.AgentResponseReady;
+import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.response.AgentSessionResponse;
-import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.event.ApplicationEventListener;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Base64;
 import java.util.List;
 
 /**
  * Hands every agent response to one agent orchestrator as soon as it is on disk: the {@link AgentSessionResponse}, as
- * {@code GET /agent-response} returns it, as JSON in a base64 string, goes from the session's Pushca client as a
- * find-any broadcast to the
- * orchestrators' clients, so only one of them gets it. Once sent, the session's files are deleted after
+ * {@code GET /agent-response} returns it, as a {@link ComagentsMessage} string, goes from the session's Pushca client as
+ * a find-any broadcast to the orchestrators' clients, so only one of them gets it. Once sent, the session's files are deleted after
  * {@code agent-response.cleanup-delay}, as after a first fetch. When it can't be sent, the response stays to be fetched
  * until {@code agent-response.retention}.
  */
@@ -52,7 +50,8 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         String agentName = event.agent().getAgentName();
         try {
             agentResponseService.readResponse(event.agent(), event.sessionId()).ifPresent(response -> {
-                if (agentSessionWsClientRegistry.broadcast(event.sessionId(), ORCHESTRATOR, toBase64Json(response))) {
+                var comagentsMessage = new ComagentsMessage<>(AgentSessionResponse.class, response);
+                if (agentSessionWsClientRegistry.broadcast(event.sessionId(), ORCHESTRATOR, comagentsMessage.toString())) {
                     LOG.info("[{} {}] response sent to {}", agentName, event.sessionId(), ACCOUNT_DOMAIN);
                     agentResponseService.scheduleCleanup(event.agent(), event.sessionId());
                 }
@@ -60,10 +59,5 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         } catch (RuntimeException e) {
             LOG.error("[{} {}] sending the response to {} failed", agentName, event.sessionId(), ACCOUNT_DOMAIN, e);
         }
-    }
-
-    // the JSON (UTF-8) as a standard base64 string
-    private static String toBase64Json(AgentSessionResponse response) {
-        return Base64.getEncoder().encodeToString(JsonUtility.toJsonAsBytes(response));
     }
 }
