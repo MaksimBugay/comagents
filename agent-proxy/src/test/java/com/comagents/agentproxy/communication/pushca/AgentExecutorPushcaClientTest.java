@@ -4,6 +4,7 @@ import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.conf.DeviceIdExtractor;
 import com.comagents.commons.communication.ComagentsMessage;
+import com.comagents.commons.domain.AiHarnessProvider;
 import com.comagents.commons.domain.agent_context.AgentContext;
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ class AgentExecutorPushcaClientTest {
     private final FakePushcaConnector connector = new FakePushcaConnector();
     private final AgentExecutorPushcaClient client = new AgentExecutorPushcaClient(connector,
             new AgentProxyConf("https://github.com/acme/comagents.git", "token", "key", "https://pushca.example",
-                    "pushca-key", new DeviceIdExtractor("executor-device-1", "host")));
+                    "pushca-key", AiHarnessProvider.CLAUDE_CODE, new DeviceIdExtractor("executor-device-1", "host")));
 
     @Test
     void connectsOnceAtStartupAndKeepsTheConnection() {

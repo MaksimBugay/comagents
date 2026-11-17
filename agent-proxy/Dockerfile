@@ -35,6 +35,8 @@ VOLUME /var/lib/agent-proxy/sessions
 # the native installer is per-user (~/.local/bin); the image is immutable, so no self-updates
 ENV PATH="/home/nonroot/.local/bin:${PATH}" \
     DISABLE_AUTOUPDATER=1
+# the harness installed below (agent-proxy.ai-harness-provider): fixed by the image, not meant to be overridden
+ENV AI_HARNESS_PROVIDER=CLAUDE_CODE
 # build-image.sh passes a new value on every build, so this layer is never reused from cache
 # and always installs the latest Claude Code release
 ARG CLAUDE_CODE_BUILD_ID=unset

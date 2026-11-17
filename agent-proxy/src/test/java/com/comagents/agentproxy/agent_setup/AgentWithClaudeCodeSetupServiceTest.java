@@ -11,6 +11,7 @@ import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
 import com.comagents.agentproxy.vcs.VcsGithubService;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.domain.AiHarnessProvider;
 import com.comagents.commons.domain.agent_context.AgentContext;
 import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextItem;
 import io.micronaut.context.event.ApplicationEventPublisher;
@@ -60,7 +61,8 @@ class AgentWithClaudeCodeSetupServiceTest {
         setupService = new AgentWithClaudeCodeSetupService(
                 // not a GitHub URL: downloading the agent's files, the first setup step, fails without network access
                 new VcsGithubService(new AgentProxyConf("https://gitlab.com/example/comagents.git", "token", "key",
-                        "https://pushca.example", "pushca-key", new DeviceIdExtractor("test-device", "host")), null),
+                        "https://pushca.example", "pushca-key", AiHarnessProvider.CLAUDE_CODE,
+                        new DeviceIdExtractor("test-device", "host")), null),
                 registry, sessionFolders, wsClientRegistry, new AgentContextValidator());
     }
 
