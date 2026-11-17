@@ -13,3 +13,5 @@ out/
 build/
 # Tooling
 .DS_Store
+# per-user IDE state
+.idea/workspace.xml

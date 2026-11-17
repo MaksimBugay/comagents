@@ -3,7 +3,7 @@ package com.comagents.agentproxy.agent_setup.claude;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.json.tree.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;

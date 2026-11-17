@@ -1,7 +1,7 @@
 package com.comagents.agentproxy;
 
-import io.micronaut.serde.annotation.Serdeable;
+import io.micronaut.core.annotation.Introspected;
 
-@Serdeable
+@Introspected
 public record AgentInfo(String name, String proxy, String version, String instance) {
 }

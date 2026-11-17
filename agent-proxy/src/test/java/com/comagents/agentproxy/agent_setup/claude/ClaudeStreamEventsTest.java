@@ -1,10 +1,9 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
-import io.micronaut.json.tree.JsonNode;
-import io.micronaut.serde.ObjectMapper;
+import com.comagents.commons.serialization.JsonUtility;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
-import java.io.IOException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,10 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClaudeStreamEventsTest {
 
-    private static final ObjectMapper JSON = ObjectMapper.getDefault();
-
     @Test
-    void findsToolResultsByTheirStart() throws IOException {
+    void findsToolResultsByTheirStart() {
         JsonNode textBlocks = parse("""
                 {"type":"user","message":{"content":[{"type":"tool_result","content":[{"type":"text","text":"NO ANSWER YET. End your turn."}]}]}}""");
         JsonNode plainString = parse("""
@@ -33,7 +30,7 @@ class ClaudeStreamEventsTest {
     }
 
     @Test
-    void summarizesInit() throws IOException {
+    void summarizesInit() {
         JsonNode event = parse("""
                 {"type":"system","subtype":"init","model":"claude-x","tools":["Read","Bash"],"mcp_servers":[{"name":"agentproxy","status":"connected"}]}""");
 
@@ -41,7 +38,7 @@ class ClaudeStreamEventsTest {
     }
 
     @Test
-    void summarizesToolCallsAndTextButNotToolResults() throws IOException {
+    void summarizesToolCallsAndTextButNotToolResults() {
         JsonNode toolCall = parse("""
                 {"type":"assistant","message":{"content":[{"type":"text","text":"Checking\\nthe service"},{"type":"tool_use","name":"Bash","input":{"command":"./mvnw -B -q test","description":"run tests"}}]}}""");
         JsonNode toolResult = parse("""
@@ -52,7 +49,7 @@ class ClaudeStreamEventsTest {
     }
 
     @Test
-    void thinkingIsVerboseAndNeverMixedIntoOtherOutput() throws IOException {
+    void thinkingIsVerboseAndNeverMixedIntoOtherOutput() {
         JsonNode thinkingTokens = parse("""
                 {"type":"system","subtype":"thinking_tokens","estimated_tokens":6116,"estimated_tokens_delta":2}""");
         JsonNode thinking = parse("""
@@ -72,7 +69,7 @@ class ClaudeStreamEventsTest {
     }
 
     @Test
-    void summarizesAndReadsResult() throws IOException {
+    void summarizesAndReadsResult() {
         JsonNode event = parse("""
                 {"type":"result","subtype":"success","is_error":false,"num_turns":42,"total_cost_usd":0.87,"duration_ms":372000,"result":"# Report"}""");
 
@@ -83,7 +80,7 @@ class ClaudeStreamEventsTest {
     }
 
     @Test
-    void errorResultIsNotSuccessful() throws IOException {
+    void errorResultIsNotSuccessful() {
         assertFalse(ClaudeStreamEvents.isSuccessfulResult(parse("""
                 {"type":"result","subtype":"error_max_turns","is_error":true}""")));
     }
@@ -96,7 +93,7 @@ class ClaudeStreamEventsTest {
         assertTrue(summary.endsWith("…"));
     }
 
-    private static JsonNode parse(String json) throws IOException {
-        return JSON.readValue(json, JsonNode.class);
+    private static JsonNode parse(String json) {
+        return JsonUtility.fromJson(json, JsonNode.class);
     }
 }

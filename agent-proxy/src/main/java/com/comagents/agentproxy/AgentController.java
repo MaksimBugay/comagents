@@ -25,6 +25,7 @@ import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import tools.jackson.core.JacksonException;
 
 import java.util.Optional;
 
@@ -83,8 +84,14 @@ public class AgentController {
         return HttpResponse.<JsonError>status(HttpStatus.BAD_REQUEST).body(new JsonError(e.getMessage()));
     }
 
-    // an AgentContext rejects itself while the request body is read; the deserializer wraps that rejection, so its
-    // message would otherwise be lost behind "Failed to convert argument"
+    // an AgentContext rejects itself while the request body is read; Jackson wraps that rejection, so its message
+    // would otherwise be lost behind "Invalid JSON" (or "Failed to convert argument")
+    @Error(exception = JacksonException.class)
+    public HttpResponse<JsonError> unparsableRequest(HttpRequest<?> ignoredRequest, JacksonException e) {
+        String message = invalidAgentContextCause(e).map(Throwable::getMessage).orElse("Invalid JSON: " + e.getOriginalMessage());
+        return HttpResponse.<JsonError>status(HttpStatus.BAD_REQUEST).body(new JsonError(message));
+    }
+
     @Error(exception = ConversionErrorException.class)
     public HttpResponse<JsonError> unreadableRequest(HttpRequest<?> ignoredRequest, ConversionErrorException e) {
         String message = invalidAgentContextCause(e).map(Throwable::getMessage).orElse(e.getMessage());

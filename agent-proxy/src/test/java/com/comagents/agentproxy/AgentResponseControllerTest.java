@@ -18,7 +18,7 @@ import io.micronaut.http.HttpStatus;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
-import io.micronaut.serde.ObjectMapper;
+import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
@@ -159,7 +159,7 @@ class AgentResponseControllerTest {
     private void writeAllGoodResponse() throws IOException {
         Path responseFile = sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW);
         Files.createDirectories(responseFile.getParent());
-        Files.write(responseFile, ObjectMapper.getDefault().writeValueAsBytes(ALL_GOOD));
+        Files.write(responseFile, JsonUtility.toJsonAsBytes(ALL_GOOD));
     }
 
     private HttpStatus statusOf(String uri) {

@@ -1,9 +1,8 @@
 package com.comagents.agentproxy.domain.agent_context;
 
-import io.micronaut.serde.ObjectMapper;
+import com.comagents.commons.serialization.JsonUtility;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,8 +61,8 @@ class AgentContextTest {
     }
 
     @Test
-    void readsTypedItemsFromJson() throws IOException {
-        AgentContext context = ObjectMapper.getDefault().readValue("""
+    void readsTypedItemsFromJson() {
+        AgentContext context = JsonUtility.fromJson("""
                 {"items": [
                   {"type": "GITHUB_REPOSITORY", "value": "https://github.com/acme/kn-challenge.git", "primary": true},
                   {"type": "FILE", "name": "requirements.md", "value": "https://storage.example/requirements.md",
@@ -81,11 +80,11 @@ class AgentContextTest {
     }
 
     @Test
-    void jsonRoundTrip() throws IOException {
+    void jsonRoundTrip() {
         AgentContext context = new AgentContext(List.of(NOTE, SOURCES, new FileAgentContextItem("a.md", "https://storage.example/a.md")));
 
-        String json = ObjectMapper.getDefault().writeValueAsString(context);
+        String json = JsonUtility.toJson(context);
 
-        assertEquals(context, ObjectMapper.getDefault().readValue(json, AgentContext.class), json);
+        assertEquals(context, JsonUtility.fromJson(json, AgentContext.class), json);
     }
 }

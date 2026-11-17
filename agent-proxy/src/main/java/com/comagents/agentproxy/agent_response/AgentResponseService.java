@@ -9,8 +9,8 @@ import com.comagents.agentproxy.domain.agent_context.AgentContext;
 import com.comagents.agentproxy.request.StartAgentSessionRequest;
 import com.comagents.agentproxy.response.AgentSessionResponse;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.json.JsonMapper;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.TaskScheduler;
 import jakarta.inject.Named;
@@ -44,14 +44,11 @@ public class AgentResponseService {
     private final SessionFolders sessionFolders;
     private final TaskScheduler taskScheduler;
     private final Duration cleanupDelay;
-    private final JsonMapper jsonMapper;
     private final Set<UUID> scheduledCleanups = ConcurrentHashMap.newKeySet();
 
     public AgentResponseService(AgentSetupServices agentSetupServices, SessionFolders sessionFolders,
                                 @Named(TaskExecutors.SCHEDULED) TaskScheduler taskScheduler,
-                                @Value("${agent-response.cleanup-delay:5m}") Duration cleanupDelay,
-                                JsonMapper jsonMapper) {
-        this.jsonMapper = jsonMapper;
+                                @Value("${agent-response.cleanup-delay:5m}") Duration cleanupDelay) {
         this.agentSetupServices = agentSetupServices;
         this.sessionFolders = sessionFolders;
         this.taskScheduler = taskScheduler;
@@ -76,7 +73,7 @@ public class AgentResponseService {
         }
         Path responseFile = sessionFolders.agentResponseFile(sessionId, agent);
         try {
-            AgentContext response = jsonMapper.readValue(Files.readAllBytes(responseFile), AgentContext.class);
+            AgentContext response = JsonUtility.fromJson(Files.readAllBytes(responseFile), AgentContext.class);
             return Optional.of(new AgentSessionResponse(request(agent, attributes.get()), response,
                     Instant.now().toEpochMilli()));
         } catch (NoSuchFileException e) {

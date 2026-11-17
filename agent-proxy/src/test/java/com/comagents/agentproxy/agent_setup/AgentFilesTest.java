@@ -6,7 +6,7 @@ import com.comagents.agentproxy.domain.agent_context.FileAgentContextItem;
 import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContextItem;
 import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
 import com.comagents.agentproxy.request.StartAgentSessionRequest;
-import io.micronaut.serde.ObjectMapper;
+import com.comagents.commons.serialization.JsonUtility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -115,7 +115,7 @@ class AgentFilesTest {
     }
 
     @Test
-    void requestSample() throws IOException {
+    void requestSample() {
         var request = new StartAgentSessionRequest(
                 UUID.randomUUID(),
                 AiAgent.CODE_REVIEW,
@@ -126,12 +126,10 @@ class AgentFilesTest {
                         new StringAgentContextItem("focus", "security"))),
                 "Maks"
         );
-        ObjectMapper objectMapper = ObjectMapper.getDefault();
-
-        String json = objectMapper.writeValueAsString(request);
+        String json = JsonUtility.toJson(request);
         System.out.println(json);
 
         // the printed body is what POST /{agentName}/start accepts
-        assertEquals(request, objectMapper.readValue(json, StartAgentSessionRequest.class));
+        assertEquals(request, JsonUtility.fromJson(json, StartAgentSessionRequest.class));
     }
 }

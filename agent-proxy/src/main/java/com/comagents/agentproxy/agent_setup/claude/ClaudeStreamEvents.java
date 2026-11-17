@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
-import io.micronaut.json.tree.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +46,7 @@ final class ClaudeStreamEvents {
             return false;
         }
         JsonNode content = content(event);
-        if (content == null || content.size() == 0) {
+        if (content == null || content.isEmpty()) {
             return false;
         }
         for (JsonNode block : content.values()) {
@@ -88,7 +88,7 @@ final class ClaudeStreamEvents {
             }
             return text.toString();
         }
-        return content.isString() ? content.getStringValue() : "";
+        return content.isString() ? content.stringValue() : "";
     }
 
     static boolean isResult(JsonNode event) {
@@ -107,7 +107,7 @@ final class ClaudeStreamEvents {
 
     static boolean isSuccessfulResult(JsonNode event) {
         JsonNode isError = event.get("is_error");
-        return "success".equals(text(event, "subtype")) && (isError == null || !isError.getBooleanValue());
+        return "success".equals(text(event, "subtype")) && (isError == null || !isError.asBoolean());
     }
 
     static String truncate(String text) {
@@ -160,15 +160,15 @@ final class ClaudeStreamEvents {
         StringBuilder summary = new StringBuilder("done: ").append(text(event, "subtype"));
         JsonNode turns = event.get("num_turns");
         if (turns != null && turns.isNumber()) {
-            summary.append(", ").append(turns.getIntValue()).append(" turns");
+            summary.append(", ").append(turns.intValue()).append(" turns");
         }
         JsonNode cost = event.get("total_cost_usd");
         if (cost != null && cost.isNumber()) {
-            summary.append(String.format(Locale.ROOT, ", $%.4f", cost.getDoubleValue()));
+            summary.append(String.format(Locale.ROOT, ", $%.4f", cost.doubleValue()));
         }
         JsonNode duration = event.get("duration_ms");
         if (duration != null && duration.isNumber()) {
-            summary.append(String.format(Locale.ROOT, ", %.1fs", duration.getLongValue() / 1000.0));
+            summary.append(String.format(Locale.ROOT, ", %.1fs", duration.longValue() / 1000.0));
         }
         return summary.toString();
     }
@@ -190,7 +190,7 @@ final class ClaudeStreamEvents {
         List<String> names = new ArrayList<>();
         if (servers != null && servers.isArray()) {
             for (JsonNode server : servers.values()) {
-                names.add(server.isObject() ? String.valueOf(text(server, "name")) : server.coerceStringValue());
+                names.add(server.isObject() ? String.valueOf(text(server, "name")) : server.asString());
             }
         }
         return names;
@@ -198,6 +198,6 @@ final class ClaudeStreamEvents {
 
     private static String text(JsonNode node, String field) {
         JsonNode value = node == null || !node.isObject() ? null : node.get(field);
-        return value == null || value.isNull() ? null : value.coerceStringValue();
+        return value == null || value.isNull() ? null : value.asString();
     }
 }

@@ -7,15 +7,16 @@ import com.comagents.agentproxy.domain.agent_context.AgentContext;
 import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.serialization.JsonUtility;
+import com.comagents.commons.serialization.SerializationException;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.json.JsonMapper;
-import io.micronaut.json.tree.JsonNode;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.JsonNode;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -70,7 +71,6 @@ public class ClaudeAgentSessionRegistry {
     // how often the watchdog checks the time limit and the idle timeout
     private static final Duration WATCHDOG_INTERVAL = Duration.ofSeconds(1);
 
-    private final JsonMapper jsonMapper;
     private final String claudeExecutable;
     private final int maxConcurrentSessions;
     private final Duration sessionTimeout;
@@ -84,8 +84,7 @@ public class ClaudeAgentSessionRegistry {
     // reserved, not yet started: a session id is either here or in sessions, never both
     private final Set<UUID> reservedSessionIds = ConcurrentHashMap.newKeySet();
 
-    public ClaudeAgentSessionRegistry(JsonMapper jsonMapper,
-                                      @Value("${claude.executable:claude}") String claudeExecutable,
+    public ClaudeAgentSessionRegistry(@Value("${claude.executable:claude}") String claudeExecutable,
                                       @Value("${claude.session.max-concurrent:2}") int maxConcurrentSessions,
                                       @Value("${claude.session.timeout:60m}") Duration sessionTimeout,
                                       @Value("${claude.session.idle-timeout:10m}") Duration idleTimeout,
@@ -97,7 +96,6 @@ public class ClaudeAgentSessionRegistry {
         this.sessionListener = sessionListener;
         this.responseReadyPublisher = responseReadyPublisher;
         this.mcpServer = mcpServer;
-        this.jsonMapper = jsonMapper;
         this.claudeExecutable = claudeExecutable;
         this.maxConcurrentSessions = maxConcurrentSessions;
         this.sessionTimeout = sessionTimeout;
@@ -524,8 +522,8 @@ public class ClaudeAgentSessionRegistry {
 
     private ClaudeSessionArchive readArchive(Path stateFile) {
         try {
-            return jsonMapper.readValue(Files.readAllBytes(stateFile), ClaudeSessionArchive.class);
-        } catch (IOException e) {
+            return JsonUtility.fromJson(Files.readAllBytes(stateFile), ClaudeSessionArchive.class);
+        } catch (IOException | SerializationException e) {
             throw new IllegalStateException("Unreadable archive " + stateFile, e);
         }
     }
@@ -545,7 +543,7 @@ public class ClaudeAgentSessionRegistry {
                 session.getOptions().actorAccountId(), session.deferredQuestion().orElse(null),
                 session.getOptions().attributes());
         try {
-            Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), jsonMapper.writeValueAsBytes(archive));
+            Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), JsonUtility.toJsonAsBytes(archive));
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to save the state of session " + session.getSessionId(), e);
         }
@@ -602,12 +600,8 @@ public class ClaudeAgentSessionRegistry {
         return command;
     }
 
-    private String responseSchema(ClaudeAgentConfig config) {
-        try {
-            return jsonMapper.writeValueAsString(config.responseSchema());
-        } catch (IOException e) {
-            throw new IllegalStateException("Unwritable responseSchema", e);
-        }
+    private static String responseSchema(ClaudeAgentConfig config) {
+        return JsonUtility.toJson(config.responseSchema());
     }
 
     // the agent's kick-off prompt, then the session's context, then the response schema at the very end
@@ -625,12 +619,12 @@ public class ClaudeAgentSessionRegistry {
     private ClaudeAgentConfig readConfig(AiAgent agent, Path agentFolder) {
         Path configFile = agentFolder.resolve(ClaudeAgentConfig.FILE_NAME);
         try {
-            ClaudeAgentConfig config = jsonMapper.readValue(Files.readAllBytes(configFile), ClaudeAgentConfig.class);
+            ClaudeAgentConfig config = JsonUtility.fromJson(Files.readAllBytes(configFile), ClaudeAgentConfig.class);
             if (config == null || config.kickOffPrompt() == null || config.kickOffPrompt().isBlank()) {
                 throw new IllegalStateException(configFile + " has no kickOffPrompt");
             }
             return config;
-        } catch (IOException e) {
+        } catch (IOException | SerializationException e) {
             throw new IllegalStateException("Agent " + agent.getAgentName() + " has no readable " + configFile, e);
         }
     }
@@ -715,10 +709,11 @@ public class ClaudeAgentSessionRegistry {
     }
 
     // empty for lines that are not JSON, and for blank or "null" lines, which parse to no value
-    private Optional<JsonNode> parseEvent(String line) {
+    private static Optional<JsonNode> parseEvent(String line) {
         try {
-            return Optional.ofNullable(jsonMapper.readValue(line, JsonNode.class));
-        } catch (IOException e) {
+            return Optional.ofNullable(JsonUtility.fromJson(line, JsonNode.class))
+                    .filter(event -> !event.isNull() && !event.isMissingNode());
+        } catch (SerializationException e) {
             return Optional.empty();
         }
     }
@@ -796,7 +791,7 @@ public class ClaudeAgentSessionRegistry {
             response.ifPresent(context -> {
                 boolean written = writeResponse(session, context);
                 sessionListener.onResponse(sessionId, answersPerSchema(session)
-                        ? toJson(context) : session.resultText().orElseThrow());
+                        ? JsonUtility.toJson(context) : session.resultText().orElseThrow());
                 if (written) {
                     responseReadyPublisher.publishEvent(new AgentResponseReady(session.getAgent(), sessionId));
                 }
@@ -836,7 +831,7 @@ public class ClaudeAgentSessionRegistry {
                     ? structuredResponse(session)
                     : new AgentContext(List.of(new StringAgentContextItem(ClaudeAgentConfig.DEFAULT_RESPONSE_ITEM,
                             session.resultText().orElse(null)))));
-        } catch (IOException | RuntimeException e) {
+        } catch (RuntimeException e) {
             LOG.error("[{} {}] invalid final answer: {}", session.getAgent().getAgentName(), session.getSessionId(), e.getMessage());
             sessionListener.onOutput(session.getSessionId(), "The agent's final answer is invalid: " + e.getMessage());
             return Optional.empty();
@@ -849,17 +844,9 @@ public class ClaudeAgentSessionRegistry {
         return session.isStructuredResponse() && (session.isResultSuccessful() || session.structuredOutput().isPresent());
     }
 
-    private AgentContext structuredResponse(ClaudeAgentSession session) throws IOException {
+    private static AgentContext structuredResponse(ClaudeAgentSession session) {
         JsonNode output = session.structuredOutput().orElseThrow(() -> new IllegalArgumentException("no structured output"));
-        return Objects.requireNonNull(jsonMapper.readValueFromTree(output, AgentContext.class), "empty structured output");
-    }
-
-    private String toJson(AgentContext context) {
-        try {
-            return jsonMapper.writeValueAsString(context);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return Objects.requireNonNull(JsonUtility.getSimpleMapper().treeToValue(output, AgentContext.class), "empty structured output");
     }
 
     // written to a temporary file and renamed, so a reader never sees a half-written response
@@ -867,7 +854,7 @@ public class ClaudeAgentSessionRegistry {
         Path responseFile = session.getResponseFile();
         Path partial = responseFile.resolveSibling(responseFile.getFileName() + ".partial");
         try {
-            Files.write(partial, jsonMapper.writeValueAsBytes(response));
+            Files.write(partial, JsonUtility.toJsonAsBytes(response));
             Files.move(partial, responseFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             return true;
         } catch (IOException e) {

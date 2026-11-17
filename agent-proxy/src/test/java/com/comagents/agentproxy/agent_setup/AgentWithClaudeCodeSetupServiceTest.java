@@ -13,7 +13,6 @@ import com.comagents.agentproxy.domain.agent_context.GithubRepositoryAgentContex
 import com.comagents.agentproxy.vcs.VcsGithubService;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.event.ApplicationEventPublisher;
-import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -53,15 +52,15 @@ class AgentWithClaudeCodeSetupServiceTest {
         AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(new FakePushcaConnector(),
                 new RecordingChatListener(),
                 "https://chat.example/chat-room.html");
-        registry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1, Duration.ofMinutes(1),
+        registry = new ClaudeAgentSessionRegistry("false", 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
-                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+                new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
                 ApplicationEventPublisher.noOp());
         setupService = new AgentWithClaudeCodeSetupService(
                 // not a GitHub URL: downloading the agent's files, the first setup step, fails without network access
                 new VcsGithubService(new AgentProxyConf("https://gitlab.com/example/comagents.git", "token", "key",
                         "https://pushca.example", "pushca-key"), null),
-                registry, sessionFolders, wsClientRegistry, new AgentContextValidator(), ObjectMapper.getDefault());
+                registry, sessionFolders, wsClientRegistry, new AgentContextValidator());
     }
 
     @Test

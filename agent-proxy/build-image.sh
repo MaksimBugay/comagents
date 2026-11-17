@@ -24,8 +24,9 @@ else
 fi
 
 echo "Building ${IMAGE}"
-# a new build id on every run forces a fresh install of the latest Claude Code (see Dockerfile)
-docker build --build-arg CLAUDE_CODE_BUILD_ID="$(date +%s)" -t "$IMAGE" .
+# a new build id on every run forces a fresh install of the latest Claude Code (see Dockerfile). The context is
+# the comagents root, so the build can install agent-commons from its sources (see Dockerfile.dockerignore)
+docker build --build-arg CLAUDE_CODE_BUILD_ID="$(date +%s)" -f Dockerfile -t "$IMAGE" ..
 
 echo
 echo "Built ${IMAGE}. Run it with:"

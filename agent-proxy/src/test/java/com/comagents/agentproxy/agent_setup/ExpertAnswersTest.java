@@ -5,7 +5,6 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.event.ApplicationEventPublisher;
-import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,10 +26,10 @@ class ExpertAnswersTest {
     @BeforeEach
     void createAnswers(@TempDir Path sessionsRoot) {
         // no session in it waits for a deferred answer
-        ClaudeAgentSessionRegistry sessions = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 1,
+        ClaudeAgentSessionRegistry sessions = new ClaudeAgentSessionRegistry("false", 1,
                 Duration.ofMinutes(1), Duration.ofMinutes(1), new SessionFolders(sessionsRoot.toString()),
                 new AgentSessionWsClientRegistry(new FakePushcaConnector(), new RecordingChatListener(), "https://chat.example"),
-                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+                new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
                 ApplicationEventPublisher.noOp());
         answers = new ExpertAnswers(() -> sessions);
     }

@@ -7,8 +7,8 @@ import com.comagents.agentproxy.domain.agent_context.AgentContext;
 import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
 import com.comagents.agentproxy.domain.agent_context.StringAgentContextItem;
 import com.comagents.agentproxy.workspace.SessionFolders;
-import io.micronaut.json.tree.JsonNode;
-import io.micronaut.serde.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import com.comagents.commons.serialization.JsonUtility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -193,12 +193,12 @@ class ClaudeAgentSessionRegistryTest {
         ClaudeAgentSession session = registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
 
         assertEquals(Optional.of(AgentSessionState.DONE), session.awaitFinished(WAIT));
-        AgentContext response = Objects.requireNonNull(ObjectMapper.getDefault().readValue(Files.readAllBytes(session.getResponseFile()), AgentContext.class));
+        AgentContext response = Objects.requireNonNull(JsonUtility.fromJson(Files.readAllBytes(session.getResponseFile()), AgentContext.class));
         assertEquals(new AgentContext(List.of(new StringAgentContextItem("verdict", "approve"))), response);
         assertEquals("approve", response.items().getFirst().getValue());
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
         String schema = args.get(args.indexOf("--json-schema") + 1);
-        assertEquals(ObjectMapper.getDefault().readValue(RESPONSE_SCHEMA, JsonNode.class), ObjectMapper.getDefault().readValue(schema, JsonNode.class));
+        assertEquals(JsonUtility.fromJson(RESPONSE_SCHEMA, JsonNode.class), JsonUtility.fromJson(schema, JsonNode.class));
         assertEquals(List.of("Review it", "", "Return your final answer as JSON matching this schema:", schema), args.subList(1, 5),
                 "the schema comes at the very end of the kick-off prompt");
     }
@@ -294,11 +294,11 @@ class ClaudeAgentSessionRegistryTest {
         session.awaitFinished(WAIT);
 
         JsonNode server = mcpServer(Files.readAllLines(scripts.resolve("args.txt")));
-        assertEquals("http", path(server, "type").getStringValue());
-        assertEquals("http://127.0.0.1:8080/mcp", path(server, "url").getStringValue());
-        assertEquals(Duration.ofMinutes(5).toMillis(), path(server, "timeout").getLongValue(), "answer timeout + margin");
-        assertEquals(sessionId.toString(), path(server, "headers", "X-Agent-Session-Id").getStringValue());
-        assertTrue(session.acceptsMcpToken(path(server, "headers", "X-Agent-Session-Token").getStringValue()));
+        assertEquals("http", path(server, "type").stringValue());
+        assertEquals("http://127.0.0.1:8080/mcp", path(server, "url").stringValue());
+        assertEquals(Duration.ofMinutes(5).toMillis(), path(server, "timeout").longValue(), "answer timeout + margin");
+        assertEquals(sessionId.toString(), path(server, "headers", "X-Agent-Session-Id").stringValue());
+        assertTrue(session.acceptsMcpToken(path(server, "headers", "X-Agent-Session-Token").stringValue()));
         assertFalse(session.acceptsMcpToken("guessed"));
         assertFalse(session.acceptsMcpToken(null));
     }
@@ -895,8 +895,7 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     private static ClaudeSessionArchive readArchive(Path agentFolder) throws IOException {
-        return ObjectMapper.getDefault()
-                .readValue(Files.readAllBytes(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE)), ClaudeSessionArchive.class);
+        return JsonUtility.fromJson(Files.readAllBytes(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE)), ClaudeSessionArchive.class);
     }
 
     @Test
@@ -1060,7 +1059,7 @@ class ClaudeAgentSessionRegistryTest {
 
     // the text of a response without schema: its one "response" item
     private static String responseText(Path responseFile) throws IOException {
-        AgentContext response = Objects.requireNonNull(ObjectMapper.getDefault().readValue(Files.readAllBytes(responseFile), AgentContext.class));
+        AgentContext response = Objects.requireNonNull(JsonUtility.fromJson(Files.readAllBytes(responseFile), AgentContext.class));
         assertEquals(1, response.items().size());
         StringAgentContextItem item = assertInstanceOf(StringAgentContextItem.class, response.items().getFirst());
         assertEquals(ClaudeAgentConfig.DEFAULT_RESPONSE_ITEM, item.getName());
@@ -1077,8 +1076,8 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     // the --mcp-config the fake claude was started with
-    private static JsonNode mcpServer(List<String> args) throws IOException {
-        JsonNode config = ObjectMapper.getDefault().readValue(args.get(args.indexOf("--mcp-config") + 1), JsonNode.class);
+    private static JsonNode mcpServer(List<String> args) {
+        JsonNode config = JsonUtility.fromJson(args.get(args.indexOf("--mcp-config") + 1), JsonNode.class);
         return path(Objects.requireNonNull(config, "--mcp-config"), "mcpServers", "agentproxy");
     }
 
@@ -1102,8 +1101,8 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     private ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
-        return new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), maxConcurrent, timeout, idleTimeout,
-                sessionFolders, listener, new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+        return new ClaudeAgentSessionRegistry(claude.toString(), maxConcurrent, timeout, idleTimeout,
+                sessionFolders, listener, new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
                 responsesReady::add);
     }
 

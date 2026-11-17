@@ -2,22 +2,22 @@ package com.comagents.agentproxy.domain.agent_context;
 
 import com.comagents.agentproxy.domain.GithubRepositoryUrl;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.micronaut.core.annotation.Creator;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.serde.annotation.Serdeable;
 
 /**
  * A GitHub repository, given by its clone URL (the value); its name is {@code <owner>/<repository>} from that URL,
  * so repositories of the same name under different owners are different items. The primary one is
  * cloned as the session's working directory when the context has several.
  */
-@Serdeable
+@Introspected
 public final class GithubRepositoryAgentContextItem extends AgentContextItem {
 
     private final boolean primary;
 
     /** @throws InvalidAgentContextException when the URL is blank or not a GitHub repository URL */
-    @Creator
+    @JsonCreator
     public GithubRepositoryAgentContextItem(@JsonProperty("value") String cloneUrl, boolean primary,
                                             @Nullable String description) {
         super(AgentContextItemType.GITHUB_REPOSITORY, fullName(cloneUrl), cloneUrl, description);

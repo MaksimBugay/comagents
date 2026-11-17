@@ -2,8 +2,8 @@ package com.comagents.agentproxy.domain;
 
 import com.comagents.agentproxy.agent_setup.AgentSessionLoggingLevel;
 import com.comagents.agentproxy.domain.agent_context.AgentContext;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.serde.annotation.Serdeable;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
@@ -14,7 +14,7 @@ import java.util.UUID;
  * @param loggingLevel   what the session's chat shows; {@link AgentSessionLoggingLevel#INFO} when not given
  * @param createdAt      when the start request was created, in epoch milliseconds
  */
-@Serdeable
+@Introspected
 public record AgentSessionAttributes(@NotNull UUID sessionId,
                                      @Nullable AgentContext agentContext,
                                      @Nullable String actorAccountId,

@@ -3,8 +3,8 @@ package com.comagents.agentproxy.agent_setup.claude;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.serde.annotation.Serdeable;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -24,7 +24,7 @@ import java.util.UUID;
  *                           the answer as soon as one arrives in its chat
  * @param attributes         what the session was started with (see {@link ClaudeSessionOptions#attributes()})
  */
-@Serdeable
+@Introspected
 public record ClaudeSessionArchive(UUID sessionId, AiAgent agent, String workingDirectory,
                                    AgentSessionState stateBeforeArchive, Instant startedAt, Instant lastOutputAt,
                                    Instant archivedAt, @Nullable String resultText, boolean verboseOutput,

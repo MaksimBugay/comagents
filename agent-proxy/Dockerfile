@@ -2,12 +2,16 @@
 
 # ---- build: GraalVM native image ----
 # pinned: the floating ":25" tag is stuck on 25.0.2 (Jan 2026); 25i5 tracks current JDK 25 CPU updates
+# the build context is the comagents root (see build-image.sh): agent-commons is not published, so it is installed
+# from its sources next to agent-proxy before agent-proxy resolves its dependencies
 FROM ghcr.io/graalvm/native-image-community:25i5-25.0.5.0.3-ol9 AS build
-WORKDIR /workspace
-COPY .mvn .mvn
-COPY mvnw pom.xml aot-*.properties ./
+WORKDIR /workspace/agent-proxy
+COPY agent-proxy/.mvn .mvn
+COPY agent-proxy/mvnw agent-proxy/pom.xml agent-proxy/aot-*.properties ./
+COPY agent-commons /workspace/agent-commons
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q -f ../agent-commons/pom.xml install -DskipTests
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q dependency:go-offline
-COPY src src
+COPY agent-proxy/src src
 # mostly-static: link libz & co. into the binary, only glibc stays dynamic (provided by the runtime image)
 ENV NATIVE_IMAGE_OPTIONS="--static-nolibc"
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q package -Dpackaging=native-image -DskipTests
@@ -37,6 +41,6 @@ ARG CLAUDE_CODE_BUILD_ID=unset
 RUN echo "Claude Code install, build ${CLAUDE_CODE_BUILD_ID}" \
  && curl -fsSL https://claude.ai/install.sh | bash -s latest \
  && claude --version
-COPY --from=build /workspace/target/application /app/application
+COPY --from=build /workspace/agent-proxy/target/application /app/application
 EXPOSE 8080
 ENTRYPOINT ["/app/application"]

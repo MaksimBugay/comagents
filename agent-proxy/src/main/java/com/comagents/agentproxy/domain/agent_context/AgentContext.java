@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.domain.agent_context;
 
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.serde.annotation.Serdeable;
 
 import java.util.HashSet;
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.Set;
  *
  * @param items the context's items; empty when null
  */
-@Serdeable
+@Introspected
 public record AgentContext(@Nullable List<AgentContextItem> items) {
 
     /**

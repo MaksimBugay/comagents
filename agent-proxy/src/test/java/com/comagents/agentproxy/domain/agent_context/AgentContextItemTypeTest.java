@@ -1,10 +1,9 @@
 package com.comagents.agentproxy.domain.agent_context;
 
+import com.comagents.commons.serialization.JsonUtility;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
-import io.micronaut.serde.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,9 +25,9 @@ class AgentContextItemTypeTest {
     }
 
     @Test
-    void theSubtypeOfEachTypeNameReportsThatType() throws IOException {
+    void theSubtypeOfEachTypeNameReportsThatType() {
         for (AgentContextItemType type : AgentContextItemType.values()) {
-            AgentContextItem item = ObjectMapper.getDefault().readValue(
+            AgentContextItem item = JsonUtility.fromJson(
                     "{\"type\": \"" + type.name() + "\", \"name\": \"sample\", \"value\": \"" + sampleValue(type) + "\"}",
                     AgentContextItem.class);
 

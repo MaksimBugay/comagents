@@ -16,7 +16,8 @@ import com.comagents.agentproxy.domain.agent_context.InvalidAgentContextExceptio
 import com.comagents.agentproxy.vcs.VcsService;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
-import io.micronaut.json.JsonMapper;
+import com.comagents.commons.serialization.JsonUtility;
+import com.comagents.commons.serialization.SerializationException;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
@@ -48,18 +49,15 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
 
     private final AgentContextValidator agentContextValidator;
 
-    private final JsonMapper jsonMapper;
-
     public AgentWithClaudeCodeSetupService(VcsService vcsService, ClaudeAgentSessionRegistry claudeAgentSessionRegistry,
                                            SessionFolders sessionFolders,
                                            AgentSessionWsClientRegistry agentSessionWsClientRegistry,
-                                           AgentContextValidator agentContextValidator, JsonMapper jsonMapper) {
+                                           AgentContextValidator agentContextValidator) {
         this.vcsService = vcsService;
         this.claudeAgentSessionRegistry = claudeAgentSessionRegistry;
         this.sessionFolders = sessionFolders;
         this.agentSessionWsClientRegistry = agentSessionWsClientRegistry;
         this.agentContextValidator = agentContextValidator;
-        this.jsonMapper = jsonMapper;
     }
 
 
@@ -112,8 +110,8 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     private ClaudeAgentConfig readConfig(Path comAgentsSources, AiAgent agent) {
         Path configFile = AgentFiles.agentConfigFile(comAgentsSources, agent);
         try {
-            return jsonMapper.readValue(Files.readAllBytes(configFile), ClaudeAgentConfig.class);
-        } catch (IOException e) {
+            return JsonUtility.fromJson(Files.readAllBytes(configFile), ClaudeAgentConfig.class);
+        } catch (IOException | SerializationException e) {
             throw new IllegalStateException("Agent " + agent.getAgentName() + " has no readable " + configFile, e);
         }
     }

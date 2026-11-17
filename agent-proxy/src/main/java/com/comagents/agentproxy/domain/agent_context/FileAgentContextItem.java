@@ -1,14 +1,14 @@
 package com.comagents.agentproxy.domain.agent_context;
 
-import io.micronaut.core.annotation.Creator;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.serde.annotation.Serdeable;
 
 /** A file in S3-compatible object storage: its file name, and its download URL as the value. */
-@Serdeable
+@Introspected
 public final class FileAgentContextItem extends AgentContextItem {
 
-    @Creator
+    @JsonCreator
     public FileAgentContextItem(String name, String value, @Nullable String description) {
         super(AgentContextItemType.FILE, name, value, description);
     }

@@ -1,11 +1,9 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.json.JsonMapper;
 import jakarta.inject.Singleton;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +31,6 @@ public class AgentProxyMcpServer {
     // a call gets its answer or the "no answer" result within the answer timeout; the margin covers the rest
     private static final Duration CALL_TIMEOUT_MARGIN = Duration.ofMinutes(1);
 
-    private final JsonMapper jsonMapper;
     private final String url;
     private final Duration callTimeout;
 
@@ -41,10 +38,8 @@ public class AgentProxyMcpServer {
      * @param url           where Claude Code reaches the server ({@code agent-proxy.mcp-url})
      * @param answerTimeout how long {@value #ASK_EXPERT_TOOL} waits for an answer ({@code agent-question.answer-timeout})
      */
-    public AgentProxyMcpServer(JsonMapper jsonMapper,
-                               @Value("${agent-proxy.mcp-url}") String url,
+    public AgentProxyMcpServer(@Value("${agent-proxy.mcp-url}") String url,
                                @Value("${agent-question.answer-timeout}") Duration answerTimeout) {
-        this.jsonMapper = jsonMapper;
         this.url = url;
         this.callTimeout = answerTimeout.plus(CALL_TIMEOUT_MARGIN);
     }
@@ -61,10 +56,6 @@ public class AgentProxyMcpServer {
                 "url", url,
                 "headers", Map.of(SESSION_ID_HEADER, sessionId.toString(), SESSION_TOKEN_HEADER, sessionToken),
                 "timeout", callTimeout.toMillis());
-        try {
-            return jsonMapper.writeValueAsString(Map.of("mcpServers", Map.of(NAME, server)));
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to write the MCP config of session " + sessionId, e);
-        }
+        return JsonUtility.toJson(Map.of("mcpServers", Map.of(NAME, server)));
     }
 }

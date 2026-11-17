@@ -162,10 +162,12 @@ tool and its main argument (path, command, URL), truncates long text and never p
 ## Build & run
 
 ```bash
+./mvnw -f ../agent-commons/pom.xml install   # once, and after agent-commons changes: it is not published
 ./mvnw test                          # tests
 ./mvnw package && java -jar target/agent-proxy-0.1.jar   # JVM
 
-docker build -t agent-proxy:0.1 .    # native image (no local GraalVM needed)
+docker build -f Dockerfile -t agent-proxy:0.1 ..   # native image (no local GraalVM needed); the context is the
+                                                   # comagents root, so agent-commons is built inside the image
 docker run -d --name agent-proxy -p 8080:8080 \
   -v agent-proxy-sessions:/var/lib/agent-proxy/sessions \
   -e CLONE_COMAGENTS_SOURCES_URL=https://github.com/<org>/<repo>.git \

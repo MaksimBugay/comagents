@@ -1,9 +1,9 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
 import com.comagents.agentproxy.domain.agent_context.RequiredAgentContextItem;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.json.tree.JsonNode;
-import io.micronaut.serde.annotation.Serdeable;
+import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 import java.util.Set;
@@ -27,7 +27,7 @@ import java.util.Set;
  *                      final text is the response, as one {@code STRING} item named
  *                      {@value #DEFAULT_RESPONSE_ITEM}
  */
-@Serdeable
+@Introspected
 public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
                                 String kickOffPrompt, @Nullable String resumePrompt,
                                 @Nullable Set<RequiredAgentContextItem> requiredItems,

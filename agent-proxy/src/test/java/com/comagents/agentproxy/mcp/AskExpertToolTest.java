@@ -11,8 +11,8 @@ import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.event.ApplicationEventPublisher;
-import io.micronaut.json.tree.JsonNode;
-import io.micronaut.serde.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import com.comagents.commons.serialization.JsonUtility;
 import io.modelcontextprotocol.common.McpTransportContext;
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
 import io.modelcontextprotocol.spec.McpSchema.TextContent;
@@ -85,9 +85,9 @@ class AskExpertToolTest {
         Files.setPosixFilePermissions(claude, PosixFilePermissions.fromString("rwx------"));
 
         chats = new AgentSessionWsClientRegistry(connector, answers, "https://chat.example/chat-room.html");
-        sessions = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), claude.toString(), 1, Duration.ofMinutes(1),
+        sessions = new ClaudeAgentSessionRegistry(claude.toString(), 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, chats,
-                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+                new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
                 ApplicationEventPublisher.noOp());
         session = sessions.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
         await().atMost(WAIT).until(() -> Files.exists(scripts.resolve("args.txt")));
@@ -193,7 +193,7 @@ class AskExpertToolTest {
     private String runToken() {
         try {
             return path(mcpServer(Files.readAllLines(scripts.resolve("args.txt"))), "headers", "X-Agent-Session-Token")
-                    .getStringValue();
+                    .stringValue();
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -210,7 +210,7 @@ class AskExpertToolTest {
 
     // the --mcp-config the fake claude was started with
     private static JsonNode mcpServer(List<String> args) throws IOException {
-        JsonNode config = ObjectMapper.getDefault().readValue(args.get(args.indexOf("--mcp-config") + 1), JsonNode.class);
+        JsonNode config = JsonUtility.fromJson(args.get(args.indexOf("--mcp-config") + 1), JsonNode.class);
         return path(Objects.requireNonNull(config, "--mcp-config"), "mcpServers", "agentproxy");
     }
 

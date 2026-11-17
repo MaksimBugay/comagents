@@ -4,14 +4,12 @@ import bmv.org.pushca.client.model.ClientFilter;
 import com.comagents.agentproxy.agent_setup.AgentSessionWsClientRegistry;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.response.AgentSessionResponse;
+import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.event.ApplicationEventListener;
-import io.micronaut.json.JsonMapper;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Base64;
 import java.util.List;
 
@@ -37,13 +35,11 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
 
     private final AgentResponseService agentResponseService;
     private final AgentSessionWsClientRegistry agentSessionWsClientRegistry;
-    private final JsonMapper jsonMapper;
 
     public AgentResponseBroadcast(AgentResponseService agentResponseService,
-                                  AgentSessionWsClientRegistry agentSessionWsClientRegistry, JsonMapper jsonMapper) {
+                                  AgentSessionWsClientRegistry agentSessionWsClientRegistry) {
         this.agentResponseService = agentResponseService;
         this.agentSessionWsClientRegistry = agentSessionWsClientRegistry;
-        this.jsonMapper = jsonMapper;
     }
 
     // published on the session's output thread, which must not wait for Pushca
@@ -67,11 +63,7 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
     }
 
     // the JSON (UTF-8) as a standard base64 string
-    private String toBase64Json(AgentSessionResponse response) {
-        try {
-            return Base64.getEncoder().encodeToString(jsonMapper.writeValueAsBytes(response));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    private static String toBase64Json(AgentSessionResponse response) {
+        return Base64.getEncoder().encodeToString(JsonUtility.toJsonAsBytes(response));
     }
 }

@@ -16,7 +16,7 @@ import com.comagents.agentproxy.request.StartAgentSessionRequest;
 import com.comagents.agentproxy.response.AgentSessionResponse;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.annotation.Property;
-import io.micronaut.serde.ObjectMapper;
+import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -88,7 +88,7 @@ class AgentResponseBroadcastTest {
         assertTrue(broadcasts.getFirst().receivers().findAny, "only one orchestrator gets it");
         // JSON in a base64 string
         byte[] json = Base64.getDecoder().decode(broadcasts.getFirst().message());
-        AgentSessionResponse response = Objects.requireNonNull(ObjectMapper.getDefault().readValue(json, AgentSessionResponse.class));
+        AgentSessionResponse response = Objects.requireNonNull(JsonUtility.fromJson(json, AgentSessionResponse.class));
         assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());
@@ -124,6 +124,6 @@ class AgentResponseBroadcastTest {
 
     private void writeAllGoodResponse() throws Exception {
         Path responseFile = sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW);
-        Files.write(responseFile, ObjectMapper.getDefault().writeValueAsBytes(ALL_GOOD));
+        Files.write(responseFile, JsonUtility.toJsonAsBytes(ALL_GOOD));
     }
 }

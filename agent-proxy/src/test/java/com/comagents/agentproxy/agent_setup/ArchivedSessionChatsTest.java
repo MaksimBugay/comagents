@@ -8,7 +8,7 @@ import com.comagents.agentproxy.domain.AgentSessionState;
 import com.comagents.agentproxy.domain.AiAgent;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import io.micronaut.context.event.ApplicationEventPublisher;
-import io.micronaut.serde.ObjectMapper;
+import com.comagents.commons.serialization.JsonUtility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,9 +40,9 @@ class ArchivedSessionChatsTest {
         sessionFolders = new SessionFolders(sessionsRoot.toString());
         AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(connector, chatListener,
                 "https://chat.example/chat-room.html");
-        ClaudeAgentSessionRegistry claudeRegistry = new ClaudeAgentSessionRegistry(ObjectMapper.getDefault(), "false", 2,
+        ClaudeAgentSessionRegistry claudeRegistry = new ClaudeAgentSessionRegistry("false", 2,
                 Duration.ofMinutes(1), Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
-                new AgentProxyMcpServer(ObjectMapper.getDefault(), "http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
+                new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
                 ApplicationEventPublisher.noOp());
         archivedSessionChats = new ArchivedSessionChats(claudeRegistry, wsClientRegistry);
     }
@@ -79,6 +79,6 @@ class ArchivedSessionChatsTest {
         Instant now = Instant.now();
         ClaudeSessionArchive archive = new ClaudeSessionArchive(sessionId, AiAgent.CODE_REVIEW, agentFolder.toString(),
                 AgentSessionState.WAITING, now, now, now, null, false, "MBugai", null, null);
-        Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), ObjectMapper.getDefault().writeValueAsBytes(archive));
+        Files.write(agentFolder.resolve(ClaudeSessionArchive.STATE_FILE), JsonUtility.toJsonAsBytes(archive));
     }
 }
