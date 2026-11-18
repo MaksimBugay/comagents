@@ -1,8 +1,8 @@
 package com.comagents.agentproxy.agent_response;
 
-import com.comagents.agentproxy.communication.ComagentsMessageDeliveryService;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.commons.communication.ComagentsMessage;
+import com.comagents.commons.communication.ComagentsMessageDeliveryService;
 import com.comagents.commons.response.AgentSessionResponse;
 import io.micronaut.context.event.ApplicationEventListener;
 import jakarta.inject.Singleton;

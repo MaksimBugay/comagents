@@ -1,6 +1,5 @@
-package com.comagents.agentproxy.communication;
+package com.comagents.commons.communication;
 
-import com.comagents.commons.communication.ComagentsMessage;
 
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;

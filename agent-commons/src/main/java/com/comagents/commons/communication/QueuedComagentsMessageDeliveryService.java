@@ -1,8 +1,5 @@
-package com.comagents.agentproxy.communication;
+package com.comagents.commons.communication;
 
-import com.comagents.commons.communication.ComagentsMessage;
-import io.micronaut.context.annotation.Value;
-import jakarta.inject.Singleton;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +12,9 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * Delivers through the {@link ComagentsMessageQueue}: each payload or error, as a {@link ComagentsMessage}, waits
- * there for its turn, and the delivery returns once it is sent, or after {@code agent-proxy.message-timeout}. A
+ * there for its turn, and the delivery returns once it is sent, or after the message timeout. A
  * message not sent by then is dropped: for a response, the orchestrator has timed out meanwhile and asks again.
  */
-@Singleton
 public class QueuedComagentsMessageDeliveryService implements ComagentsMessageDeliveryService {
 
     private static final Logger LOG = LoggerFactory.getLogger(QueuedComagentsMessageDeliveryService.class);
@@ -26,8 +22,7 @@ public class QueuedComagentsMessageDeliveryService implements ComagentsMessageDe
     private final ComagentsMessageQueue queue;
     private final Duration messageTimeout;
 
-    public QueuedComagentsMessageDeliveryService(
-            ComagentsMessageQueue queue, @Value("${agent-proxy.message-timeout:30s}") Duration messageTimeout) {
+    public QueuedComagentsMessageDeliveryService(ComagentsMessageQueue queue, Duration messageTimeout) {
         this.queue = queue;
         this.messageTimeout = messageTimeout;
     }

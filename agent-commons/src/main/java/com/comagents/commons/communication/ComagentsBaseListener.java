@@ -1,7 +1,5 @@
-package com.comagents.agentproxy.communication;
+package com.comagents.commons.communication;
 
-import com.comagents.commons.communication.ComagentsMessageListener;
-import com.comagents.commons.communication.WithOrchestratorDeviceId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

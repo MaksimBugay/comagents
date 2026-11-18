@@ -1,10 +1,8 @@
-package com.comagents.agentproxy.communication;
-
-import com.comagents.commons.communication.WithSequenceId;
+package com.comagents.commons.communication;
 
 /**
- * Sends payloads, requests and responses alike, as {@link com.comagents.commons.communication.ComagentsMessage}s to
- * other devices; an error goes in place of a payload that couldn't be made.
+ * Sends payloads, requests and responses alike, as {@link ComagentsMessage}s to other devices; an
+ * error goes in place of a payload that couldn't be made.
  */
 public interface ComagentsMessageDeliveryService {
 

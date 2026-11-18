@@ -3,13 +3,14 @@ package com.comagents.agentproxy.communication.pushca;
 import bmv.org.pushca.client.PushcaWebSocket;
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
-import com.comagents.agentproxy.communication.ComagentsMessageQueue;
-import com.comagents.agentproxy.communication.ComagentsQueueConsumer;
-import com.comagents.agentproxy.communication.QueuedComagentsMessage;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.communication.ComagentsMessageDispatcher;
 import com.comagents.commons.communication.ComagentsMessageListener;
+import com.comagents.commons.communication.ComagentsMessageQueue;
+import com.comagents.commons.communication.ComagentsQueueConsumer;
+import com.comagents.commons.communication.QueuedComagentsMessage;
+import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import jakarta.annotation.PreDestroy;
@@ -21,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static com.comagents.agentproxy.communication.pushca.PushcaConnectionFactory.IGNORE_MESSAGES;
+import static com.comagents.commons.communication.pushca.PushcaConnectionFactory.IGNORE_MESSAGES;
 
 /**
  * The agent executor's own Pushca client: one per executor (not per session), signed in to the orchestrators'

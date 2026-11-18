@@ -6,8 +6,8 @@ import bmv.org.pushca.core.PChannel;
 import java.time.Duration;
 import java.time.Instant;
 
-import static com.comagents.agentproxy.communication.BrokenConnectionRetry.callWithRetry;
-import static com.comagents.agentproxy.communication.BrokenConnectionRetry.runWithRetry;
+import static com.comagents.commons.communication.BrokenConnectionRetry.callWithRetry;
+import static com.comagents.commons.communication.BrokenConnectionRetry.runWithRetry;
 
 /**
  * One session's chat: a close private channel of the session's own client. Commands are blocking and throw on

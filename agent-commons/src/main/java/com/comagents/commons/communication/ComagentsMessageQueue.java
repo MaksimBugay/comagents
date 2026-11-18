@@ -1,6 +1,4 @@
-package com.comagents.agentproxy.communication;
-
-import jakarta.inject.Singleton;
+package com.comagents.commons.communication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,10 +6,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * The comagents messages waiting to go to orchestrators, in the order they came: one connection sends them one by
+ * The comagents messages waiting to go to other devices, in the order they came: one connection sends them one by
  * one, so a single {@link ComagentsQueueConsumer} takes them.
  */
-@Singleton
 public class ComagentsMessageQueue {
 
     // unbounded: adding never blocks, taking blocks until there is a message

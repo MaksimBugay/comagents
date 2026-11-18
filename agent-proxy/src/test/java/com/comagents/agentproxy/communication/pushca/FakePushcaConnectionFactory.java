@@ -6,6 +6,8 @@ import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
 import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
+import com.comagents.agentproxy.conf.PushcaConnectionFactoryProvider;
+import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
 import io.micronaut.context.annotation.Replaces;
 import jakarta.inject.Singleton;
 import org.mockito.invocation.InvocationOnMock;
@@ -26,7 +28,7 @@ import static org.mockito.Mockito.mock;
  * {@link #reset()} it, or create their own.
  */
 @Singleton
-@Replaces(PushcaConnectionFactory.class)
+@Replaces(bean = PushcaConnectionFactory.class, factory = PushcaConnectionFactoryProvider.class)
 public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
 
     public final List<FakeConnection> connections = new CopyOnWriteArrayList<>();
@@ -39,7 +41,7 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
     public volatile RuntimeException addMembersFailure;
 
     public FakePushcaConnectionFactory() {
-        super(null, Duration.ZERO);
+        super(null, null, Duration.ZERO);
     }
 
     /** Forgets what was sent so far and the failures set; the connections stay open. */

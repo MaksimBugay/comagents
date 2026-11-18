@@ -1,6 +1,8 @@
 package com.comagents.agentproxy.communication;
 
 import com.comagents.agentproxy.agent_response.AgentResponseService;
+import com.comagents.commons.communication.ComagentsBaseListener;
+import com.comagents.commons.communication.ComagentsMessageDeliveryService;
 import com.comagents.commons.request.AgentResponseRequest;
 import com.comagents.commons.response.AgentResponseReply;
 import jakarta.inject.Singleton;

@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.communication;
+package com.comagents.commons.communication;
 
 import bmv.org.pushca.client.exception.PushcaCommandException;
 import bmv.org.pushca.client.exception.WebsocketConnectionIsBrokenException;

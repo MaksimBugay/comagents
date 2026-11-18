@@ -1,14 +1,10 @@
-package com.comagents.agentproxy.communication.pushca;
+package com.comagents.commons.communication.pushca;
 
 import bmv.org.pushca.client.PushcaWebSocket;
 import bmv.org.pushca.client.PushcaWebSocketBuilder;
 import bmv.org.pushca.client.exception.PushcaAuthenticationException;
 import bmv.org.pushca.client.model.PClient;
 import bmv.org.pushca.core.ChannelMessage;
-import com.comagents.agentproxy.conf.AgentProxyConf;
-import io.micronaut.context.annotation.Primary;
-import io.micronaut.context.annotation.Value;
-import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,16 +14,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * Opens connections to the Pushca server ({@code pushca.api-url}) with the organization's API key
- * ({@code pushca.api-key}).
+ * Opens connections to the Pushca server at {@code apiUrl} with the organization's API key {@code apiKey}.
  */
-// @Primary for the IDE, which doesn't know @Replaces and also sees the tests' FakePushcaConnectionFactory
-@Primary
-@Singleton
 public class PushcaConnectionFactory {
 
     /** For a client that ignores what it receives: plain messages, channel messages, or both. */
-    static final Consumer<Object> IGNORE_MESSAGES = _ -> {
+    public static final Consumer<Object> IGNORE_MESSAGES = _ -> {
     };
 
     private static final Logger LOG = LoggerFactory.getLogger(PushcaConnectionFactory.class);
@@ -38,13 +30,14 @@ public class PushcaConnectionFactory {
     // sent by the server once the connection is registered and accepts commands
     private static final String READY_MESSAGE = "CONNECTION_ALIAS";
 
-    private final AgentProxyConf conf;
+    private final String apiUrl;
+    private final String apiKey;
     private final int connectTimeoutMs;
     private final Duration waitForReconnectTimeout;
 
-    public PushcaConnectionFactory(AgentProxyConf conf,
-                                   @Value("${pushca.connect-timeout:10s}") Duration connectTimeout) {
-        this.conf = conf;
+    public PushcaConnectionFactory(String apiUrl, String apiKey, Duration connectTimeout) {
+        this.apiUrl = apiUrl;
+        this.apiKey = apiKey;
         this.connectTimeoutMs = Math.toIntExact(connectTimeout.toMillis());
         // the next keep-alive check, the connect itself, and a second to spare
         this.waitForReconnectTimeout = KEEP_ALIVE_INTERVAL.plus(connectTimeout).plusSeconds(1);
@@ -56,20 +49,20 @@ public class PushcaConnectionFactory {
     }
 
     /**
-     * Signs {@code client} in and returns once its connection is open, or after {@code pushca.connect-timeout}. A
-     * connection that isn't open by then is returned all the same: the Pushca client signs in and reconnects by
-     * itself (every 2 s), and sends fail until it has.
+     * Signs {@code client} in and returns once its connection is open, or after the connect timeout. A connection
+     * that isn't open by then is returned all the same: the Pushca client signs in and reconnects by itself (every
+     * 2 s), and sends fail until it has.
      *
      * @param messages        receives the messages sent to the client, on the client's receiving thread
      * @param channelMessages receives the messages of the channels the client is a member of, on the client's
      *                        receiving thread
-     * @throws PushcaAuthenticationException when Pushca refuses the API key ({@code pushca.api-key}): a
-     *                                       configuration mistake that no retry fixes
+     * @throws PushcaAuthenticationException when Pushca refuses the API key: a configuration mistake that no retry
+     *                                       fixes
      */
     public PushcaWebSocket createConnection(PClient client, Consumer<? super String> messages,
                                             Consumer<? super ChannelMessage> channelMessages) {
         CountDownLatch ready = new CountDownLatch(1);
-        PushcaWebSocket webSocket = new PushcaWebSocketBuilder(conf.getPushcaApiUrl(), conf.getPushcaApiKey(), client, null)
+        PushcaWebSocket webSocket = new PushcaWebSocketBuilder(apiUrl, apiKey, client, null)
                 .withConnectTimeoutMs(connectTimeoutMs)
                 .withKeepAliveInterval(KEEP_ALIVE_INTERVAL)
                 .withMessageConsumer((_, message) -> {

@@ -5,7 +5,7 @@ import bmv.org.pushca.client.model.PClient;
 import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
 import com.comagents.agentproxy.communication.pushca.AgentSessionPrivateChannelWithPushcaService;
-import com.comagents.agentproxy.communication.pushca.PushcaConnectionFactory;
+import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
 import com.comagents.commons.domain.AiAgent;
 import io.micronaut.core.annotation.Nullable;
 import org.slf4j.Logger;

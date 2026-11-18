@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.communication;
+package com.comagents.commons.communication;
 
 import java.time.Instant;
 import java.util.concurrent.TimeoutException;

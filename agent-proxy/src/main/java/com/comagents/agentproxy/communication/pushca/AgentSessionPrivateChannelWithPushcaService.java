@@ -6,11 +6,12 @@ import bmv.org.pushca.client.model.PClient;
 import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
 import com.comagents.agentproxy.communication.AgentSessionPrivateChannelService;
+import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
 
 import java.time.Duration;
 import java.util.function.Consumer;
 
-import static com.comagents.agentproxy.communication.pushca.PushcaConnectionFactory.IGNORE_MESSAGES;
+import static com.comagents.commons.communication.pushca.PushcaConnectionFactory.IGNORE_MESSAGES;
 
 /**
  * One session's Pushca connection, signed in as {@code client}: its chat is a close private channel. Opened on

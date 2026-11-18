@@ -3,7 +3,7 @@ package com.comagents.agentproxy.agent_setup;
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionListener;
-import com.comagents.agentproxy.communication.pushca.PushcaConnectionFactory;
+import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
 import com.comagents.commons.domain.AiAgent;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.annotation.Nullable;
