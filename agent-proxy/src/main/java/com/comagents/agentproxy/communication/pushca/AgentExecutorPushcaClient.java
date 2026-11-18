@@ -28,8 +28,8 @@ import static com.comagents.agentproxy.communication.pushca.PushcaConnectionFact
  * {@link AgentProxyConf#getAiHarnessProvider()}) with the executor's device id ({@link AgentProxyConf#getDeviceId()}).
  * It passes the orchestrators' requests to the {@link ComagentsMessageListener}s, and sends the queued
  * {@link ComagentsMessage}s ({@link ComagentsMessageQueue}) one by one to the orchestrator device each is for. The
- * connection is opened once, on service startup, and kept. It is opened again only after an issue: when the startup
- * connect failed, or a send finds it broken (once per message).
+ * connection is opened once, on service startup, and kept: the Pushca client reconnects it by itself. It is opened
+ * here again only when the startup connect failed.
  */
 @Singleton
 public class AgentExecutorPushcaClient
@@ -98,27 +98,16 @@ public class AgentExecutorPushcaClient
     }
 
     /**
-     * Sends {@code message} to its orchestrator device over the kept connection; a broken connection is replaced
-     * once.
+     * Sends {@code message} to its orchestrator device over the kept connection.
      *
      * @throws IllegalStateException when Pushca can't be reached or refuses the message
      */
     @Override
     public synchronized void consume(QueuedComagentsMessage message) {
-        String messageString = message.message().toString();
-        ClientFilter orchestrator = orchestrator(message.orchestratorDeviceId());
-        boolean reused = connection != null;
-        try {
-            send(orchestrator, messageString);
-        } catch (RuntimeException e) {
-            closeConnection();
-            if (!reused) {
-                throw e;
-            }
-            // the kept connection may have broken meanwhile: one more try with a new one
-            LOG.warn("Pushca connection of executor {} broken ({}), reconnecting", client.deviceId, e.getMessage());
-            send(orchestrator, messageString);
+        if (connection == null) {
+            connect();
         }
+        connection.broadcastMessage(orchestrator(message.orchestratorDeviceId()), message.message().toString());
     }
 
     /**
@@ -151,14 +140,6 @@ public class AgentExecutorPushcaClient
     // client
     private static ClientFilter orchestrator(String orchestratorDeviceId) {
         return new ClientFilter(WORKSPACE_ID, ORCHESTRATOR_ACCOUNT_ID, orchestratorDeviceId, ORCHESTRATOR_APPLICATION_ID);
-    }
-
-    // over the kept connection; there is none only after an issue (startup connect failed, or it broke)
-    private void send(ClientFilter receivers, String message) {
-        if (connection == null) {
-            connect();
-        }
-        connection.broadcastMessage(receivers, message);
     }
 
     private void connect() {

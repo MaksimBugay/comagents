@@ -202,6 +202,7 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `PUSHCA_API_URL`              | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |
 | `PUSHCA_CHAT_URL`             | `https://secure.fileshare.ovh/chat-room.html` | Chat page; each new session chat is logged with its join link (`pushca.chat-url`) |
 | `PUSHCA_CONNECT_TIMEOUT`      | `10s`        | How long signing in, opening the socket and waiting for the server to accept commands may each take (`pushca.connect-timeout`) |
+| `AGENT_PROXY_RESPONSE_TIMEOUT` | `30s`      | How long a response (or error) for an orchestrator may take to be sent over Pushca; sends finding the connection broken are retried every second until then, and a message not sent by then is dropped with an error logged: the orchestrator has timed out meanwhile and asks again (`agent-proxy.response-timeout`) |
 | `AGENT_PROXY_MCP_URL`         | `http://127.0.0.1:8080/mcp` | Where Claude Code reaches agent-proxy's MCP server (`agent-proxy.mcp-url`); change it with the port |
 | `AGENT_QUESTION_ANSWER_TIMEOUT` | `4m`       | How long `ask_expert` waits for an answer; below 5 min, after which Claude Code aborts the call (`agent-question.answer-timeout`) |
 | `AGENT_PROXY_SESSIONS_DIR`    | `/var/lib/agent-proxy/sessions` | One folder per session (`agent-proxy.sessions-dir`); put it on a persistent volume |

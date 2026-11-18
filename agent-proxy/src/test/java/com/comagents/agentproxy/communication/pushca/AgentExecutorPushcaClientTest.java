@@ -1,6 +1,9 @@
 package com.comagents.agentproxy.communication.pushca;
 
+import bmv.org.pushca.client.exception.PushcaCommandException;
+import bmv.org.pushca.client.exception.WebsocketConnectionIsBrokenException;
 import com.comagents.agentproxy.communication.ComagentsMessageQueue;
+import com.comagents.agentproxy.communication.ComagentsQueueConsumer;
 import com.comagents.agentproxy.communication.QueuedComagentsMessage;
 import com.comagents.agentproxy.communication.QueuedResponseDeliveryService;
 import com.comagents.agentproxy.communication.ResponseDeliveryService;
@@ -20,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -38,7 +42,7 @@ class AgentExecutorPushcaClientTest {
     private final FakePushcaConnectionFactory connectionFactory = new FakePushcaConnectionFactory();
     private final ComagentsMessageQueue queue = new ComagentsMessageQueue();
     // deliveries go through the queue, which the client takes from
-    private final ResponseDeliveryService delivery = new QueuedResponseDeliveryService(queue);
+    private final ResponseDeliveryService delivery = new QueuedResponseDeliveryService(queue, Duration.ofSeconds(10));
     private final RecordingListener listener = new RecordingListener();
     private final AgentExecutorPushcaClient client = new AgentExecutorPushcaClient(connectionFactory, queue,
             List.of(listener), new AgentProxyConf("0.1", "https://github.com/acme/comagents.git", "token", "key",
@@ -81,38 +85,52 @@ class AgentExecutorPushcaClientTest {
     }
 
     @Test
-    void reconnectsOnceWhenTheKeptConnectionBroke() {
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
-        FakePushcaConnectionFactory.FakeConnection broken = connectionFactory.connections.getFirst();
-        broken.broadcastFailure = new IllegalStateException("Web socket connection is broken");
+    void retriesEverySecondOnTheSameConnectionUntilItWorksAgain() {
+        client.open();
+        FakePushcaConnectionFactory.FakeConnection connection = connectionFactory.connections.getFirst();
+        connection.broadcastFailure = new WebsocketConnectionIsBrokenException(new IllegalStateException("no ack"));
+        // the Pushca client reconnects by itself meanwhile
+        Thread.ofVirtual().start(() -> {
+            sleep(Duration.ofMillis(1500));
+            connection.broadcastFailure = null;
+        });
 
+        long start = System.nanoTime();
         delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
 
-        assertTrue(broken.closed);
-        assertEquals(2, connectionFactory.connections.size());
-        FakePushcaConnectionFactory.FakeConnection reconnected = connectionFactory.connections.get(1);
-        assertEquals(1, reconnected.broadcasts.size());
-        ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(reconnected.broadcasts.getFirst().message());
+        assertTrue(Duration.ofNanos(System.nanoTime() - start).compareTo(Duration.ofMillis(1500)) >= 0,
+                "sent after the connection came back");
+        assertEquals(1, connectionFactory.connections.size(), "the same connection");
+        ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(connection.broadcasts.getFirst().message());
         assertEquals(RESPONSE, message.comagentsMessagePayload().payload());
     }
 
     @Test
-    void failsWhenReconnectingFailsTooAndConnectsAgainOnTheNextDelivery() {
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
-        FakePushcaConnectionFactory.FakeConnection broken = connectionFactory.connections.getFirst();
-        broken.broadcastFailure = new IllegalStateException("Web socket connection is broken");
-        IllegalStateException unreachable = new IllegalStateException("Pushca unreachable");
-        connectionFactory.connectFailure = unreachable;
+    void dropsTheMessageWhenTheConnectionStaysBrokenUntilTheResponseTimeout() {
+        ResponseDeliveryService shortDelivery = new QueuedResponseDeliveryService(queue, Duration.ofMillis(2500));
+        client.open();
+        FakePushcaConnectionFactory.FakeConnection connection = connectionFactory.connections.getFirst();
+        connection.broadcastFailure = new IllegalStateException(ComagentsQueueConsumer.BROKEN_CONNECTION_MESSAGE);
 
-        assertSame(unreachable, assertThrows(IllegalStateException.class,
+        long start = System.nanoTime();
+        shortDelivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
+
+        // returns without an exception (an error is logged): the orchestrator times out itself and asks again
+        assertTrue(Duration.ofNanos(System.nanoTime() - start).compareTo(Duration.ofSeconds(4)) < 0);
+        connection.broadcastFailure = null;
+        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-2", RESPONSE);
+        assertEquals(1, connection.broadcasts.size(), "the dropped message is never sent");
+        assertEquals("sequence-2", sentMessage(0).id());
+    }
+
+    @Test
+    void doesNotRetryWhatPushcaRejects() {
+        client.open();
+        PushcaCommandException rejected = new PushcaCommandException("Send message", "no such receiver");
+        connectionFactory.connections.getFirst().broadcastFailure = rejected;
+
+        assertSame(rejected, assertThrows(PushcaCommandException.class,
                 () -> delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE)));
-        assertTrue(broken.closed);
-
-        connectionFactory.connectFailure = null;
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
-
-        assertEquals(2, connectionFactory.connections.size());
-        assertEquals(1, connectionFactory.connections.get(1).broadcasts.size());
     }
 
     @Test
@@ -172,7 +190,7 @@ class AgentExecutorPushcaClientTest {
     void closingFailsTheMessagesStillQueued() {
         client.close();
         QueuedComagentsMessage waiting = new QueuedComagentsMessage("orchestrator-device-1",
-                ComagentsMessage.ofPayload("sequence-1", RESPONSE, AgentContext.class));
+                ComagentsMessage.ofPayload("sequence-1", RESPONSE, AgentContext.class), Instant.now().plusSeconds(10));
         queue.put(waiting);
 
         client.close();
@@ -194,6 +212,14 @@ class AgentExecutorPushcaClientTest {
     @SuppressWarnings("SameParameterValue")
     private ComagentsMessage sentMessage(int index) {
         return ComagentsMessage.fromComagentsMessageString(connectionFactory.connections.getFirst().broadcasts.get(index).message());
+    }
+
+    private static void sleep(Duration duration) {
+        try {
+            Thread.sleep(duration);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static final class RecordingListener implements ComagentsMessageListener<AgentContext> {
