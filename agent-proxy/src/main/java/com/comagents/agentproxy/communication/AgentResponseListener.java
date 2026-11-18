@@ -17,8 +17,8 @@ public class AgentResponseListener extends ComagentsBaseListener<AgentResponseRe
     private final AgentResponseService agentResponseService;
 
     public AgentResponseListener(AgentResponseService agentResponseService,
-                                 ResponseDeliveryService responseDeliveryService) {
-        super(responseDeliveryService);
+                                 ComagentsMessageDeliveryService messageDeliveryService) {
+        super(messageDeliveryService);
         this.agentResponseService = agentResponseService;
     }
 

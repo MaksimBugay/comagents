@@ -5,8 +5,8 @@ import bmv.org.pushca.client.exception.WebsocketConnectionIsBrokenException;
 import bmv.org.pushca.client.exception.WebsocketConnectionIsNotOpenException;
 import com.comagents.agentproxy.communication.ComagentsMessageQueue;
 import com.comagents.agentproxy.communication.QueuedComagentsMessage;
-import com.comagents.agentproxy.communication.QueuedResponseDeliveryService;
-import com.comagents.agentproxy.communication.ResponseDeliveryService;
+import com.comagents.agentproxy.communication.QueuedComagentsMessageDeliveryService;
+import com.comagents.agentproxy.communication.ComagentsMessageDeliveryService;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.conf.DeviceIdExtractor;
 import com.comagents.commons.communication.ComagentsMessage;
@@ -42,7 +42,8 @@ class AgentExecutorPushcaClientTest {
     private final FakePushcaConnectionFactory connectionFactory = new FakePushcaConnectionFactory();
     private final ComagentsMessageQueue queue = new ComagentsMessageQueue();
     // deliveries go through the queue, which the client takes from
-    private final ResponseDeliveryService delivery = new QueuedResponseDeliveryService(queue, Duration.ofSeconds(10));
+    private final ComagentsMessageDeliveryService delivery =
+            new QueuedComagentsMessageDeliveryService(queue, Duration.ofSeconds(10));
     private final RecordingListener listener = new RecordingListener();
     private final AgentExecutorPushcaClient client = new AgentExecutorPushcaClient(connectionFactory, queue,
             List.of(listener), new AgentProxyConf("0.1", "https://github.com/acme/comagents.git", "token", "key",
@@ -64,8 +65,8 @@ class AgentExecutorPushcaClientTest {
     @Test
     void connectsOnceAtStartupAndKeepsTheConnection() {
         assertEquals(1, connectionFactory.connections.size(), "opened at startup");
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
+        delivery.deliverToDevice("orchestrator-device-1", "sequence-1", RESPONSE);
+        delivery.deliverToDevice("orchestrator-device-1", "sequence-1", RESPONSE);
 
         assertEquals(1, connectionFactory.connections.size(), "never opened again while it works");
         assertEquals(2, connectionFactory.connections.getFirst().broadcasts.size());
@@ -82,7 +83,7 @@ class AgentExecutorPushcaClientTest {
         });
 
         long start = System.nanoTime();
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
+        delivery.deliverToDevice("orchestrator-device-1", "sequence-1", RESPONSE);
 
         assertTrue(Duration.ofNanos(System.nanoTime() - start).compareTo(Duration.ofMillis(1500)) >= 0,
                 "sent after the connection came back");
@@ -92,18 +93,19 @@ class AgentExecutorPushcaClientTest {
     }
 
     @Test
-    void dropsTheMessageWhenTheConnectionStaysBrokenUntilTheResponseTimeout() {
-        ResponseDeliveryService shortDelivery = new QueuedResponseDeliveryService(queue, Duration.ofMillis(2500));
+    void dropsTheMessageWhenTheConnectionStaysBrokenUntilTheMessageTimeout() {
+        ComagentsMessageDeliveryService shortDelivery =
+                new QueuedComagentsMessageDeliveryService(queue, Duration.ofMillis(2500));
         FakePushcaConnectionFactory.FakeConnection connection = connectionFactory.connections.getFirst();
         connection.broadcastFailure = new WebsocketConnectionIsNotOpenException();
 
         long start = System.nanoTime();
-        shortDelivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
+        shortDelivery.deliverToDevice("orchestrator-device-1", "sequence-1", RESPONSE);
 
         // returns without an exception (an error is logged): the orchestrator times out itself and asks again
         assertTrue(Duration.ofNanos(System.nanoTime() - start).compareTo(Duration.ofSeconds(4)) < 0);
         connection.broadcastFailure = null;
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-2", RESPONSE);
+        delivery.deliverToDevice("orchestrator-device-1", "sequence-2", RESPONSE);
         assertEquals(1, connection.broadcasts.size(), "the dropped message is never sent");
         assertEquals("sequence-2", sentMessage(0).id());
     }
@@ -114,12 +116,12 @@ class AgentExecutorPushcaClientTest {
         connectionFactory.connections.getFirst().broadcastFailure = rejected;
 
         assertSame(rejected, assertThrows(PushcaCommandException.class,
-                () -> delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE)));
+                () -> delivery.deliverToDevice("orchestrator-device-1", "sequence-1", RESPONSE)));
     }
 
     @Test
     void theMessageIdIsTheGivenSequenceId() {
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
+        delivery.deliverToDevice("orchestrator-device-1", "sequence-1", RESPONSE);
 
         assertEquals("sequence-1", sentMessage(0).id());
     }
@@ -130,7 +132,7 @@ class AgentExecutorPushcaClientTest {
                 AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-device-1", "MBugai"), RESPONSE, 1L,
                 "executor-device-1");
 
-        delivery.deliverToOrchestrator("orchestrator-device-1", response);
+        delivery.deliverToDevice("orchestrator-device-1", response);
 
         assertEquals("sequence-1", sentMessage(0).id());
     }
@@ -138,8 +140,8 @@ class AgentExecutorPushcaClientTest {
     @Test
     void aBlankSequenceIdIsRejected() {
         assertThrows(IllegalArgumentException.class,
-                () -> delivery.deliverToOrchestrator("orchestrator-device-1", " ", RESPONSE));
-        assertThrows(IllegalArgumentException.class, () -> delivery.deliverErrorToOrchestrator("orchestrator-device-1",
+                () -> delivery.deliverToDevice("orchestrator-device-1", " ", RESPONSE));
+        assertThrows(IllegalArgumentException.class, () -> delivery.deliverErrorToDevice("orchestrator-device-1",
                 " ", AgentInfo.class, new IllegalStateException("agent failed")));
 
         assertTrue(connectionFactory.connections.getFirst().broadcasts.isEmpty());
@@ -147,7 +149,7 @@ class AgentExecutorPushcaClientTest {
 
     @Test
     void deliversAnErrorInPlaceOfTheResponseWithTheRequestsSequenceId() {
-        delivery.deliverErrorToOrchestrator("orchestrator-device-1", "sequence-1", AgentInfo.class,
+        delivery.deliverErrorToDevice("orchestrator-device-1", "sequence-1", AgentInfo.class,
                 new IllegalStateException("agent failed"));
 
         ComagentsMessage message = sentMessage(0);

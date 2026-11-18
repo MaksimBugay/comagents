@@ -41,7 +41,7 @@ The same API works over Pushca, between orchestrators and the agent executor (th
 
 Every message to an orchestrator (replies, errors, and the `AgentSessionResponse` sent once a response is on disk)
 goes through one queue and over the one connection, one by one. A send that finds the connection broken is retried
-every second until `AGENT_PROXY_RESPONSE_TIMEOUT` (30 s) has passed since it was queued; a message not sent by then is
+every second until `AGENT_PROXY_MESSAGE_TIMEOUT` (30 s) has passed since it was queued; a message not sent by then is
 dropped with an error logged, and the orchestrator, which has timed out meanwhile, asks again.
 
 ### Session chat
@@ -228,7 +228,7 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `PUSHCA_API_URL`              | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |
 | `PUSHCA_CHAT_URL`             | `https://secure.fileshare.ovh/chat-room.html` | Chat page; each new session chat is logged with its join link (`pushca.chat-url`) |
 | `PUSHCA_CONNECT_TIMEOUT`      | `10s`        | How long signing in, opening the socket and waiting for the server to accept commands may each take (`pushca.connect-timeout`). Session chat commands on a broken connection are retried for this long plus the 2 s keep-alive interval plus 1 s: the time the Pushca client takes to reconnect by itself |
-| `AGENT_PROXY_RESPONSE_TIMEOUT` | `30s`      | How long a response (or error) for an orchestrator may take to be sent over Pushca; sends finding the connection broken are retried every second until then, and a message not sent by then is dropped with an error logged: the orchestrator has timed out meanwhile and asks again (`agent-proxy.response-timeout`) |
+| `AGENT_PROXY_MESSAGE_TIMEOUT` | `30s`      | How long a message (payload or error) for another device may take to be sent over Pushca; sends finding the connection broken are retried every second until then, and a message not sent by then is dropped with an error logged: the orchestrator has timed out meanwhile and asks again (`agent-proxy.message-timeout`) |
 | `AGENT_PROXY_MCP_URL`         | `http://127.0.0.1:8080/mcp` | Where Claude Code reaches agent-proxy's MCP server (`agent-proxy.mcp-url`); change it with the port |
 | `AGENT_QUESTION_ANSWER_TIMEOUT` | `4m`       | How long `ask_expert` waits for an answer; below 5 min, after which Claude Code aborts the call (`agent-question.answer-timeout`) |
 | `AGENT_PROXY_SESSIONS_DIR`    | `/var/lib/agent-proxy/sessions` | One folder per session (`agent-proxy.sessions-dir`); put it on a persistent volume |

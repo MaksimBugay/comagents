@@ -15,8 +15,8 @@ public class AgentStatusListener extends ComagentsBaseListener<AgentStatusReques
     private final AgentStatusService agentStatusService;
 
     public AgentStatusListener(AgentStatusService agentStatusService,
-                               ResponseDeliveryService responseDeliveryService) {
-        super(responseDeliveryService);
+                               ComagentsMessageDeliveryService messageDeliveryService) {
+        super(messageDeliveryService);
         this.agentStatusService = agentStatusService;
     }
 

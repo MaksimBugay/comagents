@@ -15,8 +15,8 @@ public class StartAgentSessionListener extends ComagentsBaseListener<StartAgentS
     private final AgentSessionStarter agentSessionStarter;
 
     public StartAgentSessionListener(AgentSessionStarter agentSessionStarter,
-                                     ResponseDeliveryService responseDeliveryService) {
-        super(responseDeliveryService);
+                                     ComagentsMessageDeliveryService messageDeliveryService) {
+        super(messageDeliveryService);
         this.agentSessionStarter = agentSessionStarter;
     }
 

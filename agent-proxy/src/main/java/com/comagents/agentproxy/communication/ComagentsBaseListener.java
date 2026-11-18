@@ -17,10 +17,10 @@ public abstract class ComagentsBaseListener<T extends WithOrchestratorDeviceId, 
 
     private static final Logger LOG = LoggerFactory.getLogger(ComagentsBaseListener.class);
 
-    private final ResponseDeliveryService responseDeliveryService;
+    private final ComagentsMessageDeliveryService messageDeliveryService;
 
-    protected ComagentsBaseListener(ResponseDeliveryService responseDeliveryService) {
-        this.responseDeliveryService = responseDeliveryService;
+    protected ComagentsBaseListener(ComagentsMessageDeliveryService messageDeliveryService) {
+        this.messageDeliveryService = messageDeliveryService;
     }
 
     // the message's sequence id is the request's: ComagentsMessageDispatcher checked it
@@ -32,11 +32,11 @@ public abstract class ComagentsBaseListener<T extends WithOrchestratorDeviceId, 
         } catch (RuntimeException e) {
             LOG.warn("{} {} of orchestrator device {} failed: {}", getPayloadClass().getSimpleName(), sequenceId,
                     request.orchestratorDeviceId(), e.getMessage());
-            responseDeliveryService.deliverErrorToOrchestrator(request.orchestratorDeviceId(), sequenceId,
+            messageDeliveryService.deliverErrorToDevice(request.orchestratorDeviceId(), sequenceId,
                     getResponseClass(), e);
             return;
         }
-        responseDeliveryService.deliverToOrchestrator(request.orchestratorDeviceId(), sequenceId, response);
+        messageDeliveryService.deliverToDevice(request.orchestratorDeviceId(), sequenceId, response);
     }
 
     /** The class of the response, which an error replaces in the message. */
