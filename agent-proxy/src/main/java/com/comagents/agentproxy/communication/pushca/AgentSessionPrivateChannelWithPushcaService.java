@@ -7,6 +7,7 @@ import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
 import com.comagents.agentproxy.communication.AgentSessionPrivateChannelService;
 
+import java.time.Duration;
 import java.util.function.Consumer;
 
 import static com.comagents.agentproxy.communication.pushca.PushcaConnectionFactory.IGNORE_MESSAGES;
@@ -18,6 +19,7 @@ import static com.comagents.agentproxy.communication.pushca.PushcaConnectionFact
 public class AgentSessionPrivateChannelWithPushcaService implements AgentSessionPrivateChannelService, AutoCloseable {
 
     private final PushcaWebSocket webSocket;
+    private final Duration retryTimeout;
 
     /**
      * Signs {@code client} in and returns once its connection is open, or after the connect timeout; until it is
@@ -25,10 +27,13 @@ public class AgentSessionPrivateChannelWithPushcaService implements AgentSession
      *
      * @param channelMessages receives the messages of the session's chat, on the client's receiving thread
      */
-    public AgentSessionPrivateChannelWithPushcaService(PushcaConnectionFactory connectionFactory, PClient client,
+    public AgentSessionPrivateChannelWithPushcaService(PushcaConnectionFactory connectionFactory,
+                                                       PClient client,
                                                        Consumer<ChannelMessage> channelMessages) {
         // a session's client gets only chat messages
         this.webSocket = connectionFactory.createConnection(client, IGNORE_MESSAGES, channelMessages);
+        // as long as a broken connection takes to be open again
+        this.retryTimeout = connectionFactory.getWaitForReconnectTimeout();
     }
 
     @Override
@@ -50,6 +55,11 @@ public class AgentSessionPrivateChannelWithPushcaService implements AgentSession
     @Override
     public void removeChannel(PChannel channel) {
         webSocket.removeChannel(channel);
+    }
+
+    @Override
+    public Duration getRetryTimeout() {
+        return retryTimeout;
     }
 
     @Override

@@ -1,16 +1,10 @@
 package com.comagents.agentproxy.communication;
 
-import bmv.org.pushca.client.exception.WebsocketConnectionIsBrokenException;
-import bmv.org.pushca.client.exception.WebsocketConnectionIsNotOpenException;
-
-import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeoutException;
 
 /** Sends the {@link ComagentsMessageQueue}'s messages, one by one in queue order. */
 public interface ComagentsQueueConsumer {
-
-    Duration RETRY_INTERVAL = Duration.ofSeconds(1);
 
     /**
      * Sends {@code message} once; blocks until it is sent.
@@ -26,21 +20,7 @@ public interface ComagentsQueueConsumer {
      * @throws RuntimeException when it can't be sent: the last failure, a broken connection's once it expired
      */
     default void consumeWithRetry(QueuedComagentsMessage message) {
-        while (true) {
-            try {
-                consume(message);
-                return;
-            } catch (RuntimeException e) {
-                if (!isBrokenConnection(e)) {
-                    throw e;
-                }
-                pause();
-                // nobody waits for it any more
-                if (message.isExpired(Instant.now())) {
-                    throw e;
-                }
-            }
-        }
+        BrokenConnectionRetry.runWithRetry(() -> consume(message), message.expiresAt());
     }
 
     /**
@@ -66,21 +46,6 @@ public interface ComagentsQueueConsumer {
             } catch (RuntimeException e) {
                 message.sent().completeExceptionally(e);
             }
-        }
-    }
-
-    // what the Pushca client throws for a send on a broken connection: not open, or not acknowledged by Pushca
-    private static boolean isBrokenConnection(RuntimeException e) {
-        return e instanceof WebsocketConnectionIsNotOpenException || e instanceof WebsocketConnectionIsBrokenException;
-    }
-
-    private static void pause() {
-        try {
-            Thread.sleep(RETRY_INTERVAL);
-        } catch (InterruptedException e) {
-            // closed meanwhile
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while waiting for the connection", e);
         }
     }
 }

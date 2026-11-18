@@ -73,9 +73,9 @@ final class AgentSessionWsClient {
             LOG.info("[{}] chat {} reopened, join: {}", sessionId, channelName, joinUrl);
             return;
         }
-        channel = connection.createClosePrivateChannel(channelName);
+        channel = connection.createClosePrivateChannelWithRetry(channelName);
         if (actor != null) {
-            connection.addMembers(channel, actor);
+            connection.addMembersWithRetry(channel, actor);
         }
         LOG.info("[{}] chat {} created, join: {}", sessionId, channelName, joinUrl);
     }
@@ -108,7 +108,7 @@ final class AgentSessionWsClient {
         sender.shutdownNow();
         if (connection != null && channel != null) {
             try {
-                connection.removeChannel(channel);
+                connection.removeChannelWithRetry(channel);
                 LOG.info("[{}] chat {} removed", sessionId, channelName);
             } catch (RuntimeException e) {
                 LOG.warn("[{}] cannot remove chat {}: {}", sessionId, channelName, e.getMessage());
@@ -131,7 +131,7 @@ final class AgentSessionWsClient {
             return;
         }
         try {
-            connection.sendMessage(channel, message);
+            connection.sendMessageWithRetry(channel, message);
             sendFailing = false;
         } catch (RuntimeException e) {
             if (!sendFailing) {

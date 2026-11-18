@@ -40,11 +40,19 @@ public class PushcaConnectionFactory {
 
     private final AgentProxyConf conf;
     private final int connectTimeoutMs;
+    private final Duration waitForReconnectTimeout;
 
     public PushcaConnectionFactory(AgentProxyConf conf,
                                    @Value("${pushca.connect-timeout:10s}") Duration connectTimeout) {
         this.conf = conf;
         this.connectTimeoutMs = Math.toIntExact(connectTimeout.toMillis());
+        // the next keep-alive check, the connect itself, and a second to spare
+        this.waitForReconnectTimeout = KEEP_ALIVE_INTERVAL.plus(connectTimeout).plusSeconds(1);
+    }
+
+    /** How long a broken connection takes at most to be open again: the Pushca client reconnects it by itself. */
+    public Duration getWaitForReconnectTimeout() {
+        return waitForReconnectTimeout;
     }
 
     /**
