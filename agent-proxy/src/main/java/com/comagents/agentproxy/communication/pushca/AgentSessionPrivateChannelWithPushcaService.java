@@ -9,6 +9,8 @@ import com.comagents.agentproxy.communication.AgentSessionPrivateChannelService;
 
 import java.util.function.Consumer;
 
+import static com.comagents.agentproxy.communication.pushca.PushcaConnectionFactory.IGNORE_MESSAGES;
+
 /**
  * One session's Pushca connection, signed in as {@code client}: its chat is a close private channel. Opened on
  * creation; {@link #close()} closes it.
@@ -26,8 +28,7 @@ public class AgentSessionPrivateChannelWithPushcaService implements AgentSession
     public AgentSessionPrivateChannelWithPushcaService(PushcaConnectionFactory connectionFactory, PClient client,
                                                        Consumer<ChannelMessage> channelMessages) {
         // a session's client gets only chat messages
-        this.webSocket = connectionFactory.createConnection(client, _ -> {
-        }, channelMessages);
+        this.webSocket = connectionFactory.createConnection(client, IGNORE_MESSAGES, channelMessages);
     }
 
     @Override

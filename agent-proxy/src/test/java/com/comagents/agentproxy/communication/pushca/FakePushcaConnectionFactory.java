@@ -45,8 +45,8 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
     }
 
     @Override
-    public PushcaWebSocket createConnection(PClient client, Consumer<String> messages,
-                                            Consumer<ChannelMessage> channelMessages) {
+    public PushcaWebSocket createConnection(PClient client, Consumer<? super String> messages,
+                                            Consumer<? super ChannelMessage> channelMessages) {
         if (connectFailure != null) {
             throw connectFailure;
         }
@@ -72,12 +72,12 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
         public volatile RuntimeException broadcastFailure;
         public volatile boolean closed;
         private final RuntimeException addMembersFailure;
-        private final Consumer<String> incomingMessages;
-        private final Consumer<ChannelMessage> channelMessages;
+        private final Consumer<? super String> incomingMessages;
+        private final Consumer<? super ChannelMessage> channelMessages;
         private final PushcaWebSocket webSocket;
 
-        private FakeConnection(PClient client, RuntimeException addMembersFailure, Consumer<String> incomingMessages,
-                               Consumer<ChannelMessage> channelMessages) {
+        private FakeConnection(PClient client, RuntimeException addMembersFailure, Consumer<? super String> incomingMessages,
+                               Consumer<? super ChannelMessage> channelMessages) {
             this.client = client;
             this.addMembersFailure = addMembersFailure;
             this.incomingMessages = incomingMessages;

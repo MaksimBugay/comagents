@@ -23,6 +23,10 @@ import java.util.function.Consumer;
 @Singleton
 public class PushcaConnectionFactory {
 
+    /** For a client that ignores what it receives: plain messages, channel messages, or both. */
+    public static final Consumer<Object> IGNORE_MESSAGES = _ -> {
+    };
+
     // sent by the server once the connection is registered and accepts commands
     private static final String READY_MESSAGE = "CONNECTION_ALIAS";
 
@@ -43,8 +47,8 @@ public class PushcaConnectionFactory {
      *                        receiving thread
      * @throws IllegalStateException when the connection cannot be opened
      */
-    public PushcaWebSocket createConnection(PClient client, Consumer<String> messages,
-                                            Consumer<ChannelMessage> channelMessages) {
+    public PushcaWebSocket createConnection(PClient client, Consumer<? super String> messages,
+                                            Consumer<? super ChannelMessage> channelMessages) {
         CountDownLatch ready = new CountDownLatch(1);
         PushcaWebSocket webSocket = new PushcaWebSocketBuilder(conf.getPushcaApiUrl(), conf.getPushcaApiKey(), client, null)
                 .withConnectTimeoutMs(connectTimeoutMs)

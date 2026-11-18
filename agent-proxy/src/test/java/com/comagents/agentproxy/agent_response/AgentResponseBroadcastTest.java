@@ -64,11 +64,11 @@ class AgentResponseBroadcastTest {
     @Inject
     FakePushcaConnectionFactory connectionFactory;
 
-    // the executor's client connected on startup, and earlier tests used the fake; closed and forgotten, the
+    // the executor's client connected on startup, and earlier tests used the fake; disconnected and forgotten, the
     // delivery connects anew
     @BeforeEach
-    void closeExecutorClient() {
-        executorClient.close();
+    void disconnectExecutorClient() {
+        executorClient.disconnect();
         connectionFactory.reset();
     }
 
