@@ -1,14 +1,15 @@
 package com.comagents.agentproxy;
 
 import com.comagents.agentproxy.agent_response.AgentResponseService;
-import com.comagents.agentproxy.agent_status.AgentStatusService;
-import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.agentproxy.agent_response.AgentResponseUnavailableException;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.response.AgentResponseUnavailable;
-import com.comagents.commons.response.AgentStatus;
+import com.comagents.commons.response.AgentSessionResponse;
+import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.Error;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.exceptions.HttpStatusException;
@@ -21,11 +22,9 @@ import java.util.UUID;
 public class AgentResponseController {
 
     private final AgentResponseService agentResponseService;
-    private final AgentStatusService agentStatusService;
 
-    public AgentResponseController(AgentResponseService agentResponseService, AgentStatusService agentStatusService) {
+    public AgentResponseController(AgentResponseService agentResponseService) {
         this.agentResponseService = agentResponseService;
-        this.agentStatusService = agentStatusService;
     }
 
     /**
@@ -35,18 +34,15 @@ public class AgentResponseController {
     // reads the response file (blocking I/O), which must not run on the Netty event loop
     @Get("/{agentName}/{sessionId}")
     @ExecuteOn(TaskExecutors.BLOCKING)
-    public HttpResponse<?> agentResponse(@PathVariable String agentName, @PathVariable UUID sessionId) {
+    public AgentSessionResponse agentResponse(@PathVariable String agentName, @PathVariable UUID sessionId) {
         AiAgent agent = AiAgent.fromAgentName(agentName)
                 .orElseThrow(() -> new HttpStatusException(HttpStatus.NOT_FOUND, "Unknown agent: " + agentName));
-        return agentResponseService.findResponse(agent, sessionId)
-                .<HttpResponse<?>>map(HttpResponse::ok)
-                .orElseGet(() -> HttpResponse.notFound(unavailable(agent, sessionId)));
+        return agentResponseService.getResponse(agent, sessionId);
     }
 
-    private AgentResponseUnavailable unavailable(AiAgent agent, UUID sessionId) {
-        AgentSessionState state = agentStatusService.findStatus(agent, sessionId).map(AgentStatus::state).orElse(null);
-        String reason = state == null ? "session not found (never started, or already cleaned up)" : "session is " + state;
-        return new AgentResponseUnavailable(
-                "No response from agent " + agent.getAgentName() + " for session " + sessionId + ": " + reason, state);
+    @Error(exception = AgentResponseUnavailableException.class)
+    public HttpResponse<AgentResponseUnavailable> responseUnavailable(HttpRequest<?> ignoredRequest,
+                                                                      AgentResponseUnavailableException e) {
+        return HttpResponse.notFound(e.getUnavailable());
     }
 }

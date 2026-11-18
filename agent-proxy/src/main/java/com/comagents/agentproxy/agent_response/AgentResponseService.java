@@ -2,6 +2,7 @@ package com.comagents.agentproxy.agent_response;
 
 import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
+import com.comagents.agentproxy.agent_status.AgentStatusService;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -9,7 +10,9 @@ import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.AgentContext;
 import com.comagents.commons.request.StartAgentSessionRequest;
+import com.comagents.commons.response.AgentResponseUnavailable;
 import com.comagents.commons.response.AgentSessionResponse;
+import com.comagents.commons.response.AgentStatus;
 import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.scheduling.TaskExecutors;
@@ -42,21 +45,34 @@ public class AgentResponseService {
     private static final Logger LOG = LoggerFactory.getLogger(AgentResponseService.class);
 
     private final AgentSetupServices agentSetupServices;
+    private final AgentStatusService agentStatusService;
     private final SessionFolders sessionFolders;
     private final TaskScheduler taskScheduler;
     private final Duration cleanupDelay;
     private final String deviceId;
     private final Set<UUID> scheduledCleanups = ConcurrentHashMap.newKeySet();
 
-    public AgentResponseService(AgentSetupServices agentSetupServices, SessionFolders sessionFolders,
+    public AgentResponseService(AgentSetupServices agentSetupServices, AgentStatusService agentStatusService,
+                                SessionFolders sessionFolders,
                                 @Named(TaskExecutors.SCHEDULED) TaskScheduler taskScheduler,
                                 @Value("${agent-response.cleanup-delay:5m}") Duration cleanupDelay,
                                 AgentProxyConf agentProxyConf) {
         this.agentSetupServices = agentSetupServices;
+        this.agentStatusService = agentStatusService;
         this.sessionFolders = sessionFolders;
         this.taskScheduler = taskScheduler;
         this.cleanupDelay = cleanupDelay;
         this.deviceId = agentProxyConf.getDeviceId();
+    }
+
+    /**
+     * {@link #findResponse}, or why there is none.
+     *
+     * @throws AgentResponseUnavailableException when there is no response; its state tells whether one may still come
+     */
+    public AgentSessionResponse getResponse(AiAgent agent, UUID sessionId) {
+        return findResponse(agent, sessionId)
+                .orElseThrow(() -> new AgentResponseUnavailableException(unavailable(agent, sessionId)));
     }
 
     /**
@@ -85,6 +101,15 @@ public class AgentResponseService {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read " + responseFile, e);
         }
+    }
+
+    private AgentResponseUnavailable unavailable(AiAgent agent, UUID sessionId) {
+        AgentSessionState state = agentStatusService.findStatus(agent, sessionId).map(AgentStatus::state).orElse(null);
+        String reason = state == null
+                ? "session not found (never started, or already cleaned up)"
+                : "session is " + state;
+        return new AgentResponseUnavailable(
+                "No response from agent " + agent.getAgentName() + " for session " + sessionId + ": " + reason, state);
     }
 
     private static StartAgentSessionRequest request(AiAgent agent, AgentSessionAttributes attributes) {

@@ -11,9 +11,11 @@ import com.comagents.commons.domain.agent_context.AgentContextItemType;
 import com.comagents.commons.domain.agent_context.FileAgentContextItem;
 import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextItem;
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;
+import com.comagents.commons.request.AgentResponseRequest;
 import com.comagents.commons.request.AgentStatusRequest;
 import com.comagents.commons.request.StartAgentSessionRequest;
 import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentResponseReply;
 import com.comagents.commons.response.AgentResponseUnavailable;
 import com.comagents.commons.response.AgentSessionResponse;
 import com.comagents.commons.response.AgentStatus;
@@ -29,10 +31,12 @@ import io.micronaut.core.annotation.Introspected;
 @Introspected(classes = {
         StartAgentSessionRequest.class,
         AgentStatusRequest.class,
+        AgentResponseRequest.class,
         AgentSessionResponse.class,
         AgentStatus.class,
         AgentStatusResponse.class,
         AgentInfo.class,
+        AgentResponseReply.class,
         AgentResponseUnavailable.class,
         AiAgent.class,
         AgentSessionState.class,
