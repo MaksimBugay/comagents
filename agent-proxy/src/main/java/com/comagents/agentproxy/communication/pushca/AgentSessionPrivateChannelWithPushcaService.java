@@ -20,10 +20,10 @@ public class AgentSessionPrivateChannelWithPushcaService implements AgentSession
     private final PushcaWebSocket webSocket;
 
     /**
-     * Signs {@code client} in and returns once its connection is open.
+     * Signs {@code client} in and returns once its connection is open, or after the connect timeout; until it is
+     * open, the commands fail.
      *
      * @param channelMessages receives the messages of the session's chat, on the client's receiving thread
-     * @throws IllegalStateException when the connection cannot be opened
      */
     public AgentSessionPrivateChannelWithPushcaService(PushcaConnectionFactory connectionFactory, PClient client,
                                                        Consumer<ChannelMessage> channelMessages) {

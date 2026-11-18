@@ -1,9 +1,9 @@
 package com.comagents.agentproxy.agent_response;
 
+import bmv.org.pushca.client.exception.PushcaCommandException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
-import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
@@ -52,9 +52,6 @@ class AgentResponseBroadcastTest {
     AgentResponseBroadcast broadcast;
 
     @Inject
-    AgentExecutorPushcaClient executorClient;
-
-    @Inject
     ClaudeAgentSessionRegistry registry;
 
     @Inject
@@ -64,11 +61,9 @@ class AgentResponseBroadcastTest {
     @Inject
     FakePushcaConnectionFactory connectionFactory;
 
-    // the executor's client connected on startup, and earlier tests used the fake; disconnected and forgotten, the
-    // delivery connects anew
+    // the executor's connection, opened on startup, stays; what earlier tests sent is forgotten
     @BeforeEach
-    void disconnectExecutorClient() {
-        executorClient.disconnect();
+    void resetPushca() {
         connectionFactory.reset();
     }
 
@@ -113,11 +108,13 @@ class AgentResponseBroadcastTest {
     void responseThatCannotBeSentStaysToBeFetched() throws Exception {
         startSession();
         writeAllGoodResponse();
-        connectionFactory.connectFailure = new IllegalStateException("Pushca unreachable");
+        FakePushcaConnectionFactory.FakeConnection executor = connectionFactory.connections.getFirst();
+        // refused, as by Pushca: not retried
+        executor.broadcastFailure = new PushcaCommandException("Send message", "no such receiver");
 
         broadcast.send(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId));
 
-        assertTrue(connectionFactory.connections.isEmpty());
+        assertTrue(executor.broadcasts.isEmpty());
         // the cleanup delay (1 s) passes several times; nothing was scheduled
         await().during(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(5))
                 .until(() -> Files.exists(sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW)));

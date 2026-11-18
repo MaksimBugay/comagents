@@ -14,6 +14,7 @@ import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
+import org.apache.commons.lang3.Validate;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,9 @@ import static com.comagents.agentproxy.communication.pushca.PushcaConnectionFact
  * {@link AgentProxyConf#getAiHarnessProvider()}) with the executor's device id ({@link AgentProxyConf#getDeviceId()}).
  * It passes the orchestrators' requests to the {@link ComagentsMessageListener}s, and sends the queued
  * {@link ComagentsMessage}s ({@link ComagentsMessageQueue}) one by one to the orchestrator device each is for. The
- * connection is opened once, on service startup, and kept: the Pushca client reconnects it by itself. It is opened
- * here again only when the startup connect failed.
+ * connection is opened once, on service startup; the Pushca client signs in and reconnects by itself whenever it
+ * isn't open. Sends meanwhile are retried until their message expires ({@link #consumeWithRetry}); after that the
+ * orchestrator, which has timed out, asks again.
  */
 @Singleton
 public class AgentExecutorPushcaClient
@@ -77,16 +79,13 @@ public class AgentExecutorPushcaClient
     }
 
     /**
-     * Opens the connection unless it is open; when Pushca can't be reached, the next send tries again.
+     * Opens the connection, unless it is open; from then on the Pushca client keeps it open by itself.
      */
     synchronized void open() {
-        try {
-            if (connection == null) {
-                connect();
-            }
-        } catch (RuntimeException e) {
-            LOG.warn("Pushca connection of executor {} not opened, the next send tries again: {}", client.deviceId,
-                    e.getMessage());
+        if (connection == null) {
+            // the executor receives nothing on channels
+            connection = connectionFactory.createConnection(client, this::onComagentsMessage, IGNORE_MESSAGES);
+            LOG.info("Pushca client of executor {} started", client.deviceId);
         }
     }
 
@@ -104,17 +103,8 @@ public class AgentExecutorPushcaClient
      */
     @Override
     public synchronized void consume(QueuedComagentsMessage message) {
-        if (connection == null) {
-            connect();
-        }
+        Validate.validState(connection != null, "Pushca connection of executor %s not open", client.deviceId);
         connection.broadcastMessage(orchestrator(message.orchestratorDeviceId()), message.message().toString());
-    }
-
-    /**
-     * Closes the connection; the next message sent opens a new one.
-     */
-    public synchronized void disconnect() {
-        closeConnection();
     }
 
     /**
@@ -133,19 +123,13 @@ public class AgentExecutorPushcaClient
         }
         queue.drain().forEach(message -> message.sent().completeExceptionally(
                 new IllegalStateException("Pushca client of executor " + client.deviceId + " closed")));
-        disconnect();
+        closeConnection();
     }
 
     // the orchestrator device that sent the request; workspace, account, device and application name exactly one
     // client
     private static ClientFilter orchestrator(String orchestratorDeviceId) {
         return new ClientFilter(WORKSPACE_ID, ORCHESTRATOR_ACCOUNT_ID, orchestratorDeviceId, ORCHESTRATOR_APPLICATION_ID);
-    }
-
-    private void connect() {
-        // the executor receives nothing on channels
-        connection = connectionFactory.createConnection(client, this::onComagentsMessage, IGNORE_MESSAGES);
-        LOG.info("Pushca connection of executor {} opened", client.deviceId);
     }
 
     // on the Pushca client's receiving thread, which must not wait: a start request clones and copies files
@@ -162,7 +146,7 @@ public class AgentExecutorPushcaClient
         }
     }
 
-    private void closeConnection() {
+    private synchronized void closeConnection() {
         if (connection == null) {
             return;
         }

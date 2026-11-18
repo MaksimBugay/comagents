@@ -2,7 +2,6 @@ package com.comagents.agentproxy.communication;
 
 import com.comagents.agentproxy.agent_setup.NoAgentSetupServiceException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
-import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -34,18 +33,13 @@ class StartAgentSessionListenerTest {
     @Inject
     SessionFolders sessionFolders;
 
-    @Inject
-    AgentExecutorPushcaClient executorClient;
-
     // the context's Pushca: records what was sent
     @Inject
     FakePushcaConnectionFactory connectionFactory;
 
-    // the executor's client connected on startup, and earlier tests used the fake; disconnected and forgotten, the
-    // delivery connects anew
+    // the executor's connection, opened on startup, stays; what earlier tests sent is forgotten
     @BeforeEach
-    void disconnectExecutorClient() {
-        executorClient.disconnect();
+    void resetPushca() {
         connectionFactory.reset();
     }
 

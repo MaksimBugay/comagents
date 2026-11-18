@@ -49,8 +49,10 @@ class AgentExecutorPushcaClientTest {
             "https://pushca.example", "pushca-key", AiHarnessProvider.CLAUDE_CODE,
             new DeviceIdExtractor("executor-device-1", "host")));
 
+    // as on startup
     @BeforeEach
-    void startSending() {
+    void openAndStartSending() {
+        client.open();
         client.startSending();
     }
 
@@ -61,8 +63,6 @@ class AgentExecutorPushcaClientTest {
 
     @Test
     void connectsOnceAtStartupAndKeepsTheConnection() {
-        client.open();
-
         assertEquals(1, connectionFactory.connections.size(), "opened at startup");
         delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
         delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
@@ -72,21 +72,7 @@ class AgentExecutorPushcaClientTest {
     }
 
     @Test
-    void deliveryConnectsWhenTheStartupConnectFailed() {
-        connectionFactory.connectFailure = new IllegalStateException("Pushca unreachable");
-        client.open();
-        assertTrue(connectionFactory.connections.isEmpty());
-
-        connectionFactory.connectFailure = null;
-        delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);
-
-        assertEquals(1, connectionFactory.connections.size());
-        assertEquals(1, connectionFactory.connections.getFirst().broadcasts.size());
-    }
-
-    @Test
     void retriesEverySecondOnTheSameConnectionUntilItWorksAgain() {
-        client.open();
         FakePushcaConnectionFactory.FakeConnection connection = connectionFactory.connections.getFirst();
         connection.broadcastFailure = new WebsocketConnectionIsBrokenException(new IllegalStateException("no ack"));
         // the Pushca client reconnects by itself meanwhile
@@ -108,7 +94,6 @@ class AgentExecutorPushcaClientTest {
     @Test
     void dropsTheMessageWhenTheConnectionStaysBrokenUntilTheResponseTimeout() {
         ResponseDeliveryService shortDelivery = new QueuedResponseDeliveryService(queue, Duration.ofMillis(2500));
-        client.open();
         FakePushcaConnectionFactory.FakeConnection connection = connectionFactory.connections.getFirst();
         connection.broadcastFailure = new IllegalStateException(ComagentsQueueConsumer.BROKEN_CONNECTION_MESSAGE);
 
@@ -125,7 +110,6 @@ class AgentExecutorPushcaClientTest {
 
     @Test
     void doesNotRetryWhatPushcaRejects() {
-        client.open();
         PushcaCommandException rejected = new PushcaCommandException("Send message", "no such receiver");
         connectionFactory.connections.getFirst().broadcastFailure = rejected;
 
@@ -158,7 +142,7 @@ class AgentExecutorPushcaClientTest {
         assertThrows(IllegalArgumentException.class, () -> delivery.deliverErrorToOrchestrator("orchestrator-device-1",
                 " ", AgentInfo.class, new IllegalStateException("agent failed")));
 
-        assertTrue(connectionFactory.connections.isEmpty());
+        assertTrue(connectionFactory.connections.getFirst().broadcasts.isEmpty());
     }
 
     @Test
@@ -177,8 +161,6 @@ class AgentExecutorPushcaClientTest {
 
     @Test
     void passesTheOrchestratorsMessagesToTheirListeners() {
-        client.open();
-
         connectionFactory.connections.getFirst().receive(
                 ComagentsMessage.ofPayload("sequence-1", RESPONSE, AgentContext.class).toString());
 
@@ -196,17 +178,7 @@ class AgentExecutorPushcaClientTest {
         client.close();
 
         assertTrue(waiting.sent().isCompletedExceptionally());
-        assertTrue(connectionFactory.connections.isEmpty(), "never sent");
-    }
-
-    @Test
-    void doesNotRetryWhenTheFirstConnectFails() {
-        connectionFactory.connectFailure = new IllegalStateException("Pushca unreachable");
-
-        assertThrows(IllegalStateException.class,
-                () -> delivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE));
-
-        assertTrue(connectionFactory.connections.isEmpty());
+        assertTrue(connectionFactory.connections.getFirst().broadcasts.isEmpty(), "never sent");
     }
 
     @SuppressWarnings("SameParameterValue")

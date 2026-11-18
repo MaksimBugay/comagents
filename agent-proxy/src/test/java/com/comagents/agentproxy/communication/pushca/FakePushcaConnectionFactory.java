@@ -37,9 +37,9 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
         super(null, Duration.ZERO);
     }
 
-    /** Forgets the connections opened so far and the failures set. */
+    /** Forgets what was sent so far and the failures set; the connections stay open. */
     public void reset() {
-        connections.clear();
+        connections.forEach(FakeConnection::reset);
         connectFailure = null;
         addMembersFailure = null;
     }
@@ -83,6 +83,15 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
             this.incomingMessages = incomingMessages;
             this.channelMessages = channelMessages;
             this.webSocket = mock(PushcaWebSocket.class, this::answer);
+        }
+
+        private void reset() {
+            createdChannels.clear();
+            members.clear();
+            messages.clear();
+            removedChannels.clear();
+            broadcasts.clear();
+            broadcastFailure = null;
         }
 
         /** A message Pushca delivers to this connection: someone wrote {@code body} in channel {@code channelId}. */

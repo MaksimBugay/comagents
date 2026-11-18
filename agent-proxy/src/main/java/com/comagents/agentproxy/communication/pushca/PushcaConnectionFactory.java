@@ -8,6 +8,8 @@ import com.comagents.agentproxy.conf.AgentProxyConf;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -27,6 +29,8 @@ public class PushcaConnectionFactory {
     public static final Consumer<Object> IGNORE_MESSAGES = _ -> {
     };
 
+    private static final Logger LOG = LoggerFactory.getLogger(PushcaConnectionFactory.class);
+
     // sent by the server once the connection is registered and accepts commands
     private static final String READY_MESSAGE = "CONNECTION_ALIAS";
 
@@ -40,12 +44,13 @@ public class PushcaConnectionFactory {
     }
 
     /**
-     * Signs {@code client} in and returns once its connection is open.
+     * Signs {@code client} in and returns once its connection is open, or after {@code pushca.connect-timeout}. A
+     * connection that isn't open by then is returned all the same: the Pushca client signs in and reconnects by
+     * itself (every 5 s), and sends fail until it has.
      *
      * @param messages        receives the messages sent to the client, on the client's receiving thread
      * @param channelMessages receives the messages of the channels the client is a member of, on the client's
      *                        receiving thread
-     * @throws IllegalStateException when the connection cannot be opened
      */
     public PushcaWebSocket createConnection(PClient client, Consumer<? super String> messages,
                                             Consumer<? super ChannelMessage> channelMessages) {
@@ -63,15 +68,15 @@ public class PushcaConnectionFactory {
                 .build();
         // no pusher instance: the sign-in itself failed (wrong API key, server unreachable)
         if (webSocket.getPusherInstanceId() == null) {
-            webSocket.close();
-            throw new IllegalStateException("Cannot sign in to Pushca as " + webSocket.getClientInfo());
+            LOG.warn("Cannot sign in to Pushca as {}, the Pushca client tries again by itself", webSocket.getClientInfo());
+            return webSocket;
         }
         awaitReady(webSocket, ready);
         return webSocket;
     }
 
     // The server takes a moment after the socket opens to register the connection, and announces it with
-    // CONNECTION_ALIAS. A command sent before that is never answered, and the connection stays unusable.
+    // CONNECTION_ALIAS. A command sent before that is never answered.
     private void awaitReady(PushcaWebSocket webSocket, CountDownLatch ready) {
         try {
             if (ready.await(connectTimeoutMs, TimeUnit.MILLISECONDS)) {
@@ -80,8 +85,7 @@ public class PushcaConnectionFactory {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        webSocket.close();
-        throw new IllegalStateException("Pushca did not confirm the connection of " + webSocket.getClientInfo()
-                + " within " + connectTimeoutMs + " ms");
+        LOG.warn("Pushca did not confirm the connection of {} within {} ms, the Pushca client reconnects by itself",
+                webSocket.getClientInfo(), connectTimeoutMs);
     }
 }
