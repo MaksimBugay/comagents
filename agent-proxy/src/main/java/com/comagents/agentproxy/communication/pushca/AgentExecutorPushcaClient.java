@@ -17,7 +17,6 @@ import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -112,8 +111,7 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
 
     // the orchestrator device that started the session; one client of it, should it be connected more than once
     private static ClientFilter orchestrator(String orchestratorDeviceId) {
-        return new ClientFilter(WORKSPACE_ID, ORCHESTRATOR_ACCOUNT_ID, orchestratorDeviceId,
-                ORCHESTRATOR_APPLICATION_ID, true, List.of());
+        return new ClientFilter(WORKSPACE_ID, ORCHESTRATOR_ACCOUNT_ID, orchestratorDeviceId, ORCHESTRATOR_APPLICATION_ID);
     }
 
     @SuppressWarnings("unchecked")
