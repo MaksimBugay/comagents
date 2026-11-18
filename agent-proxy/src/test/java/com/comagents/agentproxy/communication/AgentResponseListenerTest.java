@@ -1,14 +1,16 @@
 package com.comagents.agentproxy.communication;
 
-import com.comagents.agentproxy.agent_response.AgentResponseUnavailableException;
+import com.comagents.agentproxy.agent_response.AgentResponseNotReadyException;
 import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
 import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
+import com.comagents.agentproxy.agent_status.AgentSessionNotFoundException;
 import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AiAgent;
@@ -98,19 +100,25 @@ class AgentResponseListenerTest {
     }
 
     @Test
-    void sendsBackWhyThereIsNoResponse() throws Exception {
+    void sendsBackThatTheResponseOfAnArchivedSessionIsNotReady() throws Exception {
         startSession();
+        registry.archive(sessionId);
 
         listener.consumePayload("sequence-2", request);
 
-        ComagentsMessage message = sentMessage();
-        assertEquals("sequence-2", message.id());
-        // in place of the AgentResponseReply
-        assertEquals(AgentResponseReply.class.getName(), message.payloadClassName());
-        assertNull(message.payloadString());
-        assertEquals(AgentResponseUnavailableException.class.getName(), message.error().errorClassName());
-        assertEquals("No response from agent code_review for session " + sessionId + ": session is FAILED",
-                message.error().errorMessage());
+        ComagentsError error = sentError();
+        assertEquals(AgentResponseNotReadyException.class.getName(), error.errorClassName());
+        assertEquals("No response from agent code_review for session " + sessionId + " yet: session is ARCHIVED",
+                error.errorMessage());
+    }
+
+    @Test
+    void sendsBackThatTheSessionIsUnknown() {
+        listener.consumePayload("sequence-2", request);
+
+        ComagentsError error = sentError();
+        assertEquals(AgentSessionNotFoundException.class.getName(), error.errorClassName());
+        assertEquals("No session " + sessionId + " for agent code_review", error.errorMessage());
     }
 
     // started by a sequence-1 request; "false" ends it FAILED at once, without a response
@@ -125,6 +133,15 @@ class AgentResponseListenerTest {
             slot.start(AiAgent.CODE_REVIEW, agentFolder, new ClaudeSessionOptions(false, "MBugai", attributes))
                     .awaitFinished(Duration.ofSeconds(20));
         }
+    }
+
+    // an error in place of the AgentResponseReply, with the response request's id
+    private ComagentsError sentError() {
+        ComagentsMessage message = sentMessage();
+        assertEquals("sequence-2", message.id());
+        assertEquals(AgentResponseReply.class.getName(), message.payloadClassName());
+        assertNull(message.payloadString());
+        return message.error();
     }
 
     // the only message sent, to the device that asked

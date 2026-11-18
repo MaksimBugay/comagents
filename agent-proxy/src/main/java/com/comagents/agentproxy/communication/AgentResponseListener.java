@@ -7,8 +7,9 @@ import jakarta.inject.Singleton;
 
 /**
  * Response requests from an orchestrator over Pushca, as {@code GET /agent-response/{agentName}/{sessionId}}; the
- * orchestrator device gets back the response, or why there is none
- * ({@link com.comagents.agentproxy.agent_response.AgentResponseUnavailableException}, as the 404's message).
+ * orchestrator device gets back the response, or why there is none: the session is unknown
+ * ({@link com.comagents.agentproxy.agent_status.AgentSessionNotFoundException}), or its response isn't ready yet
+ * ({@link com.comagents.agentproxy.agent_response.AgentResponseNotReadyException}).
  */
 @Singleton
 public class AgentResponseListener extends ComagentsBaseListener<AgentResponseRequest, AgentResponseReply> {

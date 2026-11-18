@@ -99,7 +99,7 @@ class AgentResponseControllerTest {
         assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
         AgentResponseUnavailable body = e.getResponse().getBody(AgentResponseUnavailable.class).orElseThrow();
         assertNull(body.state());
-        assertTrue(body.message().contains("session not found"));
+        assertEquals("No session " + sessionId + " for agent code_review", body.message());
         assertTrue(Files.exists(sessionFolders.of(sessionId)), "nothing is cleaned up without a response");
     }
 

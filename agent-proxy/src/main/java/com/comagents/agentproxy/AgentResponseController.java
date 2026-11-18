@@ -1,7 +1,8 @@
 package com.comagents.agentproxy;
 
+import com.comagents.agentproxy.agent_response.AgentResponseNotReadyException;
 import com.comagents.agentproxy.agent_response.AgentResponseService;
-import com.comagents.agentproxy.agent_response.AgentResponseUnavailableException;
+import com.comagents.agentproxy.agent_status.AgentSessionNotFoundException;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.response.AgentResponseUnavailable;
 import com.comagents.commons.response.AgentSessionResponse;
@@ -28,8 +29,8 @@ public class AgentResponseController {
     }
 
     /**
-     * 200 with the agent's response, or 404 with {@link AgentResponseUnavailable}, whose {@code state} tells the
-     * caller whether to try again ({@code RUNNING}) or not.
+     * 200 with the agent's response, or 404 with {@link AgentResponseUnavailable}: with the session's {@code state}
+     * when the response isn't ready yet (try again), without one when the session is unknown.
      */
     // reads the response file (blocking I/O), which must not run on the Netty event loop
     @Get("/{agentName}/{sessionId}")
@@ -40,9 +41,15 @@ public class AgentResponseController {
         return agentResponseService.getResponse(agent, sessionId);
     }
 
-    @Error(exception = AgentResponseUnavailableException.class)
-    public HttpResponse<AgentResponseUnavailable> responseUnavailable(HttpRequest<?> ignoredRequest,
-                                                                      AgentResponseUnavailableException e) {
-        return HttpResponse.notFound(e.getUnavailable());
+    @Error(exception = AgentResponseNotReadyException.class)
+    public HttpResponse<AgentResponseUnavailable> responseNotReady(HttpRequest<?> ignoredRequest,
+                                                                   AgentResponseNotReadyException e) {
+        return HttpResponse.notFound(new AgentResponseUnavailable(e.getMessage(), e.getState()));
+    }
+
+    @Error(exception = AgentSessionNotFoundException.class)
+    public HttpResponse<AgentResponseUnavailable> sessionNotFound(HttpRequest<?> ignoredRequest,
+                                                                  AgentSessionNotFoundException e) {
+        return HttpResponse.notFound(new AgentResponseUnavailable(e.getMessage(), null));
     }
 }
