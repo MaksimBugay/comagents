@@ -25,7 +25,7 @@
     <exec.mainClass>com.comagents.agentproxy.Application</exec.mainClass>
 
     <agent-commons.version>1.0.0</agent-commons.version>
-    <pushca-client.version>2.1.1</pushca-client.version>
+    <pushca-client.version>2.1.2</pushca-client.version>
 
     <!-- security overrides of micronaut-platform 5.2.5 BOM versions; drop once the platform catches up -->
     <!-- all Jackson 3 modules on one version: core CVE-2026-110729, databind CVE-2026-110879 (via pushca-client) -->
