@@ -24,6 +24,13 @@ public class AgentStatusService {
         this.sessionFolders = sessionFolders;
     }
 
+    /**
+     * @throws AgentSessionNotFoundException when the session is unknown: never started, or already cleaned up
+     */
+    public AgentStatus getStatus(AiAgent agent, UUID sessionId) {
+        return findStatus(agent, sessionId).orElseThrow(() -> new AgentSessionNotFoundException(agent, sessionId));
+    }
+
     /** Empty when the session is unknown: never started, or already cleaned up. */
     public Optional<AgentStatus> findStatus(AiAgent agent, UUID sessionId) {
         return agentSetupServices.forAgent(agent)

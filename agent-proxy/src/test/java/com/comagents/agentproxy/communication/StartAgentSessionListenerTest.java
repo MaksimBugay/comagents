@@ -4,6 +4,7 @@ import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
 import com.comagents.agentproxy.agent_setup.NoAgentSetupServiceException;
 import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
+import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AiAgent;
@@ -12,6 +13,7 @@ import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolationException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -33,9 +35,19 @@ class StartAgentSessionListenerTest {
     @Inject
     SessionFolders sessionFolders;
 
+    @Inject
+    AgentExecutorPushcaClient executorClient;
+
     @MockBean(PushcaConnector.class)
     PushcaConnector pushcaConnector() {
         return connector;
+    }
+
+    // the executor's client connected on startup, through another test's connector; closed, the delivery connects
+    // through this test's connector
+    @BeforeEach
+    void closeExecutorClient() {
+        executorClient.close();
     }
 
     @Test
