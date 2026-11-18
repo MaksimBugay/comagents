@@ -2,11 +2,11 @@ package com.comagents.agentproxy.mcp;
 
 import com.comagents.agentproxy.agent_setup.AgentSessionWsClientRegistry;
 import com.comagents.agentproxy.agent_setup.ExpertAnswers;
-import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSession;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
@@ -68,7 +68,7 @@ class AskExpertToolTest {
 
     private final UUID sessionId = UUID.randomUUID();
     private final String chat = "code_review_session_" + sessionId;
-    private final FakePushcaConnector connector = new FakePushcaConnector();
+    private final FakePushcaConnectionFactory connectionFactory = new FakePushcaConnectionFactory();
     private final ExpertAnswers answers = new ExpertAnswers(() -> this.sessions);
     private AgentSessionWsClientRegistry chats;
     private ClaudeAgentSessionRegistry sessions;
@@ -84,7 +84,7 @@ class AskExpertToolTest {
         Files.writeString(claude, CLAUDE);
         Files.setPosixFilePermissions(claude, PosixFilePermissions.fromString("rwx------"));
 
-        chats = new AgentSessionWsClientRegistry(connector, answers, "https://chat.example/chat-room.html");
+        chats = new AgentSessionWsClientRegistry(connectionFactory, answers, "https://chat.example/chat-room.html");
         sessions = new ClaudeAgentSessionRegistry(claude.toString(), 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, chats,
                 new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
@@ -106,7 +106,7 @@ class AskExpertToolTest {
         CompletableFuture<String> result = CompletableFuture.supplyAsync(
                 () -> text(tool.askExpert("Which branch should I review?", runContext())));
 
-        FakePushcaConnector.FakeConnection connection = connector.connections.getFirst();
+        FakePushcaConnectionFactory.FakeConnection connection = connectionFactory.connections.getFirst();
         await().atMost(WAIT).until(() -> connection.messages.contains("Question: Which branch should I review?"));
         assertEquals(AgentSessionState.WAITING, session.getState());
         connection.receive(chat, "Maks", "main, please");
@@ -122,7 +122,7 @@ class AskExpertToolTest {
         String result = text(tool(Duration.ofMillis(300)).askExpert("What color is your mood?", runContext()));
 
         assertEquals(AskExpertTool.END_TURN, result);
-        FakePushcaConnector.FakeConnection connection = connector.connections.getFirst();
+        FakePushcaConnectionFactory.FakeConnection connection = connectionFactory.connections.getFirst();
         await().atMost(WAIT).until(() -> connection.messages.size() == 2);
         assertEquals("No answer within 300 ms: the session is archived and continues when you answer here.",
                 connection.messages.getLast());
@@ -156,7 +156,7 @@ class AskExpertToolTest {
             assertTrue(result.isError());
             assertEquals("Unknown session or wrong session token", text(result));
         }
-        assertTrue(connector.connections.isEmpty(), "nothing was asked");
+        assertTrue(connectionFactory.connections.isEmpty(), "nothing was asked");
     }
 
     @Test

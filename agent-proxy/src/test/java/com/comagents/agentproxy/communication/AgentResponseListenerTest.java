@@ -1,13 +1,12 @@
 package com.comagents.agentproxy.communication;
 
 import com.comagents.agentproxy.agent_response.AgentResponseNotReadyException;
-import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
-import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.agent_status.AgentSessionNotFoundException;
 import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.communication.ComagentsError;
@@ -20,7 +19,6 @@ import com.comagents.commons.request.AgentResponseRequest;
 import com.comagents.commons.response.AgentResponseReply;
 import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.annotation.Property;
-import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
@@ -51,7 +49,6 @@ class AgentResponseListenerTest {
     // the start request was sequence-1; this response request is sequence-2
     private final AgentResponseRequest request = new AgentResponseRequest(AiAgent.CODE_REVIEW, sessionId, "sequence-2",
             "orchestrator-device-2");
-    private final FakePushcaConnector connector = new FakePushcaConnector();
 
     @Inject
     AgentResponseListener listener;
@@ -65,16 +62,16 @@ class AgentResponseListenerTest {
     @Inject
     AgentExecutorPushcaClient executorClient;
 
-    @MockBean(PushcaConnector.class)
-    PushcaConnector pushcaConnector() {
-        return connector;
-    }
+    // the context's Pushca: records what was sent
+    @Inject
+    FakePushcaConnectionFactory connectionFactory;
 
-    // the executor's client connected on startup, through another test's connector; closed, the delivery connects
-    // through this test's connector
+    // the executor's client connected on startup, and earlier tests used the fake; closed and forgotten, the
+    // delivery connects anew
     @BeforeEach
     void closeExecutorClient() {
         executorClient.close();
+        connectionFactory.reset();
     }
 
     @AfterEach
@@ -146,7 +143,7 @@ class AgentResponseListenerTest {
 
     // the only message sent, to the device that asked
     private ComagentsMessage sentMessage() {
-        List<FakePushcaConnector.Broadcast> broadcasts = connector.connections.getLast().broadcasts;
+        List<FakePushcaConnectionFactory.Broadcast> broadcasts = connectionFactory.connections.getLast().broadcasts;
         assertEquals(1, broadcasts.size());
         assertEquals("orchestrator-device-2", broadcasts.getFirst().receivers().deviceId);
         return ComagentsMessage.fromComagentsMessageString(broadcasts.getFirst().message());

@@ -1,11 +1,10 @@
 package com.comagents.agentproxy.agent_response;
 
-import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
-import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -18,7 +17,6 @@ import com.comagents.commons.request.StartAgentSessionRequest;
 import com.comagents.commons.response.AgentSessionResponse;
 import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.annotation.Property;
-import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
@@ -49,7 +47,6 @@ class AgentResponseBroadcastTest {
     private final AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId,
             new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "sequence-1", "orchestrator-device-1", "MBugai",
             AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
-    private final FakePushcaConnector connector = new FakePushcaConnector();
 
     @Inject
     AgentResponseBroadcast broadcast;
@@ -63,16 +60,16 @@ class AgentResponseBroadcastTest {
     @Inject
     SessionFolders sessionFolders;
 
-    @MockBean(PushcaConnector.class)
-    PushcaConnector pushcaConnector() {
-        return connector;
-    }
+    // the context's Pushca: records what was sent
+    @Inject
+    FakePushcaConnectionFactory connectionFactory;
 
-    // the executor's client connected on startup, through another test's connector; closed, as after a failed startup
-    // connect, the delivery connects through this test's connector
+    // the executor's client connected on startup, and earlier tests used the fake; closed and forgotten, the
+    // delivery connects anew
     @BeforeEach
     void closeExecutorClient() {
         executorClient.close();
+        connectionFactory.reset();
     }
 
     @AfterEach
@@ -88,12 +85,12 @@ class AgentResponseBroadcastTest {
         broadcast.send(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId));
 
         // from the executor's own client, not the session's chat client
-        assertEquals(1, connector.connections.size());
-        FakePushcaConnector.FakeConnection executor = connector.connections.getFirst();
+        assertEquals(1, connectionFactory.connections.size());
+        FakePushcaConnectionFactory.FakeConnection executor = connectionFactory.connections.getFirst();
         assertEquals("comagents-main", executor.client.workSpaceId);
         assertEquals("executor-device-1", executor.client.deviceId);
         assertEquals("CLAUDE_CODE_EXECUTOR", executor.client.applicationId);
-        List<FakePushcaConnector.Broadcast> broadcasts = executor.broadcasts;
+        List<FakePushcaConnectionFactory.Broadcast> broadcasts = executor.broadcasts;
         assertEquals(1, broadcasts.size());
         assertEquals("comagents-main", broadcasts.getFirst().receivers().workSpaceId);
         assertEquals("agent-orchestrator@comagents.com", broadcasts.getFirst().receivers().accountId);
@@ -116,11 +113,11 @@ class AgentResponseBroadcastTest {
     void responseThatCannotBeSentStaysToBeFetched() throws Exception {
         startSession();
         writeAllGoodResponse();
-        connector.connectFailure = new IllegalStateException("Pushca unreachable");
+        connectionFactory.connectFailure = new IllegalStateException("Pushca unreachable");
 
         broadcast.send(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId));
 
-        assertTrue(connector.connections.isEmpty());
+        assertTrue(connectionFactory.connections.isEmpty());
         // the cleanup delay (1 s) passes several times; nothing was scheduled
         await().during(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(5))
                 .until(() -> Files.exists(sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW)));

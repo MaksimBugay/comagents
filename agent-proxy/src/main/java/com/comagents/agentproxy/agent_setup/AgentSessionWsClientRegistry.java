@@ -3,6 +3,7 @@ package com.comagents.agentproxy.agent_setup;
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionListener;
+import com.comagents.agentproxy.communication.pushca.PushcaConnectionFactory;
 import com.comagents.commons.domain.AiAgent;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.annotation.Nullable;
@@ -35,7 +36,7 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(AgentSessionWsClientRegistry.class);
 
-    private final PushcaConnector connector;
+    private final PushcaConnectionFactory connectionFactory;
     private final AgentSessionChatListener chatListener;
     private final String chatPageUrl;
     private final Map<UUID, AgentSessionWsClient> clients = new ConcurrentHashMap<>();
@@ -44,9 +45,10 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
      * @param chatListener receives what people write in session chats
      * @param chatPageUrl  the chat page ({@code pushca.chat-url}), for the join link logged with each chat
      */
-    public AgentSessionWsClientRegistry(PushcaConnector connector, AgentSessionChatListener chatListener,
+    public AgentSessionWsClientRegistry(PushcaConnectionFactory connectionFactory,
+                                        AgentSessionChatListener chatListener,
                                         @Value("${pushca.chat-url}") String chatPageUrl) {
-        this.connector = connector;
+        this.connectionFactory = connectionFactory;
         this.chatListener = chatListener;
         this.chatPageUrl = chatPageUrl;
     }
@@ -64,7 +66,7 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
     public boolean openConnection(UUID sessionId, AiAgent agent, @Nullable String actorAccountId) {
         try {
             clients.computeIfAbsent(sessionId, _ -> newClient(sessionId, agent, actorAccountId))
-                    .connect(connector, false);
+                    .connect(connectionFactory, false);
             return true;
         } catch (RuntimeException e) {
             LOG.warn("[{} {}] Pushca unavailable, the session runs without a chat: {}", agent.getAgentName(), sessionId,
@@ -84,7 +86,7 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
     public boolean reopenConnection(UUID sessionId, AiAgent agent, @Nullable String actorAccountId) {
         try {
             clients.computeIfAbsent(sessionId, _ -> newClient(sessionId, agent, actorAccountId))
-                    .connect(connector, true);
+                    .connect(connectionFactory, true);
             return true;
         } catch (RuntimeException e) {
             LOG.warn("[{} {}] Pushca unavailable, the chat is not reopened: {}", agent.getAgentName(), sessionId,
@@ -116,7 +118,7 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
         }
         AgentSessionWsClient client = newClient(sessionId, agent, null);
         try {
-            client.connect(connector, true);
+            client.connect(connectionFactory, true);
         } catch (RuntimeException e) {
             LOG.warn("[{} {}] Pushca unavailable, the chat is not removed: {}", agent.getAgentName(), sessionId,
                     e.getMessage());

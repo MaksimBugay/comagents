@@ -1,9 +1,10 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.agent_setup.FakePushcaConnector.FakeConnection;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory.FakeConnection;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionArchive;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
@@ -31,14 +32,14 @@ class ArchivedSessionChatsTest {
     Path sessionsRoot;
 
     private SessionFolders sessionFolders;
-    private final FakePushcaConnector connector = new FakePushcaConnector();
+    private final FakePushcaConnectionFactory connectionFactory = new FakePushcaConnectionFactory();
     private final RecordingChatListener chatListener = new RecordingChatListener();
     private ArchivedSessionChats archivedSessionChats;
 
     @BeforeEach
     void createServices() {
         sessionFolders = new SessionFolders(sessionsRoot.toString());
-        AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(connector, chatListener,
+        AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(connectionFactory, chatListener,
                 "https://chat.example/chat-room.html");
         ClaudeAgentSessionRegistry claudeRegistry = new ClaudeAgentSessionRegistry("false", 2,
                 Duration.ofMinutes(1), Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
@@ -56,8 +57,8 @@ class ArchivedSessionChatsTest {
 
         assertEquals(1, archivedSessionChats.reopenAll());
 
-        assertEquals(1, connector.connections.size());
-        FakeConnection connection = connector.connections.getFirst();
+        assertEquals(1, connectionFactory.connections.size());
+        FakeConnection connection = connectionFactory.connections.getFirst();
         assertEquals(archived.toString(), connection.client.deviceId);
         assertTrue(connection.createdChannels.isEmpty(), "the chat exists already");
         connection.receive("code_review_session_" + archived, "MBugai", "answer while archived");
@@ -68,7 +69,7 @@ class ArchivedSessionChatsTest {
     @Test
     void sessionsStayArchivedWhenPushcaIsUnavailable() throws IOException {
         writeArchive(UUID.randomUUID());
-        connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+        connectionFactory.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
 
         assertEquals(0, archivedSessionChats.reopenAll());
     }

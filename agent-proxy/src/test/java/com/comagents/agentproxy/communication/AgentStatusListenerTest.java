@@ -1,11 +1,10 @@
 package com.comagents.agentproxy.communication;
 
-import com.comagents.agentproxy.agent_setup.FakePushcaConnector;
-import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_status.AgentSessionNotFoundException;
 import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionState;
@@ -13,7 +12,6 @@ import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.AgentStatusRequest;
 import com.comagents.commons.response.AgentStatusResponse;
 import io.micronaut.context.annotation.Property;
-import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +34,6 @@ class AgentStatusListenerTest {
     private final UUID sessionId = UUID.randomUUID();
     private final AgentStatusRequest request = new AgentStatusRequest(AiAgent.CODE_REVIEW, sessionId, "sequence-1",
             "orchestrator-device-1");
-    private final FakePushcaConnector connector = new FakePushcaConnector();
 
     @Inject
     AgentStatusListener listener;
@@ -50,16 +47,16 @@ class AgentStatusListenerTest {
     @Inject
     AgentExecutorPushcaClient executorClient;
 
-    @MockBean(PushcaConnector.class)
-    PushcaConnector pushcaConnector() {
-        return connector;
-    }
+    // the context's Pushca: records what was sent
+    @Inject
+    FakePushcaConnectionFactory connectionFactory;
 
-    // the executor's client connected on startup, through another test's connector; closed, the delivery connects
-    // through this test's connector
+    // the executor's client connected on startup, and earlier tests used the fake; closed and forgotten, the
+    // delivery connects anew
     @BeforeEach
     void closeExecutorClient() {
         executorClient.close();
+        connectionFactory.reset();
     }
 
     @AfterEach
@@ -77,7 +74,7 @@ class AgentStatusListenerTest {
 
         listener.consumePayload("sequence-1", request);
 
-        FakePushcaConnector.Broadcast sent = connector.connections.getLast().broadcasts.getFirst();
+        FakePushcaConnectionFactory.Broadcast sent = connectionFactory.connections.getLast().broadcasts.getFirst();
         assertEquals("orchestrator-device-1", sent.receivers().deviceId);
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(sent.message());
         assertEquals("sequence-1", message.id());
@@ -91,8 +88,8 @@ class AgentStatusListenerTest {
     void sendsBackThatTheSessionIsUnknown() {
         listener.consumePayload("sequence-1", request);
 
-        assertEquals(1, connector.connections.getLast().broadcasts.size());
-        FakePushcaConnector.Broadcast sent = connector.connections.getLast().broadcasts.getFirst();
+        assertEquals(1, connectionFactory.connections.getLast().broadcasts.size());
+        FakePushcaConnectionFactory.Broadcast sent = connectionFactory.connections.getLast().broadcasts.getFirst();
         assertEquals("orchestrator-device-1", sent.receivers().deviceId);
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(sent.message());
         assertEquals("sequence-1", message.id());

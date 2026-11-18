@@ -1,7 +1,8 @@
 package com.comagents.agentproxy.agent_setup;
 
 import bmv.org.pushca.client.model.ClientFilter;
-import com.comagents.agentproxy.agent_setup.FakePushcaConnector.FakeConnection;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory.FakeConnection;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.commons.domain.AiAgent;
 import org.junit.jupiter.api.Test;
 
@@ -14,15 +15,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SuppressWarnings("resource")
 class AgentSessionWsClientRegistryTest {
 
     private static final Duration WAIT = Duration.ofSeconds(5);
 
     private final UUID sessionId = UUID.randomUUID();
-    private final FakePushcaConnector connector = new FakePushcaConnector();
+    private final FakePushcaConnectionFactory connectionFactory = new FakePushcaConnectionFactory();
     private final RecordingChatListener chatListener = new RecordingChatListener();
-    private final AgentSessionWsClientRegistry registry = new AgentSessionWsClientRegistry(connector, chatListener,
+    private final AgentSessionWsClientRegistry registry = new AgentSessionWsClientRegistry(connectionFactory, chatListener,
             "https://secure.fileshare.ovh/chat-room.html");
 
     @Test
@@ -116,11 +116,11 @@ class AgentSessionWsClientRegistryTest {
 
     @Test
     void failedReopenLeavesTheChatAndDropsTheClient() {
-        connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+        connectionFactory.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
 
         assertFalse(registry.reopenConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai"));
 
-        connector.connectFailure = null;
+        connectionFactory.connectFailure = null;
         assertTrue(registry.reopenConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai"));
         assertTrue(onlyConnection().createdChannels.isEmpty());
         assertTrue(onlyConnection().removedChannels.isEmpty());
@@ -130,7 +130,7 @@ class AgentSessionWsClientRegistryTest {
     void outputOfUnknownSessionIsIgnored() {
         registry.onOutput(sessionId, "tool: Read pom.xml");
 
-        assertTrue(connector.connections.isEmpty());
+        assertTrue(connectionFactory.connections.isEmpty());
     }
 
     @Test
@@ -149,9 +149,9 @@ class AgentSessionWsClientRegistryTest {
 
         registry.onOutput(sessionId, "after reconnect");
 
-        assertEquals(2, connector.connections.size());
-        FakeConnection first = connector.connections.getFirst();
-        FakeConnection second = connector.connections.getLast();
+        assertEquals(2, connectionFactory.connections.size());
+        FakeConnection first = connectionFactory.connections.getFirst();
+        FakeConnection second = connectionFactory.connections.getLast();
         assertTrue(first.closed);
         assertTrue(second.createdChannels.isEmpty(), "the chat of the first connect is reused");
         await().atMost(WAIT).until(() -> second.messages.equals(List.of("after reconnect")));
@@ -206,30 +206,30 @@ class AgentSessionWsClientRegistryTest {
 
     @Test
     void chatStaysWhenPushcaIsUnavailableForItsRemoval() {
-        connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+        connectionFactory.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
 
         registry.removeChat(sessionId, AiAgent.CODE_REVIEW);
 
-        assertTrue(connector.connections.isEmpty());
+        assertTrue(connectionFactory.connections.isEmpty());
     }
 
     @Test
     void sessionRunsWithoutChatWhenPushcaIsUnavailable() {
-        connector.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+        connectionFactory.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
 
         assertFalse(registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks"));
         registry.onOutput(sessionId, "tool: Read pom.xml");
-        assertTrue(connector.connections.isEmpty());
+        assertTrue(connectionFactory.connections.isEmpty());
 
         // the failed client was removed, so a later open starts afresh
-        connector.connectFailure = null;
+        connectionFactory.connectFailure = null;
         assertTrue(registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks"));
         assertEquals(1, onlyConnection().createdChannels.size());
     }
 
     @Test
     void chatThatFailsAfterSignInIsRemovedAgain() {
-        connector.addMembersFailure = new IllegalStateException("Cannot add members to channel");
+        connectionFactory.addMembersFailure = new IllegalStateException("Cannot add members to channel");
 
         assertFalse(registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks"));
 
@@ -250,7 +250,7 @@ class AgentSessionWsClientRegistryTest {
     }
 
     private FakeConnection onlyConnection() {
-        assertEquals(1, connector.connections.size());
-        return connector.connections.getFirst();
+        assertEquals(1, connectionFactory.connections.size());
+        return connectionFactory.connections.getFirst();
     }
 }

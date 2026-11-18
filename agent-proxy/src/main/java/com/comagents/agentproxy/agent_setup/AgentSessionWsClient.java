@@ -4,6 +4,8 @@ import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
 import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
+import com.comagents.agentproxy.communication.pushca.AgentSessionPrivateChannelWithPushcaService;
+import com.comagents.agentproxy.communication.pushca.PushcaConnectionFactory;
 import com.comagents.commons.domain.AiAgent;
 import io.micronaut.core.annotation.Nullable;
 import org.slf4j.Logger;
@@ -36,7 +38,7 @@ final class AgentSessionWsClient {
     private final ExecutorService sender;
 
     // guarded by this
-    private AgentSessionPrivateChannelService connection;
+    private AgentSessionPrivateChannelWithPushcaService connection;
     private PChannel channel;
     // only the first of a run of failed sends is logged as a warning, so an unreachable Pushca doesn't flood the log
     private boolean sendFailing;
@@ -57,11 +59,11 @@ final class AgentSessionWsClient {
      * Opens the connection unless it is open. On the first connect it creates the chat, or, when
      * {@code chatExists} (an archived session after a restart), uses the chat created back then.
      */
-    synchronized void connect(PushcaConnector connector, boolean chatExists) {
+    synchronized void connect(PushcaConnectionFactory connectionFactory, boolean chatExists) {
         if (connection != null) {
             return;
         }
-        connection = connector.connect(client, this::onChannelMessage);
+        connection = new AgentSessionPrivateChannelWithPushcaService(connectionFactory, client, this::onChannelMessage);
         if (channel != null) {
             return;
         }

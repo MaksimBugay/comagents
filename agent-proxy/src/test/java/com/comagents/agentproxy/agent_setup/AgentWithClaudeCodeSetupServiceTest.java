@@ -4,6 +4,7 @@ import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.conf.DeviceIdExtractor;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
@@ -51,7 +52,7 @@ class AgentWithClaudeCodeSetupServiceTest {
     void createServices() {
         sessionFolders = new SessionFolders(sessionsRoot.toString());
         // one slot, so a freed or held slot is observable with a second reservation
-        AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(new FakePushcaConnector(),
+        AgentSessionWsClientRegistry wsClientRegistry = new AgentSessionWsClientRegistry(new FakePushcaConnectionFactory(),
                 new RecordingChatListener(),
                 "https://chat.example/chat-room.html");
         registry = new ClaudeAgentSessionRegistry("false", 1, Duration.ofMinutes(1),

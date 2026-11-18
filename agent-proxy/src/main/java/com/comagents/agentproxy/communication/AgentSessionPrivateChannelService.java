@@ -1,13 +1,13 @@
-package com.comagents.agentproxy.agent_setup;
+package com.comagents.agentproxy.communication;
 
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.core.PChannel;
 
 /**
- * The part of a Pushca connection that agent-proxy uses: session chats (channels) and the executor's deliveries to
- * the orchestrator (broadcasts). Commands are blocking and throw on failure.
+ * One session's chat: a close private channel of the session's own client. Commands are blocking and throw on
+ * failure.
  */
-public interface AgentSessionPrivateChannelService extends AutoCloseable {
+public interface AgentSessionPrivateChannelService {
 
     /**
      * Creates a channel only its owner (this connection's account) and the members it adds can see. Its id is its
@@ -20,10 +20,4 @@ public interface AgentSessionPrivateChannelService extends AutoCloseable {
     void sendMessage(PChannel channel, String message);
 
     void removeChannel(PChannel channel);
-
-    /** Sends {@code message} to the connected clients matching {@code receivers}; to only one of them with {@code findAny}. */
-    void broadcastMessage(ClientFilter receivers, String message);
-
-    @Override
-    void close();
 }

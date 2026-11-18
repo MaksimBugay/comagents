@@ -1,12 +1,13 @@
 package com.comagents.agentproxy.communication.pushca;
 
+import bmv.org.pushca.client.PushcaWebSocket;
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
-import com.comagents.agentproxy.agent_setup.AgentSessionPrivateChannelService;
-import com.comagents.agentproxy.agent_setup.PushcaConnector;
+import com.comagents.agentproxy.communication.ComagentsMessageReceiver;
 import com.comagents.agentproxy.communication.ResponseDeliveryService;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.communication.ComagentsMessage;
+import io.micronaut.context.BeanProvider;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import jakarta.annotation.PreDestroy;
@@ -20,8 +21,9 @@ import org.slf4j.LoggerFactory;
  * The agent executor's own Pushca client: one per executor (not per session), signed in to the orchestrators'
  * workspace as application {@code <harness>_EXECUTOR} (e.g. {@code CLAUDE_CODE_EXECUTOR},
  * {@link AgentProxyConf#getAiHarnessProvider()}) with the executor's device id ({@link AgentProxyConf#getDeviceId()}).
- * It hands responses to the orchestrator device that asked for them, as {@link ComagentsMessage} strings. The
- * connection is opened once, on service startup, and kept. It is opened again only after an issue: when the startup
+ * It takes the orchestrators' requests ({@link ComagentsMessageReceiver}) and hands the responses to the orchestrator
+ * device that asked for them, as {@link ComagentsMessage} strings. The connection is opened once, on service startup,
+ * and kept. It is opened again only after an issue: when the startup
  * connect failed, or a delivery finds it broken (once per delivery).
  */
 @Singleton
@@ -36,14 +38,18 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
 
     private static final Logger LOG = LoggerFactory.getLogger(AgentExecutorPushcaClient.class);
 
-    private final PushcaConnector connector;
+    private final PushcaConnectionFactory connectionFactory;
+    // looked up on the first message: its listeners answer through this client
+    private final BeanProvider<ComagentsMessageReceiver> messageReceiver;
     private final PClient client;
 
     // guarded by this
-    private AgentSessionPrivateChannelService connection;
+    private PushcaWebSocket connection;
 
-    public AgentExecutorPushcaClient(PushcaConnector connector, AgentProxyConf conf) {
-        this.connector = connector;
+    public AgentExecutorPushcaClient(PushcaConnectionFactory connectionFactory,
+                                     BeanProvider<ComagentsMessageReceiver> messageReceiver, AgentProxyConf conf) {
+        this.connectionFactory = connectionFactory;
+        this.messageReceiver = messageReceiver;
         this.client = new PClient(
                 WORKSPACE_ID,
                 ACCOUNT_ID,
@@ -147,7 +153,7 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
 
     private void connect() {
         // the executor receives nothing on channels
-        connection = connector.connect(client, _ -> {
+        connection = connectionFactory.createConnection(client, message -> messageReceiver.get().accept(message), _ -> {
         });
         LOG.info("Pushca connection of executor {} opened", client.deviceId);
     }
