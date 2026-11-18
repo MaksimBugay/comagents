@@ -26,8 +26,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 // "false" stands in for Claude Code: it exits with an error at once, so the session ends FAILED
 @MicronautTest
@@ -89,10 +88,18 @@ class AgentStatusListenerTest {
     }
 
     @Test
-    void unknownSessionIsRejectedAndNothingSent() {
-        assertEquals("No session " + sessionId + " for agent code_review", assertThrows(
-                AgentSessionNotFoundException.class, () -> listener.consumePayload("sequence-1", request)).getMessage());
+    void sendsBackThatTheSessionIsUnknown() {
+        listener.consumePayload("sequence-1", request);
 
-        assertTrue(connector.connections.stream().allMatch(connection -> connection.broadcasts.isEmpty()));
+        assertEquals(1, connector.connections.getLast().broadcasts.size());
+        FakePushcaConnector.Broadcast sent = connector.connections.getLast().broadcasts.getFirst();
+        assertEquals("orchestrator-device-1", sent.receivers().deviceId);
+        ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(sent.message());
+        assertEquals("sequence-1", message.id());
+        // in place of the AgentStatusResponse
+        assertEquals(AgentStatusResponse.class.getName(), message.payloadClassName());
+        assertNull(message.payloadString());
+        assertEquals(AgentSessionNotFoundException.class.getName(), message.error().errorClassName());
+        assertEquals("No session " + sessionId + " for agent code_review", message.error().errorMessage());
     }
 }

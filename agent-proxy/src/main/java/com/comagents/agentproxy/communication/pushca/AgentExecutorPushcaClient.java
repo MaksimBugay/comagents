@@ -7,7 +7,6 @@ import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.communication.ResponseDeliveryService;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.communication.ComagentsMessage;
-import com.comagents.commons.communication.WithSequenceId;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import jakarta.annotation.PreDestroy;
@@ -16,8 +15,6 @@ import org.apache.commons.lang3.Validate;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.UUID;
 
 /**
  * The agent executor's own Pushca client: one per executor (not per session), signed in to the orchestrators'
@@ -75,17 +72,36 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
     }
 
     /**
-     * Sends {@code response}, wrapped into a {@link ComagentsMessage}, to the orchestrator device
-     * {@code orchestratorDeviceId}; blocks until Pushca has taken it. The message id is the response's
-     * {@link WithSequenceId#sequenceId()}, or a new random UUID when it has none.
+     * Sends {@code response}, wrapped into a {@link ComagentsMessage} with the id {@code sequenceId}, to the
+     * orchestrator device {@code orchestratorDeviceId}; blocks until Pushca has taken it.
      *
-     * @throws IllegalArgumentException when the device id is blank, or the response null or blank
+     * @throws NullPointerException     when the device id, sequence id or response is null
+     * @throws IllegalArgumentException when the device id or sequence id is blank
      * @throws IllegalStateException    when Pushca can't be reached or refuses the message
      */
     @Override
-    public synchronized <T> void deliverToOrchestrator(String orchestratorDeviceId, T response) {
+    public <T> void deliverToOrchestrator(String orchestratorDeviceId, String sequenceId, T response) {
+        deliver(orchestratorDeviceId, comagentsMessage(sequenceId, response));
+    }
+
+    /**
+     * Sends {@code error}, wrapped into a {@link ComagentsMessage} of {@code responseClass} with the id
+     * {@code sequenceId}, to the orchestrator device {@code orchestratorDeviceId}; blocks until Pushca has taken it.
+     *
+     * @throws NullPointerException     when the device id, sequence id, response class or error is null
+     * @throws IllegalArgumentException when the device id or sequence id is blank
+     * @throws IllegalStateException    when Pushca can't be reached or refuses the message
+     */
+    @Override
+    public void deliverErrorToOrchestrator(String orchestratorDeviceId, String sequenceId, Class<?> responseClass,
+                                           Throwable error) {
+        Validate.notNull(error, "error must not be null");
+        deliver(orchestratorDeviceId, ComagentsMessage.ofError(sequenceId, responseClass, error));
+    }
+
+    private synchronized void deliver(String orchestratorDeviceId, ComagentsMessage comagentsMessage) {
         Validate.notBlank(orchestratorDeviceId, "orchestratorDeviceId must not be blank");
-        String message = comagentsMessage(response).toString();
+        String message = comagentsMessage.toString();
         ClientFilter orchestrator = orchestrator(orchestratorDeviceId);
         boolean reused = connection != null;
         try {
@@ -109,15 +125,14 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
         closeConnection();
     }
 
-    // the orchestrator device that started the session; one client of it, should it be connected more than once
+    // the orchestrator device that sent the request; workspace, account, device and application name exactly one client
     private static ClientFilter orchestrator(String orchestratorDeviceId) {
         return new ClientFilter(WORKSPACE_ID, ORCHESTRATOR_ACCOUNT_ID, orchestratorDeviceId, ORCHESTRATOR_APPLICATION_ID);
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> ComagentsMessage comagentsMessage(T response) {
+    private static <T> ComagentsMessage comagentsMessage(String sequenceId, T response) {
         Validate.notNull(response, "response must not be null");
-        String sequenceId = (response instanceof WithSequenceId responseWithInstanceId) ? responseWithInstanceId.sequenceId() : UUID.randomUUID().toString();
         // the payload's runtime class: the orchestrator reads the message by that class name
         return ComagentsMessage.ofPayload(sequenceId, response, (Class<T>) response.getClass());
     }

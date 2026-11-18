@@ -1,5 +1,6 @@
 package com.comagents.commons.request;
 
+import com.comagents.commons.communication.WithOrchestratorDeviceId;
 import com.comagents.commons.communication.WithSequenceId;
 import com.comagents.commons.domain.AiAgent;
 import org.apache.commons.lang3.Validate;
@@ -13,7 +14,7 @@ import java.util.UUID;
  * @param orchestratorDeviceId the orchestrator device that gets the response
  */
 public record AgentStatusRequest(AiAgent agent, UUID sessionId, String sequenceId, String orchestratorDeviceId)
-        implements WithSequenceId {
+        implements WithSequenceId, WithOrchestratorDeviceId {
 
     public AgentStatusRequest {
         Validate.notNull(agent, "agent must not be null");

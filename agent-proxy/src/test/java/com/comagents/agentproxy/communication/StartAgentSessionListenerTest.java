@@ -7,8 +7,10 @@ import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.communication.pushca.AgentExecutorPushcaClient;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.StartAgentSessionRequest;
+import com.comagents.commons.response.AgentInfo;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -20,8 +22,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 // a session that starts needs the comagents sources from GitHub, so only requests that fail before are sent here
 @MicronautTest
@@ -51,37 +53,47 @@ class StartAgentSessionListenerTest {
     }
 
     @Test
-    void rejectsAnInvalidRequest() {
-        assertThrows(ConstraintViolationException.class, () -> listener.consumePayload("sequence-1",
-                new StartAgentSessionRequest(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, "sequence-1", " ", "MBugai")));
+    void sendsBackWhyAnInvalidRequestIsRejected() {
+        listener.consumePayload("sequence-1",
+                new StartAgentSessionRequest(UUID.randomUUID(), null, null, "sequence-1", "orchestrator-device-1", "MBugai"));
 
-        assertNothingDelivered();
+        assertEquals(ConstraintViolationException.class.getName(), sentError().error().errorClassName());
     }
 
     @Test
-    void rejectsAnAgentWithoutSetupService() {
+    void sendsBackThatTheAgentHasNoSetupService() {
         // IMAGE_GENERATOR runs on CODEX, which has no AgentSetupService yet
-        assertThrows(NoAgentSetupServiceException.class, () -> listener.consumePayload("sequence-1", new StartAgentSessionRequest(
-                UUID.randomUUID(), AiAgent.IMAGE_GENERATOR, null, "sequence-1", "orchestrator-device-1", "MBugai")));
+        listener.consumePayload("sequence-1", new StartAgentSessionRequest(
+                UUID.randomUUID(), AiAgent.IMAGE_GENERATOR, null, "sequence-1", "orchestrator-device-1", "MBugai"));
 
-        assertNothingDelivered();
+        ComagentsMessage error = sentError();
+        assertEquals(NoAgentSetupServiceException.class.getName(), error.error().errorClassName());
+        assertEquals("No setup service for harness provider CODEX (agent image_generator)", error.error().errorMessage());
     }
 
     @Test
-    void deliversNothingWhenTheSetupFails() throws IOException {
+    void sendsBackWhyTheSetupFailed() throws IOException {
         UUID sessionId = UUID.randomUUID();
         Files.createDirectories(sessionFolders.of(sessionId));
         try {
-            assertThrows(ClaudeSessionExistsException.class, () -> listener.consumePayload("sequence-1", new StartAgentSessionRequest(
-                    sessionId, AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-device-1", "MBugai")));
+            listener.consumePayload("sequence-1", new StartAgentSessionRequest(
+                    sessionId, AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-device-1", "MBugai"));
 
-            assertNothingDelivered();
+            assertEquals(ClaudeSessionExistsException.class.getName(), sentError().error().errorClassName());
         } finally {
             FileTrees.deleteIfExists(sessionFolders.of(sessionId));
         }
     }
 
-    private void assertNothingDelivered() {
-        assertTrue(connector.connections.stream().allMatch(connection -> connection.broadcasts.isEmpty()));
+    // the only message sent: an error in place of the AgentInfo, to the requesting device, with the request's id
+    private ComagentsMessage sentError() {
+        FakePushcaConnector.Broadcast sent = connector.connections.getLast().broadcasts.getFirst();
+        assertEquals(1, connector.connections.getLast().broadcasts.size());
+        assertEquals("orchestrator-device-1", sent.receivers().deviceId);
+        ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(sent.message());
+        assertEquals("sequence-1", message.id());
+        assertEquals(AgentInfo.class.getName(), message.payloadClassName());
+        assertNull(message.payloadString());
+        return message;
     }
 }

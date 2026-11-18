@@ -1,21 +1,23 @@
 package com.comagents.agentproxy.communication;
 
 import com.comagents.agentproxy.agent_setup.AgentSessionStarter;
-import com.comagents.commons.communication.ComagentsMessageListener;
 import com.comagents.commons.request.StartAgentSessionRequest;
+import com.comagents.commons.response.AgentInfo;
 import jakarta.inject.Singleton;
 
-/** Start requests from an orchestrator over Pushca; the orchestrator device gets back who runs the session. */
+/**
+ * Start requests from an orchestrator over Pushca; the orchestrator device gets back who runs the session, or why it
+ * wasn't started.
+ */
 @Singleton
-public class StartAgentSessionListener implements ComagentsMessageListener<StartAgentSessionRequest> {
+public class StartAgentSessionListener extends ComagentsBaseListener<StartAgentSessionRequest, AgentInfo> {
 
     private final AgentSessionStarter agentSessionStarter;
-    private final ResponseDeliveryService responseDeliveryService;
 
     public StartAgentSessionListener(AgentSessionStarter agentSessionStarter,
                                      ResponseDeliveryService responseDeliveryService) {
+        super(responseDeliveryService);
         this.agentSessionStarter = agentSessionStarter;
-        this.responseDeliveryService = responseDeliveryService;
     }
 
     @Override
@@ -23,9 +25,13 @@ public class StartAgentSessionListener implements ComagentsMessageListener<Start
         return StartAgentSessionRequest.class;
     }
 
-    // the message's sequence id is the request's: ComagentsMessageDispatcher checked it
     @Override
-    public void consumePayload(String sequenceId, StartAgentSessionRequest request) {
-        responseDeliveryService.deliverToOrchestrator(request.orchestratorDeviceId(), agentSessionStarter.start(request));
+    protected Class<AgentInfo> getResponseClass() {
+        return AgentInfo.class;
+    }
+
+    @Override
+    protected AgentInfo prepareResponse(StartAgentSessionRequest request) {
+        return agentSessionStarter.start(request);
     }
 }

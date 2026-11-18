@@ -99,7 +99,6 @@ class AgentResponseBroadcastTest {
         assertEquals("agent-orchestrator@comagents.com", broadcasts.getFirst().receivers().accountId);
         assertEquals("orchestrator-device-1", broadcasts.getFirst().receivers().deviceId);
         assertEquals("AGENT_ORCHESTRATOR", broadcasts.getFirst().receivers().applicationId);
-        assertTrue(broadcasts.getFirst().receivers().findAny, "one client of the device gets it");
         // a ComagentsMessage, read as the orchestrator reads it
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(broadcasts.getFirst().message());
         assertEquals("sequence-1", message.id(), "the start request's sequence id");

@@ -1,5 +1,6 @@
 package com.comagents.commons.request;
 
+import com.comagents.commons.communication.WithOrchestratorDeviceId;
 import com.comagents.commons.communication.WithSequenceId;
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AiAgent;
@@ -24,7 +25,7 @@ public record StartAgentSessionRequest(UUID sessionId,
                                        @NotBlank String orchestratorDeviceId,
                                        String actorAccountId,
                                        AgentSessionLoggingLevel loggingLevel,
-                                       long createdAt) implements WithSequenceId {
+                                       long createdAt) implements WithSequenceId, WithOrchestratorDeviceId {
 
     public StartAgentSessionRequest(UUID sessionId, AiAgent agent, @Nullable AgentContext agentContext, String sequenceId, String orchestratorDeviceId, String actorAccountId) {
         this(sessionId, agent, agentContext, sequenceId, orchestratorDeviceId, actorAccountId, AgentSessionLoggingLevel.INFO, Instant.now().toEpochMilli());
