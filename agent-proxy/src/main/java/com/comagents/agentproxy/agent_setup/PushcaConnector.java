@@ -15,5 +15,5 @@ public interface PushcaConnector {
      *                        receiving thread
      * @throws IllegalStateException when the connection cannot be opened
      */
-    PushcaConnection connect(PClient client, Consumer<ChannelMessage> channelMessages);
+    AgentSessionPrivateChannelService connect(PClient client, Consumer<ChannelMessage> channelMessages);
 }

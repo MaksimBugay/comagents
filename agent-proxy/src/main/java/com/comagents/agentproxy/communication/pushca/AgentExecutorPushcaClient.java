@@ -2,7 +2,7 @@ package com.comagents.agentproxy.communication.pushca;
 
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
-import com.comagents.agentproxy.agent_setup.PushcaConnection;
+import com.comagents.agentproxy.agent_setup.AgentSessionPrivateChannelService;
 import com.comagents.agentproxy.agent_setup.PushcaConnector;
 import com.comagents.agentproxy.communication.ResponseDeliveryService;
 import com.comagents.agentproxy.conf.AgentProxyConf;
@@ -40,7 +40,7 @@ public class AgentExecutorPushcaClient implements ResponseDeliveryService, Appli
     private final PClient client;
 
     // guarded by this
-    private PushcaConnection connection;
+    private AgentSessionPrivateChannelService connection;
 
     public AgentExecutorPushcaClient(PushcaConnector connector, AgentProxyConf conf) {
         this.connector = connector;

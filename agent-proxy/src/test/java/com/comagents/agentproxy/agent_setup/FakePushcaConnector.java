@@ -27,7 +27,7 @@ public final class FakePushcaConnector implements PushcaConnector {
     volatile RuntimeException addMembersFailure;
 
     @Override
-    public PushcaConnection connect(PClient client, Consumer<ChannelMessage> channelMessages) {
+    public AgentSessionPrivateChannelService connect(PClient client, Consumer<ChannelMessage> channelMessages) {
         if (connectFailure != null) {
             throw connectFailure;
         }
@@ -39,7 +39,7 @@ public final class FakePushcaConnector implements PushcaConnector {
     public record Broadcast(ClientFilter receivers, String message) {
     }
 
-    public static final class FakeConnection implements PushcaConnection {
+    public static final class FakeConnection implements AgentSessionPrivateChannelService {
 
         public final PClient client;
         final List<PChannel> createdChannels = new CopyOnWriteArrayList<>();

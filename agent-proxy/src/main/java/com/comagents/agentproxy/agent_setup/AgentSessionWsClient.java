@@ -36,7 +36,7 @@ final class AgentSessionWsClient {
     private final ExecutorService sender;
 
     // guarded by this
-    private PushcaConnection connection;
+    private AgentSessionPrivateChannelService connection;
     private PChannel channel;
     // only the first of a run of failed sends is logged as a warning, so an unreachable Pushca doesn't flood the log
     private boolean sendFailing;

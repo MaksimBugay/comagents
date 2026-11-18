@@ -7,7 +7,7 @@ import bmv.org.pushca.core.PChannel;
  * The part of a Pushca connection that agent-proxy uses: session chats (channels) and the executor's deliveries to
  * the orchestrator (broadcasts). Commands are blocking and throw on failure.
  */
-public interface PushcaConnection extends AutoCloseable {
+public interface AgentSessionPrivateChannelService extends AutoCloseable {
 
     /**
      * Creates a channel only its owner (this connection's account) and the members it adds can see. Its id is its

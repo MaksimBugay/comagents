@@ -35,7 +35,7 @@ public class PushcaWebSocketConnector implements PushcaConnector {
     }
 
     @Override
-    public PushcaConnection connect(PClient client, Consumer<ChannelMessage> channelMessages) {
+    public AgentSessionPrivateChannelService connect(PClient client, Consumer<ChannelMessage> channelMessages) {
         CountDownLatch ready = new CountDownLatch(1);
         PushcaWebSocket webSocket = new PushcaWebSocketBuilder(conf.getPushcaApiUrl(), conf.getPushcaApiKey(), client, null)
                 .withConnectTimeoutMs(connectTimeoutMs)
@@ -70,7 +70,7 @@ public class PushcaWebSocketConnector implements PushcaConnector {
                 + " within " + connectTimeoutMs + " ms");
     }
 
-    private record WebSocketConnection(PushcaWebSocket webSocket) implements PushcaConnection {
+    private record WebSocketConnection(PushcaWebSocket webSocket) implements AgentSessionPrivateChannelService {
 
         @Override
         public PChannel createClosePrivateChannel(String name) {
