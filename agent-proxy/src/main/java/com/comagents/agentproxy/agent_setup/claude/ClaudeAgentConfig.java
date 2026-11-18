@@ -26,12 +26,14 @@ import java.util.Set;
  *                      agent context ({@code {"items": [...]}}) and is read as the session's response; if null the
  *                      final text is the response, as one {@code STRING} item named
  *                      {@value #DEFAULT_RESPONSE_ITEM}
+ * @param readOnly      the agent changes no repository; false if absent
+ * @param stateless     the agent works on no repository at all; false if absent
  */
 @Introspected
 public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
                                 String kickOffPrompt, @Nullable String resumePrompt,
                                 @Nullable Set<RequiredAgentContextItem> requiredItems,
-                                @Nullable JsonNode responseSchema) {
+                                @Nullable JsonNode responseSchema, boolean readOnly, boolean stateless) {
 
     public static final String FILE_NAME = "agent.json";
 

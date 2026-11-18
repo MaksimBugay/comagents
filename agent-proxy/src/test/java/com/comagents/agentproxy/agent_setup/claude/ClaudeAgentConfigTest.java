@@ -10,7 +10,9 @@ import java.util.Objects;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClaudeAgentConfigTest {
 
@@ -29,6 +31,24 @@ class ClaudeAgentConfigTest {
     void noRequiredItemsByDefault() {
         assertEquals(Set.of(), read("""
                 {"kickOffPrompt": "Review it"}""").requiredItems());
+    }
+
+    @Test
+    void readsReadOnlyAndStateless() {
+        ClaudeAgentConfig config = read("""
+                {"kickOffPrompt": "Forecast it", "readOnly": true, "stateless": true}""");
+
+        assertTrue(config.readOnly());
+        assertTrue(config.stateless());
+    }
+
+    @Test
+    void neitherReadOnlyNorStatelessByDefault() {
+        ClaudeAgentConfig config = read("""
+                {"kickOffPrompt": "Review it"}""");
+
+        assertFalse(config.readOnly());
+        assertFalse(config.stateless());
     }
 
     @Test

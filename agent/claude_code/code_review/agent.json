@@ -1,6 +1,7 @@
 {
   "model": "deepseek-flash[1m]",
   "effort": "high",
+  "readOnly": true,
   "allowedTools": [
     "Skill",
     "WebSearch",
