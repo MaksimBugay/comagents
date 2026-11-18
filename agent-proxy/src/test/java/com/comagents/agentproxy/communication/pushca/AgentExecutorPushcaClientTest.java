@@ -2,8 +2,8 @@ package com.comagents.agentproxy.communication.pushca;
 
 import bmv.org.pushca.client.exception.PushcaCommandException;
 import bmv.org.pushca.client.exception.WebsocketConnectionIsBrokenException;
+import bmv.org.pushca.client.exception.WebsocketConnectionIsNotOpenException;
 import com.comagents.agentproxy.communication.ComagentsMessageQueue;
-import com.comagents.agentproxy.communication.ComagentsQueueConsumer;
 import com.comagents.agentproxy.communication.QueuedComagentsMessage;
 import com.comagents.agentproxy.communication.QueuedResponseDeliveryService;
 import com.comagents.agentproxy.communication.ResponseDeliveryService;
@@ -95,7 +95,7 @@ class AgentExecutorPushcaClientTest {
     void dropsTheMessageWhenTheConnectionStaysBrokenUntilTheResponseTimeout() {
         ResponseDeliveryService shortDelivery = new QueuedResponseDeliveryService(queue, Duration.ofMillis(2500));
         FakePushcaConnectionFactory.FakeConnection connection = connectionFactory.connections.getFirst();
-        connection.broadcastFailure = new IllegalStateException(ComagentsQueueConsumer.BROKEN_CONNECTION_MESSAGE);
+        connection.broadcastFailure = new WebsocketConnectionIsNotOpenException();
 
         long start = System.nanoTime();
         shortDelivery.deliverToOrchestrator("orchestrator-device-1", "sequence-1", RESPONSE);

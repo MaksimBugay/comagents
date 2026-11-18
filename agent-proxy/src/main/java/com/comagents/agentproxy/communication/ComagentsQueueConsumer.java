@@ -1,6 +1,7 @@
 package com.comagents.agentproxy.communication;
 
 import bmv.org.pushca.client.exception.WebsocketConnectionIsBrokenException;
+import bmv.org.pushca.client.exception.WebsocketConnectionIsNotOpenException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -9,8 +10,6 @@ import java.util.concurrent.TimeoutException;
 /** Sends the {@link ComagentsMessageQueue}'s messages, one by one in queue order. */
 public interface ComagentsQueueConsumer {
 
-    // the Pushca client's message for a send while its socket isn't open
-    String BROKEN_CONNECTION_MESSAGE = "Web socket connection is broken";
     Duration RETRY_INTERVAL = Duration.ofSeconds(1);
 
     /**
@@ -70,11 +69,9 @@ public interface ComagentsQueueConsumer {
         }
     }
 
-    // what the Pushca client throws for a send on a broken connection: not open (a plain IllegalStateException, unlike
-    // PushcaCommandException for a command Pushca rejects), or not acknowledged by Pushca
+    // what the Pushca client throws for a send on a broken connection: not open, or not acknowledged by Pushca
     private static boolean isBrokenConnection(RuntimeException e) {
-        return e instanceof WebsocketConnectionIsBrokenException
-                || e.getClass() == IllegalStateException.class && BROKEN_CONNECTION_MESSAGE.equals(e.getMessage());
+        return e instanceof WebsocketConnectionIsNotOpenException || e instanceof WebsocketConnectionIsBrokenException;
     }
 
     private static void pause() {
