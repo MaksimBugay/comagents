@@ -1,8 +1,9 @@
 package com.comagents.agentproxy.agent_setup;
 
+import bmv.org.pushca.client.exception.PushcaAuthenticationException;
 import bmv.org.pushca.client.model.ClientFilter;
-import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory.FakeConnection;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory.FakeConnection;
 import com.comagents.commons.domain.AiAgent;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AgentSessionWsClientRegistryTest {
 
     private static final Duration WAIT = Duration.ofSeconds(5);
+    private static final PushcaAuthenticationException REFUSED =
+            new PushcaAuthenticationException("code_review@comagents.com", 401);
 
     private final UUID sessionId = UUID.randomUUID();
     private final FakePushcaConnectionFactory connectionFactory = new FakePushcaConnectionFactory();
@@ -115,8 +118,8 @@ class AgentSessionWsClientRegistryTest {
     }
 
     @Test
-    void failedReopenLeavesTheChatAndDropsTheClient() {
-        connectionFactory.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+    void refusedReopenLeavesTheChatAndDropsTheClient() {
+        connectionFactory.connectFailure = REFUSED;
 
         assertFalse(registry.reopenConnection(sessionId, AiAgent.CODE_REVIEW, "MBugai"));
 
@@ -206,25 +209,41 @@ class AgentSessionWsClientRegistryTest {
 
     @Test
     void chatStaysWhenPushcaIsUnavailableForItsRemoval() {
-        connectionFactory.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+        connectionFactory.notOpen = true;
 
+        // retried until the Pushca client would have reconnected
         registry.removeChat(sessionId, AiAgent.CODE_REVIEW);
 
-        assertTrue(connectionFactory.connections.isEmpty());
+        FakeConnection connection = onlyConnection();
+        assertTrue(connection.removedChannels.isEmpty());
+        assertTrue(connection.closed);
     }
 
     @Test
     void sessionRunsWithoutChatWhenPushcaIsUnavailable() {
-        connectionFactory.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+        connectionFactory.notOpen = true;
 
+        // creating the chat is retried until the Pushca client would have reconnected
         assertFalse(registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks"));
+        FakeConnection unavailable = onlyConnection();
+        assertTrue(unavailable.createdChannels.isEmpty());
+        assertTrue(unavailable.closed);
         registry.onOutput(sessionId, "tool: Read pom.xml");
-        assertTrue(connectionFactory.connections.isEmpty());
+        assertTrue(unavailable.messages.isEmpty());
 
         // the failed client was removed, so a later open starts afresh
-        connectionFactory.connectFailure = null;
+        connectionFactory.notOpen = false;
         assertTrue(registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks"));
-        assertEquals(1, onlyConnection().createdChannels.size());
+        assertEquals(1, connectionFactory.connections.getLast().createdChannels.size());
+    }
+
+    @Test
+    void sessionRunsWithoutChatWhenPushcaRefusesToSignIn() {
+        connectionFactory.connectFailure = REFUSED;
+
+        assertFalse(registry.openConnection(sessionId, AiAgent.CODE_REVIEW, "Maks"));
+
+        assertTrue(connectionFactory.connections.isEmpty());
     }
 
     @Test

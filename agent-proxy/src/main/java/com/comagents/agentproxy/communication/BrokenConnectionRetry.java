@@ -13,7 +13,7 @@ import java.util.function.Supplier;
  */
 public final class BrokenConnectionRetry {
 
-    public static final Duration RETRY_INTERVAL = Duration.ofSeconds(1);
+    private static final Duration RETRY_INTERVAL = Duration.ofSeconds(1);
 
     private BrokenConnectionRetry() {
     }

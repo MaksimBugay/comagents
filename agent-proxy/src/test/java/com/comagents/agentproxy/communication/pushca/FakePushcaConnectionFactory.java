@@ -1,6 +1,7 @@
 package com.comagents.agentproxy.communication.pushca;
 
 import bmv.org.pushca.client.PushcaWebSocket;
+import bmv.org.pushca.client.exception.WebsocketConnectionIsNotOpenException;
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
 import bmv.org.pushca.core.ChannelMessage;
@@ -12,6 +13,7 @@ import org.mockito.invocation.InvocationOnMock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
@@ -28,8 +30,11 @@ import static org.mockito.Mockito.mock;
 public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
 
     public final List<FakeConnection> connections = new CopyOnWriteArrayList<>();
-    // set to make the next connects fail, as with a wrong API key or an unreachable server
+    // set to make the next connects fail, as with a wrong API key (PushcaAuthenticationException): the only failure
+    // the real factory throws
     public volatile RuntimeException connectFailure;
+    // set to make the next connections not open, as while Pushca can't be reached: their commands fail as broken
+    public volatile boolean notOpen;
     // set to make adding the actor to a new chat fail, after sign-in and channel creation
     public volatile RuntimeException addMembersFailure;
 
@@ -41,6 +46,7 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
     public void reset() {
         connections.forEach(FakeConnection::reset);
         connectFailure = null;
+        notOpen = false;
         addMembersFailure = null;
     }
 
@@ -51,6 +57,7 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
             throw connectFailure;
         }
         FakeConnection connection = new FakeConnection(client, addMembersFailure, messages, channelMessages);
+        connection.notOpen = notOpen;
         connections.add(connection);
         return connection.webSocket;
     }
@@ -61,6 +68,9 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
     /** One connection: its {@link PushcaWebSocket} records the commands the code under test sends. */
     public static final class FakeConnection {
 
+        private static final Set<String> COMMANDS = Set.of("createChannel", "addMembersToChannel",
+                "sendMessageToChannel", "removeChannel", "broadcastMessage");
+
         public final PClient client;
         public final List<PChannel> createdChannels = new CopyOnWriteArrayList<>();
         public final List<ClientFilter> members = new CopyOnWriteArrayList<>();
@@ -70,6 +80,8 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
         public final List<Broadcast> broadcasts = new CopyOnWriteArrayList<>();
         // set to make broadcasts fail, as when the socket is broken
         public volatile RuntimeException broadcastFailure;
+        // set while the connection isn't open: every command fails as broken
+        public volatile boolean notOpen;
         public volatile boolean closed;
         private final RuntimeException addMembersFailure;
         private final Consumer<? super String> incomingMessages;
@@ -92,6 +104,7 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
             removedChannels.clear();
             broadcasts.clear();
             broadcastFailure = null;
+            notOpen = false;
         }
 
         /** A message Pushca delivers to this connection: someone wrote {@code body} in channel {@code channelId}. */
@@ -111,7 +124,11 @@ public final class FakePushcaConnectionFactory extends PushcaConnectionFactory {
         // the PushcaWebSocket commands agent-proxy sends; anything else answers with defaults
         private Object answer(InvocationOnMock call) throws Throwable {
             Object[] arguments = call.getArguments();
-            switch (call.getMethod().getName()) {
+            String command = call.getMethod().getName();
+            if (notOpen && COMMANDS.contains(command)) {
+                throw new WebsocketConnectionIsNotOpenException();
+            }
+            switch (command) {
                 case "createChannel" -> {
                     PChannel channel = new PChannel((String) arguments[0], (String) arguments[1], true);
                     createdChannels.add(channel);

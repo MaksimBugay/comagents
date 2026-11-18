@@ -1,10 +1,11 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory.FakeConnection;
+import bmv.org.pushca.client.exception.PushcaAuthenticationException;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionArchive;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
+import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory.FakeConnection;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
@@ -67,9 +68,9 @@ class ArchivedSessionChatsTest {
     }
 
     @Test
-    void sessionsStayArchivedWhenPushcaIsUnavailable() throws IOException {
+    void sessionsStayArchivedWhenPushcaRefusesToSignIn() throws IOException {
         writeArchive(UUID.randomUUID());
-        connectionFactory.connectFailure = new IllegalStateException("Cannot sign in to Pushca");
+        connectionFactory.connectFailure = new PushcaAuthenticationException("code_review@comagents.com", 401);
 
         assertEquals(0, archivedSessionChats.reopenAll());
     }

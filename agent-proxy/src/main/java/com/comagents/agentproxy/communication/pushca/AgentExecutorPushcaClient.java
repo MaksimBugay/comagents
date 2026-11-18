@@ -99,7 +99,7 @@ public class AgentExecutorPushcaClient
     /**
      * Sends {@code message} to its orchestrator device over the kept connection.
      *
-     * @throws IllegalStateException when Pushca can't be reached or refuses the message
+     * @throws RuntimeException when it can't be sent: the connection isn't open or broke, or Pushca refuses it
      */
     @Override
     public synchronized void consume(QueuedComagentsMessage message) {

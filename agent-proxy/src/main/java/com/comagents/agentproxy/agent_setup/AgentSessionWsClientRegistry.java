@@ -78,8 +78,9 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
 
     /**
      * {@link #openConnection} for a session whose chat was created before, e.g. an archived session after a restart:
-     * the existing chat is used, never created again, so its history and members stay. When Pushca can't be
-     * reached, the client is dropped and the chat is left as it is.
+     * the existing chat is used, never created again, so its history and members stay. When Pushca refuses to sign the
+     * client in, the client is dropped and the chat is left as it is; while Pushca can't be reached, the Pushca client
+     * reconnects by itself.
      *
      * @return whether the session's chat is connected again
      */
@@ -89,7 +90,7 @@ public class AgentSessionWsClientRegistry implements ClaudeSessionListener {
                     .connect(connectionFactory, true);
             return true;
         } catch (RuntimeException e) {
-            LOG.warn("[{} {}] Pushca unavailable, the chat is not reopened: {}", agent.getAgentName(), sessionId,
+            LOG.warn("[{} {}] Pushca refused the client, the chat is not reopened: {}", agent.getAgentName(), sessionId,
                     e.getMessage());
             Optional.ofNullable(clients.remove(sessionId)).ifPresent(AgentSessionWsClient::shutdown);
             return false;

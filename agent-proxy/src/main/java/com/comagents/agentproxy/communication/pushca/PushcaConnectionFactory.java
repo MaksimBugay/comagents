@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 public class PushcaConnectionFactory {
 
     /** For a client that ignores what it receives: plain messages, channel messages, or both. */
-    public static final Consumer<Object> IGNORE_MESSAGES = _ -> {
+    static final Consumer<Object> IGNORE_MESSAGES = _ -> {
     };
 
     private static final Logger LOG = LoggerFactory.getLogger(PushcaConnectionFactory.class);

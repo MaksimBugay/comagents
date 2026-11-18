@@ -18,6 +18,32 @@ $ curl localhost:8080/code_review/info
 {"name":"code_review","version":"0.1","deviceId":"cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3","sequenceId":"3f1c9a52-7d4e-4b8a-9c21-5e6f7a8b9c0d"}
 ```
 
+### Over Pushca
+
+The same API works over Pushca, between orchestrators and the agent executor (this agent-proxy):
+
+- **The executor's own client:** signed in to workspace `comagents-main` as `agent-executor@comagents.com`,
+  application `<AI_HARNESS_PROVIDER>_EXECUTOR` (e.g. `CLAUDE_CODE_EXECUTOR`), device id = `deviceId`. It is opened
+  on startup and kept open by the Pushca client itself, which signs in or reconnects every 2 s while it isn't open.
+  A `PUSHCA_API_KEY` that Pushca refuses (HTTP 401/403) stops the startup.
+- **Requests:** an orchestrator sends a `ComagentsMessage` whose payload is one of the requests below, with the
+  request's `sequenceId` as the message id. Each request is handled on its own thread.
+- **Replies:** the reply goes back to the request's `orchestratorDeviceId` device of
+  `agent-orchestrator@comagents.com` (`comagents-main`, `AGENT_ORCHESTRATOR`), with the request's `sequenceId` as the
+  message id. When the request fails, the reply carries an `error` (`errorMessage`, `errorClassName`) in place of the
+  payload, under the class the payload would have had.
+
+| Request (`com.comagents.commons.request`) | As over HTTP | Reply (`com.comagents.commons.response`) | Errors |
+|---|---|---|---|
+| `StartAgentSessionRequest` | `POST /{agentName}/start` | `AgentInfo` | anything that stops the start: an invalid request (`ConstraintViolationException`), a session id in use (`ClaudeSessionExistsException`), no setup service for the agent's harness (`NoAgentSetupServiceException`), … |
+| `AgentStatusRequest` (`agent`, `sessionId`, `sequenceId`, `orchestratorDeviceId`) | `GET /agent-status/{agentName}/{sessionId}` | `AgentStatusResponse` (the request and the `AgentStatus`) | `AgentSessionNotFoundException`: never started, or already cleaned up |
+| `AgentResponseRequest` (`agent`, `sessionId`, `sequenceId`, `orchestratorDeviceId`) | `GET /agent-response/{agentName}/{sessionId}` | `AgentResponseReply` (the `AgentSessionResponse`, which keeps the start request's `sequenceId`); as a fetch over HTTP, the session's files are deleted 5 minutes later | `AgentSessionNotFoundException`; `AgentResponseNotReadyException` while the session is `RUNNING`, `WAITING` or `ARCHIVED` (every session leaves a response when it ends) |
+
+Every message to an orchestrator (replies, errors, and the `AgentSessionResponse` sent once a response is on disk)
+goes through one queue and over the one connection, one by one. A send that finds the connection broken is retried
+every second until `AGENT_PROXY_RESPONSE_TIMEOUT` (30 s) has passed since it was queued; a message not sent by then is
+dropped with an error logged, and the orchestrator, which has timed out meanwhile, asks again.
+
 ### Session chat
 
 Every session mirrors its output into its own Pushca chat: a close private channel with id and name
@@ -201,7 +227,7 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `PUSHCA_API_KEY`              | — (required) | API key of the organization registered in Pushca (`pushca.api-key`); a key Pushca refuses stops the startup |
 | `PUSHCA_API_URL`              | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |
 | `PUSHCA_CHAT_URL`             | `https://secure.fileshare.ovh/chat-room.html` | Chat page; each new session chat is logged with its join link (`pushca.chat-url`) |
-| `PUSHCA_CONNECT_TIMEOUT`      | `10s`        | How long signing in, opening the socket and waiting for the server to accept commands may each take (`pushca.connect-timeout`) |
+| `PUSHCA_CONNECT_TIMEOUT`      | `10s`        | How long signing in, opening the socket and waiting for the server to accept commands may each take (`pushca.connect-timeout`). Session chat commands on a broken connection are retried for this long plus the 2 s keep-alive interval plus 1 s: the time the Pushca client takes to reconnect by itself |
 | `AGENT_PROXY_RESPONSE_TIMEOUT` | `30s`      | How long a response (or error) for an orchestrator may take to be sent over Pushca; sends finding the connection broken are retried every second until then, and a message not sent by then is dropped with an error logged: the orchestrator has timed out meanwhile and asks again (`agent-proxy.response-timeout`) |
 | `AGENT_PROXY_MCP_URL`         | `http://127.0.0.1:8080/mcp` | Where Claude Code reaches agent-proxy's MCP server (`agent-proxy.mcp-url`); change it with the port |
 | `AGENT_QUESTION_ANSWER_TIMEOUT` | `4m`       | How long `ask_expert` waits for an answer; below 5 min, after which Claude Code aborts the call (`agent-question.answer-timeout`) |
