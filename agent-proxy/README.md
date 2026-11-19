@@ -120,7 +120,7 @@ claude -p "<kickOffPrompt>" \
   --disallowedTools AskUserQuestion \
   --mcp-config '{"mcpServers":{"agentproxy":{"type":"http","url":"…/mcp","headers":{…},"timeout":…}}}' \
   [--model <model>] [--effort <effort>] \
-  --settings '{"permissions":{"blockReadsOutsideWorkingDirectories":true}[,"sandbox":<agent.json sandbox>]}' \
+  --settings '{"permissions":{"blockReadsOutsideWorkingDirectories":true}[,"sandbox":<agent.json sandbox, allowWrite + the m2 folder>]}' \
   --allowedTools <agent.json allowedTools…> mcp__agentproxy__ask_expert
 ```
 
@@ -133,7 +133,11 @@ claude -p "<kickOffPrompt>" \
   (Claude Code's own state for the session: settings, the conversation `--resume` reads; deleted with the session,
   kept by an archive, never shared),
   `TMPDIR=<sessions-dir>/<sessionId>/<agentName>/tmp` (the run's own temp folder in place of the container's, so
-  parallel sessions never share temp files; deleted with the session), and `CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1`
+  parallel sessions never share temp files; deleted with the session),
+  `MAVEN_OPTS=-Dmaven.repo.local=<sessions-dir>/<sessionId>/<agentName>/m2/repository` and
+  `MAVEN_USER_HOME=<sessions-dir>/<sessionId>/<agentName>/m2` (the run's own Maven repository and wrapper downloads
+  in place of the shared `~/.m2`, so parallel sessions never overwrite each other's artifacts; deleted with the
+  session, writable in the agent's sandbox), and `CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1`
   when resuming with the `resumePrompt` (finish the interrupted turn first; not when resuming with an answer).
 - **stdin** is `/dev/null`: with an open pipe, `claude -p` waits 3 s for input on every run.
 

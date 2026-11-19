@@ -48,6 +48,8 @@ class ClaudeAgentSessionRegistryTest {
             printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
             printf '%s' "$CLAUDE_CONFIG_DIR" > "$(dirname "$0")/config-dir.txt"
             printf '%s' "$TMPDIR" > "$(dirname "$0")/tmp-dir.txt"
+            printf '%s' "$MAVEN_OPTS" > "$(dirname "$0")/maven-opts.txt"
+            printf '%s' "$MAVEN_USER_HOME" > "$(dirname "$0")/maven-user-home.txt"
             # stdin must be empty, not an open pipe: this would block otherwise
             cat > "$(dirname "$0")/stdin.txt"
             # printf, not echo: sh's echo would turn the \\n escapes inside the JSON into real line breaks
@@ -152,6 +154,11 @@ class ClaudeAgentSessionRegistryTest {
         Path tempFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("tmp");
         assertEquals(tempFolder.toString(), Files.readString(scripts.resolve("tmp-dir.txt")), "temp files are kept per session");
         assertTrue(Files.isDirectory(tempFolder));
+        Path mavenFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("m2");
+        assertEquals("-Dmaven.repo.local=" + mavenFolder.resolve("repository"), Files.readString(scripts.resolve("maven-opts.txt")),
+                "the Maven repository is kept per session");
+        assertEquals(mavenFolder.toString(), Files.readString(scripts.resolve("maven-user-home.txt")));
+        assertTrue(Files.isDirectory(mavenFolder));
         assertEquals(sessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".json"), session.getResponseFile());
         assertEquals("# Report\n\nAll good", responseText(session.getResponseFile()));
         assertEquals(List.of(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId)), responsesReady, "once it is on disk");
@@ -294,7 +301,8 @@ class ClaudeAgentSessionRegistryTest {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
         UUID sessionId = newSessionId();
         writeAgentConfig(sessionId, """
-                {"kickOffPrompt": "Test it", "sandbox": {"enabled": true, "allowUnsandboxedCommands": false}}""");
+                {"kickOffPrompt": "Test it", "sandbox": {"enabled": true, "allowUnsandboxedCommands": false,
+                 "filesystem": {"allowWrite": ["~/.cache"]}}}""");
 
         registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
 
@@ -302,6 +310,10 @@ class ClaudeAgentSessionRegistryTest {
         JsonNode settings = settings(args);
         assertTrue(path(settings, "sandbox", "enabled").booleanValue());
         assertFalse(path(settings, "sandbox", "allowUnsandboxedCommands").booleanValue());
+        Path mavenFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("m2");
+        assertEquals(List.of("~/.cache", mavenFolder.toString()),
+                path(settings, "sandbox", "filesystem", "allowWrite").valueStream().map(JsonNode::stringValue).toList(),
+                "the session's Maven folder is writable too");
         assertTrue(path(settings, "permissions", "blockReadsOutsideWorkingDirectories").booleanValue());
     }
 
@@ -849,7 +861,7 @@ class ClaudeAgentSessionRegistryTest {
         // the shell adds PWD, SHLVL and _ itself
         List<String> leaked = names.stream()
                 .filter(name -> !ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name))
-                .filter(name -> !List.of("CLAUDE_CONFIG_DIR", "TMPDIR", "PWD", "OLDPWD", "SHLVL", "_").contains(name))
+                .filter(name -> !List.of("CLAUDE_CONFIG_DIR", "TMPDIR", "MAVEN_OPTS", "MAVEN_USER_HOME", "PWD", "OLDPWD", "SHLVL", "_").contains(name))
                 .toList();
         assertEquals(List.of(), leaked);
     }
@@ -1107,12 +1119,13 @@ class ClaudeAgentSessionRegistryTest {
         return current;
     }
 
-    // the --mcp-config the fake claude was started with
+    // the --settings the fake claude was started with
     private static JsonNode settings(List<String> args) {
         return Objects.requireNonNull(JsonUtility.fromJson(args.get(args.indexOf("--settings") + 1), JsonNode.class),
                 "--settings");
     }
 
+    // the --mcp-config the fake claude was started with
     private static JsonNode mcpServer(List<String> args) {
         JsonNode config = JsonUtility.fromJson(args.get(args.indexOf("--mcp-config") + 1), JsonNode.class);
         return path(Objects.requireNonNull(config, "--mcp-config"), "mcpServers", "agentproxy");

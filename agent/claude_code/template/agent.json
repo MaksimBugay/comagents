@@ -13,9 +13,6 @@
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
     "enableWeakerNestedSandbox": true,
-    "filesystem": {
-      "allowWrite": ["~/.m2"]
-    },
     "network": {
       "allowedDomains": ["repo.maven.apache.org", "repo1.maven.org"]
     }

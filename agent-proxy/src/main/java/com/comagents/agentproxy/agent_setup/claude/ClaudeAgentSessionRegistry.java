@@ -17,6 +17,7 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -66,6 +67,9 @@ public class ClaudeAgentSessionRegistry {
 
     /** The run's temp folder ({@code TMPDIR}) inside each session's agent folder. */
     public static final String TEMP_FOLDER = "tmp";
+
+    /** The run's Maven folder inside each session's agent folder: its local repository and the wrapper's downloads. */
+    public static final String MAVEN_FOLDER = "m2";
 
     // see isInheritedByClaudeCode
     private static final Set<String> INHERITED_ENVIRONMENT = Set.of("PATH", "HOME", "LANG", "LC_ALL", "TZ",
@@ -208,17 +212,23 @@ public class ClaudeAgentSessionRegistry {
         Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
         requirePrepared(sessionId, workingDirectory, agentFolder);
         ClaudeAgentConfig config = readConfig(agent, agentFolder);
+        Path mavenFolder = createFolder(sessionId, agentFolder.resolve(MAVEN_FOLDER));
         ClaudeAgentSession session = new ClaudeAgentSession(sessionId, agent, workingDirectory,
                 agentFolder.resolve("claude-stream.jsonl"), sessionFolders.agentResponseFile(sessionId, agent), resume,
                 config.responseSchema() != null, options);
-        ProcessBuilder processBuilder = new ProcessBuilder(command(config, session, prompt, promptContext));
+        ProcessBuilder processBuilder = new ProcessBuilder(command(config, session, mavenFolder, prompt, promptContext));
         processBuilder.environment().keySet().removeIf(name -> !isInheritedByClaudeCode(name));
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
         processBuilder.environment().put("CLAUDE_CONFIG_DIR", agentFolder.resolve(CLAUDE_STATE_FOLDER).toString());
         // its own temp folder, in place of the container's shared one: parallel sessions never share temp files, and they
         // go with the session
-        processBuilder.environment().put("TMPDIR", createTempFolder(sessionId, agentFolder).toString());
+        processBuilder.environment().put("TMPDIR", createFolder(sessionId, agentFolder.resolve(TEMP_FOLDER)).toString());
+        // its own Maven repository and wrapper downloads, in place of the shared ~/.m2: parallel sessions never overwrite
+        // each other's artifacts (the same SNAPSHOT installed by both, a download in progress), and they go with the
+        // session
+        processBuilder.environment().put("MAVEN_OPTS", "-Dmaven.repo.local=" + mavenFolder.resolve("repository"));
+        processBuilder.environment().put("MAVEN_USER_HOME", mavenFolder.toString());
         if (resume && prompt == null) {
             // documented by Claude Code: finish the turn that archive() interrupted before following the new prompt.
             // Not for an answer: the interrupted turn ends on the "no answer yet" result, which must not be acted on
@@ -571,12 +581,11 @@ public class ClaudeAgentSessionRegistry {
         return INHERITED_ENVIRONMENT.contains(name) || INHERITED_ENVIRONMENT_PREFIXES.stream().anyMatch(name::startsWith);
     }
 
-    private static Path createTempFolder(UUID sessionId, Path agentFolder) {
-        Path tempFolder = agentFolder.resolve(TEMP_FOLDER);
+    private static Path createFolder(UUID sessionId, Path folder) {
         try {
-            return Files.createDirectories(tempFolder);
+            return Files.createDirectories(folder);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to create the temp folder " + tempFolder + " of session " + sessionId, e);
+            throw new IllegalStateException("Failed to create the folder " + folder + " of session " + sessionId, e);
         }
     }
 
@@ -589,8 +598,8 @@ public class ClaudeAgentSessionRegistry {
     }
 
     // a new run creates Claude Code's session under our id; a resumed run continues it
-    private List<String> command(ClaudeAgentConfig config, ClaudeAgentSession session, @Nullable String prompt,
-                                 @Nullable String promptContext) {
+    private List<String> command(ClaudeAgentConfig config, ClaudeAgentSession session, Path mavenFolder,
+                                 @Nullable String prompt, @Nullable String promptContext) {
         boolean resume = session.isResumed();
         String sessionId = session.getSessionId().toString();
         List<String> command = new ArrayList<>(List.of(
@@ -609,7 +618,7 @@ public class ClaudeAgentSessionRegistry {
         if (config.responseSchema() != null) {
             command.addAll(List.of("--json-schema", responseSchema(config)));
         }
-        command.addAll(List.of("--settings", settings(config)));
+        command.addAll(List.of("--settings", settings(config, mavenFolder)));
         // headless runs can only call pre-allowed MCP tools
         command.add("--allowedTools");
         command.addAll(config.allowedTools());
@@ -623,13 +632,22 @@ public class ClaudeAgentSessionRegistry {
 
     // every run: the file tools (and sandboxed Bash) read nothing outside the working directory, so a session can't
     // read another session's folder; plus the agent's Bash sandbox, if it has one
-    private static String settings(ClaudeAgentConfig config) {
+    private static String settings(ClaudeAgentConfig config, Path mavenFolder) {
         Map<String, Object> settings = new LinkedHashMap<>();
         settings.put("permissions", Map.of("blockReadsOutsideWorkingDirectories", true));
         if (config.sandbox() != null) {
-            settings.put("sandbox", config.sandbox());
+            settings.put("sandbox", sandbox(config.sandbox(), mavenFolder));
         }
         return JsonUtility.toJson(settings);
+    }
+
+    // the agent's sandbox, plus writes to the run's Maven folder: it is outside the working directory
+    private static JsonNode sandbox(JsonNode configured, Path mavenFolder) {
+        if (!(configured.deepCopy() instanceof ObjectNode sandbox)) {
+            throw new IllegalStateException("sandbox in " + ClaudeAgentConfig.FILE_NAME + " is not an object");
+        }
+        sandbox.withObjectProperty("filesystem").withArrayProperty("allowWrite").add(mavenFolder.toString());
+        return sandbox;
     }
 
     // the agent's kick-off prompt, then the session's context, then the response schema at the very end
