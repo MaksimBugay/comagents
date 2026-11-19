@@ -4,7 +4,7 @@ import com.comagents.agentproxy.agent_setup.AgentSessionStarter;
 import com.comagents.agentproxy.agent_setup.NoAgentSetupServiceException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
-import com.comagents.agentproxy.conf.AgentProxyConf;
+import com.comagents.agentproxy.agent_status.AgentInfoService;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
 import com.comagents.commons.request.StartAgentSessionRequest;
@@ -28,26 +28,22 @@ import jakarta.validation.constraints.NotBlank;
 import tools.jackson.core.JacksonException;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @Controller("/{agentName}")
 public class AgentController {
 
-    private final String version;
-    private final String deviceId;
+    private final AgentInfoService agentInfoService;
     private final AgentSessionStarter agentSessionStarter;
 
-    public AgentController(AgentProxyConf agentProxyConf,
+    public AgentController(AgentInfoService agentInfoService,
                            AgentSessionStarter agentSessionStarter) {
-        this.version = agentProxyConf.getVersion();
-        this.deviceId = agentProxyConf.getDeviceId();
+        this.agentInfoService = agentInfoService;
         this.agentSessionStarter = agentSessionStarter;
     }
 
     @Get("/info")
     public AgentInfo info(@PathVariable String agentName) {
-        // answers no start request: a sequence id of its own
-        return new AgentInfo(agentName, version, deviceId, UUID.randomUUID().toString());
+        return agentInfoService.getInfo(agentName);
     }
 
     /**
