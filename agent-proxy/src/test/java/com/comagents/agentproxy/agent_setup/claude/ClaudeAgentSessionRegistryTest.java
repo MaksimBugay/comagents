@@ -47,6 +47,7 @@ class ClaudeAgentSessionRegistryTest {
     private static final String SUCCESSFUL_RUN = """
             printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
             printf '%s' "$CLAUDE_CONFIG_DIR" > "$(dirname "$0")/config-dir.txt"
+            printf '%s' "$TMPDIR" > "$(dirname "$0")/tmp-dir.txt"
             # stdin must be empty, not an open pipe: this would block otherwise
             cat > "$(dirname "$0")/stdin.txt"
             # printf, not echo: sh's echo would turn the \\n escapes inside the JSON into real line breaks
@@ -148,6 +149,9 @@ class ClaudeAgentSessionRegistryTest {
         assertEquals(workingDirectory, session.getWorkingDirectory());
         assertEquals(sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("claude-state").toString(),
                 Files.readString(scripts.resolve("config-dir.txt")), "Claude Code's state is kept per session");
+        Path tempFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW).resolve("tmp");
+        assertEquals(tempFolder.toString(), Files.readString(scripts.resolve("tmp-dir.txt")), "temp files are kept per session");
+        assertTrue(Files.isDirectory(tempFolder));
         assertEquals(sessionFolders.of(sessionId).resolve("code_review/agent-response-" + sessionId + ".json"), session.getResponseFile());
         assertEquals("# Report\n\nAll good", responseText(session.getResponseFile()));
         assertEquals(List.of(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId)), responsesReady, "once it is on disk");
@@ -824,7 +828,7 @@ class ClaudeAgentSessionRegistryTest {
             assertTrue(ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name), name);
         }
         for (String name : List.of("SOURCES_REPO_ACCESS_TOKEN", "PUSHCA_API_KEY", "CLONE_COMAGENTS_SOURCES_URL",
-                "CLAUDE_EXECUTABLE", "AGENT_PROXY_SESSIONS_DIR", "JAVA_HOME")) {
+                "CLAUDE_EXECUTABLE", "AGENT_PROXY_SESSIONS_DIR", "JAVA_HOME", "TMPDIR")) {
             assertFalse(ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name), name);
         }
     }
@@ -845,7 +849,7 @@ class ClaudeAgentSessionRegistryTest {
         // the shell adds PWD, SHLVL and _ itself
         List<String> leaked = names.stream()
                 .filter(name -> !ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name))
-                .filter(name -> !List.of("CLAUDE_CONFIG_DIR", "PWD", "OLDPWD", "SHLVL", "_").contains(name))
+                .filter(name -> !List.of("CLAUDE_CONFIG_DIR", "TMPDIR", "PWD", "OLDPWD", "SHLVL", "_").contains(name))
                 .toList();
         assertEquals(List.of(), leaked);
     }

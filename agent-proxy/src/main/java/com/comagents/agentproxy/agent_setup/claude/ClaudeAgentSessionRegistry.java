@@ -64,8 +64,11 @@ public class ClaudeAgentSessionRegistry {
     /** Claude Code's config dir ({@code CLAUDE_CONFIG_DIR}) inside each session's agent folder. */
     public static final String CLAUDE_STATE_FOLDER = "claude-state";
 
+    /** The run's temp folder ({@code TMPDIR}) inside each session's agent folder. */
+    public static final String TEMP_FOLDER = "tmp";
+
     // see isInheritedByClaudeCode
-    private static final Set<String> INHERITED_ENVIRONMENT = Set.of("PATH", "HOME", "LANG", "LC_ALL", "TZ", "TMPDIR",
+    private static final Set<String> INHERITED_ENVIRONMENT = Set.of("PATH", "HOME", "LANG", "LC_ALL", "TZ",
             "DISABLE_AUTOUPDATER");
     private static final List<String> INHERITED_ENVIRONMENT_PREFIXES = List.of("ANTHROPIC_", "CLAUDE_CODE_");
 
@@ -213,6 +216,9 @@ public class ClaudeAgentSessionRegistry {
         // Claude Code's own state for this session (settings, the conversation --resume reads, .claude.json) lives in
         // the session's agent folder: deleted with the session, kept with an archive, never shared between sessions
         processBuilder.environment().put("CLAUDE_CONFIG_DIR", agentFolder.resolve(CLAUDE_STATE_FOLDER).toString());
+        // its own temp folder, in place of the container's shared one: parallel sessions never share temp files, and they
+        // go with the session
+        processBuilder.environment().put("TMPDIR", createTempFolder(sessionId, agentFolder).toString());
         if (resume && prompt == null) {
             // documented by Claude Code: finish the turn that archive() interrupted before following the new prompt.
             // Not for an answer: the interrupted turn ends on the "no answer yet" result, which must not be acted on
@@ -563,6 +569,15 @@ public class ClaudeAgentSessionRegistry {
      */
     static boolean isInheritedByClaudeCode(String name) {
         return INHERITED_ENVIRONMENT.contains(name) || INHERITED_ENVIRONMENT_PREFIXES.stream().anyMatch(name::startsWith);
+    }
+
+    private static Path createTempFolder(UUID sessionId, Path agentFolder) {
+        Path tempFolder = agentFolder.resolve(TEMP_FOLDER);
+        try {
+            return Files.createDirectories(tempFolder);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to create the temp folder " + tempFolder + " of session " + sessionId, e);
+        }
     }
 
     private static void requirePrepared(UUID sessionId, Path... folders) {
