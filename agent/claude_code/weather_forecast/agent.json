@@ -8,6 +8,12 @@
     "WebSearch",
     "WebFetch"
   ],
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "enableWeakerNestedSandbox": true
+  },
   "kickOffPrompt": "Run the weather-forecast skill for the location given in the text item \"location\" of the session context. You are running non-interactively and nobody can answer questions: when something is unclear, make the most reasonable assumption and continue. Return the forecast, in the format the skill defines, as your final answer.",
   "requiredItems": [
     {

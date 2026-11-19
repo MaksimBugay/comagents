@@ -8,6 +8,12 @@
     "WebSearch",
     "WebFetch"
   ],
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "enableWeakerNestedSandbox": true
+  },
   "kickOffPrompt": "Run the interview-insights skill for the company in the text item \"company\" and the position in the text item \"position\" of the session context, and for the interview type in the text item \"interviewType\" if the context has one; without it, cover every stage of the interview process. You are running non-interactively and nobody can answer questions: when something is unclear, make the most reasonable assumption, state it in the report, and continue. Return the report, in the format the skill defines, as your final answer.",
   "requiredItems": [
     {

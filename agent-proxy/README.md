@@ -120,6 +120,7 @@ claude -p "<kickOffPrompt>" \
   --disallowedTools AskUserQuestion \
   --mcp-config '{"mcpServers":{"agentproxy":{"type":"http","url":"…/mcp","headers":{…},"timeout":…}}}' \
   [--model <model>] [--effort <effort>] \
+  [--settings '{"sandbox": <agent.json sandbox>}'] \
   --allowedTools <agent.json allowedTools…> mcp__agentproxy__ask_expert
 ```
 
@@ -168,7 +169,7 @@ tool and its main argument (path, command, URL), truncates long text and never p
 - **Time limit** per run, `CLAUDE_SESSION_TIMEOUT` (60 min): the process is stopped, state `TIMED_OUT`, files kept.
 - **Idle timeout**, `CLAUDE_SESSION_IDLE_TIMEOUT` (10 min without output): a `RUNNING` session is stopped and
   deleted; a `WAITING` one is archived, its timer counted from when the wait started.
-- **Concurrency cap**, `CLAUDE_SESSION_MAX_CONCURRENT` (2; Claude Code recommends 4 GB+ RAM per run). The slot is
+- **Concurrency cap**, `CLAUDE_SESSION_MAX_CONCURRENT` (3; Claude Code recommends 4 GB+ RAM per run). The slot is
   reserved before setup, so a busy service answers **429** before cloning anything.
 - **Kubernetes** (`k8s/deployment.yaml`): one replica (sessions live in the pod), 4 GiB memory, read-only root
   filesystem; writable are the sessions dir (a `PersistentVolumeClaim`, `strategy: Recreate`) and `/tmp`.

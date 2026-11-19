@@ -286,6 +286,32 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
+    void passesTheSandboxFromAgentConfigAsSettings() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+        writeAgentConfig(sessionId, """
+                {"kickOffPrompt": "Test it", "sandbox": {"enabled": true, "allowUnsandboxedCommands": false}}""");
+
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
+        JsonNode settings = Objects.requireNonNull(
+                JsonUtility.fromJson(args.get(args.indexOf("--settings") + 1), JsonNode.class), "--settings");
+        assertTrue(path(settings, "sandbox", "enabled").booleanValue());
+        assertFalse(path(settings, "sandbox", "allowUnsandboxedCommands").booleanValue());
+    }
+
+    @Test
+    void passesNoSettingsWithoutASandbox() throws Exception {
+        registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
+        UUID sessionId = newSessionId();
+
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        assertFalse(Files.readAllLines(scripts.resolve("args.txt")).contains("--settings"));
+    }
+
+    @Test
     void pointsTheRunAtAgentProxysMcpServerWithItsOwnToken() throws Exception {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
         UUID sessionId = newSessionId();

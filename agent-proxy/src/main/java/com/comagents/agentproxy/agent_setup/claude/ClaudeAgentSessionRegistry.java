@@ -85,7 +85,7 @@ public class ClaudeAgentSessionRegistry {
     private final Set<UUID> reservedSessionIds = ConcurrentHashMap.newKeySet();
 
     public ClaudeAgentSessionRegistry(@Value("${claude.executable:claude}") String claudeExecutable,
-                                      @Value("${claude.session.max-concurrent:2}") int maxConcurrentSessions,
+                                      @Value("${claude.session.max-concurrent:3}") int maxConcurrentSessions,
                                       @Value("${claude.session.timeout:60m}") Duration sessionTimeout,
                                       @Value("${claude.session.idle-timeout:10m}") Duration idleTimeout,
                                       SessionFolders sessionFolders,
@@ -592,6 +592,9 @@ public class ClaudeAgentSessionRegistry {
         }
         if (config.responseSchema() != null) {
             command.addAll(List.of("--json-schema", responseSchema(config)));
+        }
+        if (config.sandbox() != null) {
+            command.addAll(List.of("--settings", JsonUtility.toJson(Map.of("sandbox", config.sandbox()))));
         }
         // headless runs can only call pre-allowed MCP tools
         command.add("--allowedTools");

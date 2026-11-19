@@ -28,12 +28,16 @@ import java.util.Set;
  *                      {@value #DEFAULT_RESPONSE_ITEM}
  * @param readOnly      the agent changes no repository; false if absent
  * @param stateless     the agent works on no repository at all; false if absent
+ * @param sandbox       {@code --settings {"sandbox": ...}}: Claude Code's Bash sandbox settings for the run; no sandbox if
+ *                      null. They go on the command line, like {@code allowedTools}, so the untrusted folder can't
+ *                      weaken them
  */
 @Introspected
 public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
                                 String kickOffPrompt, @Nullable String resumePrompt,
                                 @Nullable Set<RequiredAgentContextItem> requiredItems,
-                                @Nullable JsonNode responseSchema, boolean readOnly, boolean stateless) {
+                                @Nullable JsonNode responseSchema, boolean readOnly, boolean stateless,
+                                @Nullable JsonNode sandbox) {
 
     public static final String FILE_NAME = "agent.json";
 

@@ -23,7 +23,7 @@ FROM debian:trixie-slim
 LABEL com.comagents.app=agent-proxy
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
- && apt-get install -y --no-install-recommends bash ca-certificates curl \
+ && apt-get install -y --no-install-recommends bash ca-certificates curl bubblewrap socat \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --uid 65532 --user-group --create-home --shell /bin/bash nonroot \
  && mkdir -p /var/lib/agent-proxy/sessions \
