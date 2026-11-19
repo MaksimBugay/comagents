@@ -295,20 +295,22 @@ class ClaudeAgentSessionRegistryTest {
         registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
 
         List<String> args = Files.readAllLines(scripts.resolve("args.txt"));
-        JsonNode settings = Objects.requireNonNull(
-                JsonUtility.fromJson(args.get(args.indexOf("--settings") + 1), JsonNode.class), "--settings");
+        JsonNode settings = settings(args);
         assertTrue(path(settings, "sandbox", "enabled").booleanValue());
         assertFalse(path(settings, "sandbox", "allowUnsandboxedCommands").booleanValue());
+        assertTrue(path(settings, "permissions", "blockReadsOutsideWorkingDirectories").booleanValue());
     }
 
     @Test
-    void passesNoSettingsWithoutASandbox() throws Exception {
+    void everyRunReadsNothingOutsideItsWorkingDirectory() throws Exception {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
         UUID sessionId = newSessionId();
 
         registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
 
-        assertFalse(Files.readAllLines(scripts.resolve("args.txt")).contains("--settings"));
+        JsonNode settings = settings(Files.readAllLines(scripts.resolve("args.txt")));
+        assertTrue(path(settings, "permissions", "blockReadsOutsideWorkingDirectories").booleanValue());
+        assertFalse(settings.has("sandbox"), "no sandbox without one in agent.json");
     }
 
     @Test
@@ -1102,6 +1104,11 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     // the --mcp-config the fake claude was started with
+    private static JsonNode settings(List<String> args) {
+        return Objects.requireNonNull(JsonUtility.fromJson(args.get(args.indexOf("--settings") + 1), JsonNode.class),
+                "--settings");
+    }
+
     private static JsonNode mcpServer(List<String> args) {
         JsonNode config = JsonUtility.fromJson(args.get(args.indexOf("--mcp-config") + 1), JsonNode.class);
         return path(Objects.requireNonNull(config, "--mcp-config"), "mcpServers", "agentproxy");

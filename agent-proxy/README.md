@@ -120,7 +120,7 @@ claude -p "<kickOffPrompt>" \
   --disallowedTools AskUserQuestion \
   --mcp-config '{"mcpServers":{"agentproxy":{"type":"http","url":"…/mcp","headers":{…},"timeout":…}}}' \
   [--model <model>] [--effort <effort>] \
-  [--settings '{"sandbox": <agent.json sandbox>}'] \
+  --settings '{"permissions":{"blockReadsOutsideWorkingDirectories":true}[,"sandbox":<agent.json sandbox>]}' \
   --allowedTools <agent.json allowedTools…> mcp__agentproxy__ask_expert
 ```
 
@@ -146,6 +146,10 @@ claude -p "<kickOffPrompt>" \
   repository's own `allow` rules are never passed on. MCP tools must be pre-allowed too.
 - File access outside the working directory needs `--add-dir`. Absolute paths in permission rules use a double
   slash: `Edit(//var/lib/agent-proxy/sessions/<sessionId>/**)`.
+- Every run gets `permissions.blockReadsOutsideWorkingDirectories`: `Read`, `Grep`, `Glob` and `LSP` refuse paths
+  outside the working directory, so a session can't read another session's folder with them. Under an agent's
+  `sandbox`, sandboxed Bash also loses read access to `HOME`, `/home`, `/root`, `/mnt`, `/srv` and the like (not to
+  `/var` or `/tmp`).
 
 ### Output
 

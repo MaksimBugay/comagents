@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -593,9 +594,7 @@ public class ClaudeAgentSessionRegistry {
         if (config.responseSchema() != null) {
             command.addAll(List.of("--json-schema", responseSchema(config)));
         }
-        if (config.sandbox() != null) {
-            command.addAll(List.of("--settings", JsonUtility.toJson(Map.of("sandbox", config.sandbox()))));
-        }
+        command.addAll(List.of("--settings", settings(config)));
         // headless runs can only call pre-allowed MCP tools
         command.add("--allowedTools");
         command.addAll(config.allowedTools());
@@ -605,6 +604,17 @@ public class ClaudeAgentSessionRegistry {
 
     private static String responseSchema(ClaudeAgentConfig config) {
         return JsonUtility.toJson(config.responseSchema());
+    }
+
+    // every run: the file tools (and sandboxed Bash) read nothing outside the working directory, so a session can't
+    // read another session's folder; plus the agent's Bash sandbox, if it has one
+    private static String settings(ClaudeAgentConfig config) {
+        Map<String, Object> settings = new LinkedHashMap<>();
+        settings.put("permissions", Map.of("blockReadsOutsideWorkingDirectories", true));
+        if (config.sandbox() != null) {
+            settings.put("sandbox", config.sandbox());
+        }
+        return JsonUtility.toJson(settings);
     }
 
     // the agent's kick-off prompt, then the session's context, then the response schema at the very end
