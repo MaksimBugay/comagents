@@ -1,0 +1,58 @@
+{
+  "model": "deepseek-flash[1m]",
+  "effort": "high",
+  "readOnly": true,
+  "stateless": true,
+  "allowedTools": [
+    "Skill",
+    "WebSearch",
+    "WebFetch"
+  ],
+  "kickOffPrompt": "Run the interview-insights skill for the company in the text item \"company\" and the position in the text item \"position\" of the session context, and for the interview type in the text item \"interviewType\" if the context has one; without it, cover every stage of the interview process. You are running non-interactively and nobody can answer questions: when something is unclear, make the most reasonable assumption, state it in the report, and continue. Return the report, in the format the skill defines, as your final answer.",
+  "requiredItems": [
+    {
+      "type": "STRING",
+      "name": "company"
+    },
+    {
+      "type": "STRING",
+      "name": "position"
+    }
+  ],
+  "responseSchema": {
+    "type": "object",
+    "required": [
+      "items"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "items": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "type",
+            "name",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "STRING"
+            },
+            "name": {
+              "const": "insights"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "description": "the report: candidate and insider reports, the company's own information, then less trusted sources and the agent's own assumptions, as three separate sections"
+            }
+          }
+        }
+      }
+    }
+  }
+}

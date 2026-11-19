@@ -9,6 +9,7 @@ public enum AiAgent {
     // how each agent runs (model, effort, kick-off prompt) is in its agent.json in the comagents sources
     CODE_REVIEW(AiHarnessProvider.CLAUDE_CODE),
     WEATHER_FORECAST(AiHarnessProvider.CLAUDE_CODE),
+    INTERVIEW_INSIGHTS(AiHarnessProvider.CLAUDE_CODE),
     IMAGE_GENERATOR(AiHarnessProvider.CODEX);
 
     private final AiHarnessProvider aiHarnessProvider;
