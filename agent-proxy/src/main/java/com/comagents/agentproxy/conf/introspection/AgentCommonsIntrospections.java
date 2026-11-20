@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.conf;
+package com.comagents.agentproxy.conf.introspection;
 
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessage;

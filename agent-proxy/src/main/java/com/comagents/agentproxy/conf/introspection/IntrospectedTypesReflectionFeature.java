@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.conf;
+package com.comagents.agentproxy.conf.introspection;
 
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
