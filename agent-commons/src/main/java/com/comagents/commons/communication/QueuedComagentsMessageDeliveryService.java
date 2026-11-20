@@ -37,7 +37,7 @@ public class QueuedComagentsMessageDeliveryService implements ComagentsMessageDe
      */
     @Override
     @SuppressWarnings("unchecked")
-    public <T> void deliverToDevice(DeliveryAddress address, String sequenceId, T payload) {
+    public <T> void deliverToAddress(DeliveryAddress address, String sequenceId, T payload) {
         Validate.notNull(payload, "payload must not be null");
         // the payload's runtime class: the receiver reads the message by that class name
         deliver(address, ComagentsMessage.ofPayload(sequenceId, payload, (Class<T>) payload.getClass()));
@@ -52,7 +52,7 @@ public class QueuedComagentsMessageDeliveryService implements ComagentsMessageDe
      * @throws IllegalStateException    when it can't be sent
      */
     @Override
-    public void deliverErrorToDevice(DeliveryAddress address, String sequenceId, Class<?> payloadClass,
+    public void deliverErrorToAddress(DeliveryAddress address, String sequenceId, Class<?> payloadClass,
                                      Throwable error) {
         Validate.notNull(error, "error must not be null");
         deliver(address, ComagentsMessage.ofError(sequenceId, payloadClass, error));

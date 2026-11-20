@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import static com.comagents.commons.communication.CommunicationUtils.AGENT_EXECUTOR_ACCOUNT_ID;
-import static com.comagents.commons.communication.CommunicationUtils.COMAGENTS_WORKSPACE_ID;
+import static com.comagents.commons.communication.pushca.ClientFilterUtils.COMAGENTS_WORKSPACE_ID;
 import static com.comagents.commons.communication.CommunicationUtils.buildAgentExecutorApplicationId;
 import static com.comagents.commons.communication.pushca.PushcaConnectionFactory.IGNORE_MESSAGES;
 

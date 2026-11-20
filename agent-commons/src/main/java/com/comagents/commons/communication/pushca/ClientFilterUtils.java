@@ -3,10 +3,10 @@ package com.comagents.commons.communication.pushca;
 import bmv.org.pushca.client.model.ClientFilter;
 import com.comagents.commons.communication.DeliveryAddress;
 
-import static com.comagents.commons.communication.CommunicationUtils.COMAGENTS_WORKSPACE_ID;
-
 /** The Pushca receivers of {@link DeliveryAddress}es. */
 public final class ClientFilterUtils {
+
+    public static final String COMAGENTS_WORKSPACE_ID = "comagents-main";
 
     private ClientFilterUtils() {
     }

@@ -52,11 +52,11 @@ public interface AgentSessionPrivateChannelService {
         runOperationWithRetry(() -> removeChannel(channel));
     }
 
-    default void runOperationWithRetry(Runnable operation) {
+    private void runOperationWithRetry(Runnable operation) {
         runWithRetry(operation, retryDeadline(), PushcaConnectionFailures::isBrokenConnection);
     }
 
-    default <T> T callOperationWithRetry(Supplier<T> operation) {
+    private <T> T callOperationWithRetry(Supplier<T> operation) {
         return callWithRetry(operation, retryDeadline(), PushcaConnectionFailures::isBrokenConnection);
     }
 

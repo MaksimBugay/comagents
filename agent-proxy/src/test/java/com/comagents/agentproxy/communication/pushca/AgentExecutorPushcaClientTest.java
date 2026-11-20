@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import static com.comagents.commons.communication.CommunicationUtils.COMAGENTS_WORKSPACE_ID;
+import static com.comagents.commons.communication.pushca.ClientFilterUtils.COMAGENTS_WORKSPACE_ID;
 import static com.comagents.commons.communication.CommunicationUtils.ORCHESTRATOR_ACCOUNT_ID;
 import static com.comagents.commons.communication.CommunicationUtils.ORCHESTRATOR_APPLICATION_ID;
 import static org.awaitility.Awaitility.await;
@@ -136,7 +136,7 @@ class AgentExecutorPushcaClientTest {
 
     @Test
     void sendsToTheGivenAccountDeviceAndApplication() {
-        delivery.deliverToDevice(new DeliveryAddress("someone@comagents.com", "device-1", "CHAT_ROOM"), "sequence-1",
+        delivery.deliverToAddress(new DeliveryAddress("someone@comagents.com", "device-1", "CHAT_ROOM"), "sequence-1",
                 RESPONSE);
 
         ClientFilter receivers = connectionFactory.connections.getFirst().broadcasts.getFirst().receivers();
@@ -146,7 +146,7 @@ class AgentExecutorPushcaClientTest {
 
     @Test
     void blankIdsGoToPushcaAsNull() {
-        delivery.deliverToDevice(new DeliveryAddress(" ", "device-1", ""), "sequence-1", RESPONSE);
+        delivery.deliverToAddress(new DeliveryAddress(" ", "device-1", ""), "sequence-1", RESPONSE);
 
         ClientFilter receivers = connectionFactory.connections.getFirst().broadcasts.getFirst().receivers();
         assertEquals(new ClientFilter(COMAGENTS_WORKSPACE_ID, null, "device-1", null), receivers);
@@ -154,8 +154,8 @@ class AgentExecutorPushcaClientTest {
 
     @Test
     void aMissingAddressIsRejected() {
-        assertThrows(NullPointerException.class, () -> delivery.deliverToDevice(null, "sequence-1", RESPONSE));
-        assertThrows(NullPointerException.class, () -> delivery.deliverErrorToDevice(null, "sequence-1",
+        assertThrows(NullPointerException.class, () -> delivery.deliverToAddress(null, "sequence-1", RESPONSE));
+        assertThrows(NullPointerException.class, () -> delivery.deliverErrorToAddress(null, "sequence-1",
                 AgentInfo.class, new IllegalStateException("agent failed")));
 
         assertTrue(connectionFactory.connections.getFirst().broadcasts.isEmpty());
@@ -175,7 +175,7 @@ class AgentExecutorPushcaClientTest {
                 AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-device-1", "MBugai"), RESPONSE, 1L,
                 "executor-device-1");
 
-        delivery.deliverToDevice(ORCHESTRATOR, response);
+        delivery.deliverToAddress(ORCHESTRATOR, response);
 
         assertEquals("sequence-1", sentMessage(0).id());
     }
@@ -225,11 +225,11 @@ class AgentExecutorPushcaClientTest {
     }
 
     private static void deliverToOrchestrator(ComagentsMessageDeliveryService delivery, String sequenceId) {
-        delivery.deliverToDevice(ORCHESTRATOR, sequenceId, RESPONSE);
+        delivery.deliverToAddress(ORCHESTRATOR, sequenceId, RESPONSE);
     }
 
     private void deliverErrorToOrchestrator(String sequenceId) {
-        delivery.deliverErrorToDevice(ORCHESTRATOR, sequenceId, AgentInfo.class,
+        delivery.deliverErrorToAddress(ORCHESTRATOR, sequenceId, AgentInfo.class,
                 new IllegalStateException("agent failed"));
     }
 

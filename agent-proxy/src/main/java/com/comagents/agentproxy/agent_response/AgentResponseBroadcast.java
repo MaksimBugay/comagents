@@ -43,7 +43,7 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         try {
             agentResponseService.readResponse(event.agent(), event.sessionId()).ifPresent(response -> {
                 String orchestratorDeviceId = response.request().orchestratorDeviceId();
-                messageDeliveryService.deliverToDevice(DeliveryAddress.agentOrchestrator(orchestratorDeviceId),
+                messageDeliveryService.deliverToAddress(DeliveryAddress.agentOrchestrator(orchestratorDeviceId),
                         response);
                 LOG.info("[{} {}] response sent to orchestrator device {}", agentName, event.sessionId(),
                         orchestratorDeviceId);

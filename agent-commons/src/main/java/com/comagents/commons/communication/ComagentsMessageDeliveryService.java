@@ -10,13 +10,13 @@ public interface ComagentsMessageDeliveryService {
      * Sends {@code payload} to {@code address} as a message with the id {@code sequenceId}, by which the receiver
      * matches it: a response carries the sequence id of its request.
      */
-    <T> void deliverToDevice(DeliveryAddress address, String sequenceId, T payload);
+    <T> void deliverToAddress(DeliveryAddress address, String sequenceId, T payload);
 
     /**
      * Sends {@code payload} with its own sequence id as the message id.
      */
-    default <T extends WithSequenceId> void deliverToDevice(DeliveryAddress address, T payload) {
-        deliverToDevice(address, payload.sequenceId(), payload);
+    default <T extends WithSequenceId> void deliverToAddress(DeliveryAddress address, T payload) {
+        deliverToAddress(address, payload.sequenceId(), payload);
     }
 
     /**
@@ -24,5 +24,5 @@ public interface ComagentsMessageDeliveryService {
      * {@code sequenceId}, by which the receiver matches it, and the payload class, so it reaches the receiver's
      * listener for that payload.
      */
-    void deliverErrorToDevice(DeliveryAddress address, String sequenceId, Class<?> payloadClass, Throwable error);
+    void deliverErrorToAddress(DeliveryAddress address, String sequenceId, Class<?> payloadClass, Throwable error);
 }

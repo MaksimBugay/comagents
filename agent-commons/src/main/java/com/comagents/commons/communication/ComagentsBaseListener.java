@@ -4,8 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A request from an orchestrator over Pushca that the orchestrator device gets an answer to, with the request's
- * sequence id: the {@code R} response, or the error that took its place.
+ * A request from an orchestrator that the orchestrator device gets an answer to, with the request's sequence id: the
+ * {@code R} response, or the error that took its place.
  *
  * @param <T> the request
  * @param <R> the response
@@ -31,10 +31,10 @@ public abstract class ComagentsBaseListener<T extends WithOrchestratorDeviceId, 
         } catch (RuntimeException e) {
             LOG.warn("{} {} of orchestrator device {} failed: {}", getPayloadClass().getSimpleName(), sequenceId,
                     request.orchestratorDeviceId(), e.getMessage());
-            messageDeliveryService.deliverErrorToDevice(orchestrator, sequenceId, getResponseClass(), e);
+            messageDeliveryService.deliverErrorToAddress(orchestrator, sequenceId, getResponseClass(), e);
             return;
         }
-        messageDeliveryService.deliverToDevice(orchestrator, sequenceId, response);
+        messageDeliveryService.deliverToAddress(orchestrator, sequenceId, response);
     }
 
     /**
