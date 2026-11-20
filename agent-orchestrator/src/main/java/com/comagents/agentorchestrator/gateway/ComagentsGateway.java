@@ -7,7 +7,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,11 +47,13 @@ public class ComagentsGateway {
 
     /**
      * Sends {@code request} to {@code address} and waits for its response. The message id is the request's own
-     * sequence id when it has a non-blank one ({@link WithSequenceId}: the executor rejects a request whose sequence
-     * id isn't the message id), otherwise a new one.
+     * sequence id when it has one ({@link WithSequenceId}: the executor rejects a request whose sequence id isn't the
+     * message id), otherwise a new one.
      *
      * @return the response, a {@code responseClass}
-     * @throws IllegalArgumentException when another request with the same sequence id is still waiting
+     * @throws NullPointerException     when the request is null, or its sequence id ({@link WithSequenceId})
+     * @throws IllegalArgumentException when the request's sequence id ({@link WithSequenceId}) is blank, or another
+     *                                  request with the same sequence id is still waiting
      * @throws IllegalStateException    when no response came within the response timeout (caused by a
      *                                  {@link TimeoutException}), or the wait was interrupted
      * @throws ClassCastException       when the response isn't a {@code responseClass}
@@ -85,8 +86,8 @@ public class ComagentsGateway {
     }
 
     private static String sequenceIdOf(Object request) {
-        if (request instanceof WithSequenceId withSequenceId && StringUtils.isNotBlank(withSequenceId.sequenceId())) {
-            return withSequenceId.sequenceId();
+        if (request instanceof WithSequenceId withSequenceId) {
+            return Validate.notBlank(withSequenceId.sequenceId(), "Request sequenceId must not be blank");
         }
         return UUID.randomUUID().toString();
     }

@@ -6,7 +6,6 @@ import com.comagents.commons.communication.WithSequenceId;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.AiHarnessProvider;
 import com.comagents.commons.request.AgentStatusRequest;
-import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -52,14 +51,13 @@ class ComagentsGatewayTest {
     }
 
     @Test
-    void aRequestWithBlankSequenceIdGetsANewOne() {
-        delivery.onDeliver = sent -> gateway.completeWithResponse(sent.sequenceId(), "pong");
+    void aRequestWithBlankSequenceIdIsRejected() {
+        assertThrows(IllegalArgumentException.class,
+                () -> gateway.registerRequest(EXECUTOR, new Ping(" "), String.class));
+        assertThrows(NullPointerException.class,
+                () -> gateway.registerRequest(EXECUTOR, new Ping(null), String.class));
 
-        gateway.registerRequest(EXECUTOR, new Ping(" "), String.class);
-        gateway.registerRequest(EXECUTOR, new Ping(null), String.class);
-
-        assertTrue(StringUtils.isNotBlank(delivery.sent.getFirst().sequenceId()));
-        assertTrue(StringUtils.isNotBlank(delivery.sent.get(1).sequenceId()));
+        assertTrue(delivery.sent.isEmpty(), "never sent");
     }
 
     @Test
