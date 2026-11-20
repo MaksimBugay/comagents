@@ -42,7 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AgentExecutorPushcaClientTest {
 
-    private static final AgentContext RESPONSE = new AgentContext(List.of(new StringAgentContextItem("response", "done")));
+    private static final AgentContext RESPONSE =
+            new AgentContext(List.of(new StringAgentContextItem("response", "done")));
     private static final DeliveryAddress ORCHESTRATOR = DeliveryAddress.agentOrchestrator("orchestrator-device-1");
     private static final ClientFilter ORCHESTRATOR_CLIENTS = new ClientFilter(COMAGENTS_WORKSPACE_ID,
             ORCHESTRATOR_ACCOUNT_ID, "orchestrator-device-1", ORCHESTRATOR_APPLICATION_ID);
@@ -96,7 +97,8 @@ class AgentExecutorPushcaClientTest {
         assertTrue(Duration.ofNanos(System.nanoTime() - start).compareTo(Duration.ofMillis(1500)) >= 0,
                 "sent after the connection came back");
         assertEquals(1, connectionFactory.connections.size(), "the same connection");
-        ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(connection.broadcasts.getFirst().message());
+        ComagentsMessage message =
+                ComagentsMessage.fromComagentsMessageString(connection.broadcasts.getFirst().message());
         assertEquals(RESPONSE, message.comagentsMessagePayload().payload());
     }
 
@@ -235,7 +237,8 @@ class AgentExecutorPushcaClientTest {
 
     @SuppressWarnings("SameParameterValue")
     private ComagentsMessage sentMessage(int index) {
-        return ComagentsMessage.fromComagentsMessageString(connectionFactory.connections.getFirst().broadcasts.get(index).message());
+        String sent = connectionFactory.connections.getFirst().broadcasts.get(index).message();
+        return ComagentsMessage.fromComagentsMessageString(sent);
     }
 
     private static void sleep(Duration duration) {
