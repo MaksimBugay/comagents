@@ -7,6 +7,7 @@ import com.comagents.commons.communication.pushca.PushcaConnectionFailures;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.function.Supplier;
 
 import static com.comagents.commons.communication.BrokenConnectionRetry.callWithRetry;
 import static com.comagents.commons.communication.BrokenConnectionRetry.runWithRetry;
@@ -30,25 +31,33 @@ public interface AgentSessionPrivateChannelService {
 
     void removeChannel(PChannel channel);
 
-    /** How long the {@code WithRetry} commands try again while the connection is broken. */
+    /**
+     * How long the {@code WithRetry} commands try again while the connection is broken.
+     */
     Duration getRetryTimeout();
 
     default PChannel createClosePrivateChannelWithRetry(String name) {
-        return callWithRetry(() -> createClosePrivateChannel(name), retryDeadline(),
-                PushcaConnectionFailures::isBrokenConnection);
+        return callOperationWithRetry(() -> createClosePrivateChannel(name));
     }
 
     default void addMembersWithRetry(PChannel channel, ClientFilter... members) {
-        runWithRetry(() -> addMembers(channel, members), retryDeadline(), PushcaConnectionFailures::isBrokenConnection);
+        runOperationWithRetry(() -> addMembers(channel, members));
     }
 
     default void sendMessageWithRetry(PChannel channel, String message) {
-        runWithRetry(() -> sendMessage(channel, message), retryDeadline(),
-                PushcaConnectionFailures::isBrokenConnection);
+        runOperationWithRetry(() -> sendMessage(channel, message));
     }
 
     default void removeChannelWithRetry(PChannel channel) {
-        runWithRetry(() -> removeChannel(channel), retryDeadline(), PushcaConnectionFailures::isBrokenConnection);
+        runOperationWithRetry(() -> removeChannel(channel));
+    }
+
+    default void runOperationWithRetry(Runnable operation) {
+        runWithRetry(operation, retryDeadline(), PushcaConnectionFailures::isBrokenConnection);
+    }
+
+    default <T> T callOperationWithRetry(Supplier<T> operation) {
+        return callWithRetry(operation, retryDeadline(), PushcaConnectionFailures::isBrokenConnection);
     }
 
     private Instant retryDeadline() {
