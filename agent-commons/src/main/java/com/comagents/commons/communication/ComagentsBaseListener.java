@@ -24,22 +24,26 @@ public abstract class ComagentsBaseListener<T extends WithOrchestratorDeviceId, 
     // the message's sequence id is the request's: ComagentsMessageDispatcher checked it
     @Override
     public void consumePayload(String sequenceId, T request) {
+        DeliveryAddress orchestrator = DeliveryAddress.agentOrchestrator(request.orchestratorDeviceId());
         R response;
         try {
             response = prepareResponse(request);
         } catch (RuntimeException e) {
             LOG.warn("{} {} of orchestrator device {} failed: {}", getPayloadClass().getSimpleName(), sequenceId,
                     request.orchestratorDeviceId(), e.getMessage());
-            messageDeliveryService.deliverErrorToDevice(request.orchestratorDeviceId(), sequenceId,
-                    getResponseClass(), e);
+            messageDeliveryService.deliverErrorToDevice(orchestrator, sequenceId, getResponseClass(), e);
             return;
         }
-        messageDeliveryService.deliverToDevice(request.orchestratorDeviceId(), sequenceId, response);
+        messageDeliveryService.deliverToDevice(orchestrator, sequenceId, response);
     }
 
-    /** The class of the response, which an error replaces in the message. */
+    /**
+     * The class of the response, which an error replaces in the message.
+     */
     protected abstract Class<R> getResponseClass();
 
-    /** The answer to {@code request}; a failure goes to the orchestrator device as an error in its place. */
+    /**
+     * The answer to {@code request}; a failure goes to the orchestrator device as an error in its place.
+     */
     protected abstract R prepareResponse(T request);
 }

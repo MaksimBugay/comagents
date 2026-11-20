@@ -1,7 +1,6 @@
 package com.comagents.agentproxy.communication.pushca;
 
 import bmv.org.pushca.client.PushcaWebSocket;
-import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.communication.ComagentsMessage;
@@ -10,6 +9,7 @@ import com.comagents.commons.communication.ComagentsMessageListener;
 import com.comagents.commons.communication.ComagentsMessageQueue;
 import com.comagents.commons.communication.ComagentsQueueConsumer;
 import com.comagents.commons.communication.QueuedComagentsMessage;
+import com.comagents.commons.communication.pushca.ClientFilterUtils;
 import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
@@ -22,6 +22,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import static com.comagents.commons.communication.CommunicationUtils.AGENT_EXECUTOR_ACCOUNT_ID;
+import static com.comagents.commons.communication.CommunicationUtils.COMAGENTS_WORKSPACE_ID;
+import static com.comagents.commons.communication.CommunicationUtils.buildAgentExecutorApplicationId;
 import static com.comagents.commons.communication.pushca.PushcaConnectionFactory.IGNORE_MESSAGES;
 
 /**
@@ -29,7 +32,7 @@ import static com.comagents.commons.communication.pushca.PushcaConnectionFactory
  * workspace as application {@code <harness>_EXECUTOR} (e.g. {@code CLAUDE_CODE_EXECUTOR},
  * {@link AgentProxyConf#getAiHarnessProvider()}) with the executor's device id ({@link AgentProxyConf#getDeviceId()}).
  * It passes the orchestrators' requests to the {@link ComagentsMessageListener}s, and sends the queued
- * {@link ComagentsMessage}s ({@link ComagentsMessageQueue}) one by one to the orchestrator device each is for. The
+ * {@link ComagentsMessage}s ({@link ComagentsMessageQueue}) one by one to the address each is for. The
  * connection is opened once, on service startup; the Pushca client signs in and reconnects by itself whenever it
  * isn't open. Sends meanwhile are retried until their message expires ({@link #consumeWithRetry}); after that the
  * orchestrator, which has timed out, asks again.
@@ -37,13 +40,6 @@ import static com.comagents.commons.communication.pushca.PushcaConnectionFactory
 @Singleton
 public class AgentExecutorPushcaClient
         implements ComagentsQueueConsumer, ApplicationEventListener<StartupEvent>, AutoCloseable {
-
-    static final String WORKSPACE_ID = "comagents-main";
-    static final String APPLICATION_ID_TEMPLATE = "%s_EXECUTOR";
-    static final String ACCOUNT_ID = "agent-executor@comagents.com";
-
-    static final String ORCHESTRATOR_APPLICATION_ID = "AGENT_ORCHESTRATOR";
-    static final String ORCHESTRATOR_ACCOUNT_ID = "agent-orchestrator@comagents.com";
 
     private static final Logger LOG = LoggerFactory.getLogger(AgentExecutorPushcaClient.class);
 
@@ -66,10 +62,10 @@ public class AgentExecutorPushcaClient
         this.queue = queue;
         this.dispatcher = new ComagentsMessageDispatcher(listeners);
         this.client = new PClient(
-                WORKSPACE_ID,
-                ACCOUNT_ID,
+                COMAGENTS_WORKSPACE_ID,
+                AGENT_EXECUTOR_ACCOUNT_ID,
                 conf.getDeviceId(),
-                APPLICATION_ID_TEMPLATE.formatted(conf.getAiHarnessProvider().name())
+                buildAgentExecutorApplicationId(conf.getAiHarnessProvider())
         );
     }
 
@@ -98,14 +94,14 @@ public class AgentExecutorPushcaClient
     }
 
     /**
-     * Sends {@code message} to its orchestrator device over the kept connection.
+     * Sends {@code message} to the Pushca clients of its address over the kept connection.
      *
      * @throws RuntimeException when it can't be sent: the connection isn't open or broke, or Pushca refuses it
      */
     @Override
     public synchronized void consume(QueuedComagentsMessage message) {
         Validate.validState(connection != null, "Pushca connection of executor %s not open", client.deviceId);
-        connection.broadcastMessage(orchestrator(message.orchestratorDeviceId()), message.message().toString());
+        connection.broadcastMessage(ClientFilterUtils.of(message.address()), message.message().toString());
     }
 
     /**
@@ -125,12 +121,6 @@ public class AgentExecutorPushcaClient
         queue.drain().forEach(message -> message.sent().completeExceptionally(
                 new IllegalStateException("Pushca client of executor " + client.deviceId + " closed")));
         closeConnection();
-    }
-
-    // the orchestrator device that sent the request; workspace, account, device and application name exactly one
-    // client
-    private static ClientFilter orchestrator(String orchestratorDeviceId) {
-        return new ClientFilter(WORKSPACE_ID, ORCHESTRATOR_ACCOUNT_ID, orchestratorDeviceId, ORCHESTRATOR_APPLICATION_ID);
     }
 
     // on the Pushca client's receiving thread, which must not wait: a start request clones and copies files

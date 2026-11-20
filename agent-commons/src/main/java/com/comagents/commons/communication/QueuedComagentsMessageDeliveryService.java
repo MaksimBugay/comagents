@@ -28,48 +28,49 @@ public class QueuedComagentsMessageDeliveryService implements ComagentsMessageDe
     }
 
     /**
-     * Sends {@code payload}, wrapped into a {@link ComagentsMessage} with the id {@code sequenceId}, to the device
-     * {@code deviceId}; blocks until it is sent, or the message timeout has passed.
+     * Sends {@code payload}, wrapped into a {@link ComagentsMessage} with the id {@code sequenceId}, to
+     * {@code address}; blocks until it is sent, or the message timeout has passed.
      *
-     * @throws NullPointerException     when the device id, sequence id or payload is null
-     * @throws IllegalArgumentException when the device id or sequence id is blank
+     * @throws NullPointerException     when the address, sequence id or payload is null
+     * @throws IllegalArgumentException when the sequence id is blank
      * @throws IllegalStateException    when it can't be sent
      */
     @Override
     @SuppressWarnings("unchecked")
-    public <T> void deliverToDevice(String deviceId, String sequenceId, T payload) {
+    public <T> void deliverToDevice(DeliveryAddress address, String sequenceId, T payload) {
         Validate.notNull(payload, "payload must not be null");
         // the payload's runtime class: the receiver reads the message by that class name
-        deliver(deviceId, ComagentsMessage.ofPayload(sequenceId, payload, (Class<T>) payload.getClass()));
+        deliver(address, ComagentsMessage.ofPayload(sequenceId, payload, (Class<T>) payload.getClass()));
     }
 
     /**
      * Sends {@code error}, wrapped into a {@link ComagentsMessage} of {@code payloadClass} with the id
-     * {@code sequenceId}, to the device {@code deviceId}; blocks until it is sent, or the message timeout has passed.
+     * {@code sequenceId}, to {@code address}; blocks until it is sent, or the message timeout has passed.
      *
-     * @throws NullPointerException     when the device id, sequence id, payload class or error is null
-     * @throws IllegalArgumentException when the device id or sequence id is blank
+     * @throws NullPointerException     when the address, sequence id, payload class or error is null
+     * @throws IllegalArgumentException when the sequence id is blank
      * @throws IllegalStateException    when it can't be sent
      */
     @Override
-    public void deliverErrorToDevice(String deviceId, String sequenceId, Class<?> payloadClass, Throwable error) {
+    public void deliverErrorToDevice(DeliveryAddress address, String sequenceId, Class<?> payloadClass,
+                                     Throwable error) {
         Validate.notNull(error, "error must not be null");
-        deliver(deviceId, ComagentsMessage.ofError(sequenceId, payloadClass, error));
+        deliver(address, ComagentsMessage.ofError(sequenceId, payloadClass, error));
     }
 
-    private void deliver(String deviceId, ComagentsMessage message) {
-        Validate.notBlank(deviceId, "deviceId must not be blank");
-        QueuedComagentsMessage queued = new QueuedComagentsMessage(deviceId, message,
+    private void deliver(DeliveryAddress address, ComagentsMessage message) {
+        Validate.notNull(address, "address must not be null");
+        QueuedComagentsMessage queued = new QueuedComagentsMessage(address, message,
                 Instant.now().plus(messageTimeout));
         queue.put(queued);
         try {
             queued.sent().get(messageTimeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
-            logDropped(deviceId, message);
+            logDropped(address, message);
         } catch (ExecutionException e) {
             // expired before its turn, or before the connection came back
             if (queued.isExpired(Instant.now())) {
-                logDropped(deviceId, message);
+                logDropped(address, message);
                 return;
             }
             // the consumer's failure, as if this thread had sent it
@@ -83,8 +84,8 @@ public class QueuedComagentsMessageDeliveryService implements ComagentsMessageDe
         }
     }
 
-    private void logDropped(String deviceId, ComagentsMessage message) {
-        LOG.error("Message {} ({}) for device {} not sent within {}, dropped", message.id(),
-                message.payloadClassName(), deviceId, messageTimeout);
+    private void logDropped(DeliveryAddress address, ComagentsMessage message) {
+        LOG.error("Message {} ({}) for {} not sent within {}, dropped", message.id(), message.payloadClassName(),
+                address, messageTimeout);
     }
 }

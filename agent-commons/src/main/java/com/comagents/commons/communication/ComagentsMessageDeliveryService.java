@@ -7,20 +7,22 @@ package com.comagents.commons.communication;
 public interface ComagentsMessageDeliveryService {
 
     /**
-     * Sends {@code payload} to the device {@code deviceId} as a message with the id {@code sequenceId}, by which the
-     * receiver matches it: a response carries the sequence id of its request.
+     * Sends {@code payload} to {@code address} as a message with the id {@code sequenceId}, by which the receiver
+     * matches it: a response carries the sequence id of its request.
      */
-    <T> void deliverToDevice(String deviceId, String sequenceId, T payload);
+    <T> void deliverToDevice(DeliveryAddress address, String sequenceId, T payload);
 
-    /** Sends {@code payload} with its own sequence id as the message id. */
-    default <T extends WithSequenceId> void deliverToDevice(String deviceId, T payload) {
-        deliverToDevice(deviceId, payload.sequenceId(), payload);
+    /**
+     * Sends {@code payload} with its own sequence id as the message id.
+     */
+    default <T extends WithSequenceId> void deliverToDevice(DeliveryAddress address, T payload) {
+        deliverToDevice(address, payload.sequenceId(), payload);
     }
 
     /**
-     * Sends {@code error} to the device {@code deviceId} in place of a {@code payloadClass} payload: with the id
+     * Sends {@code error} to {@code address} in place of a {@code payloadClass} payload: with the id
      * {@code sequenceId}, by which the receiver matches it, and the payload class, so it reaches the receiver's
      * listener for that payload.
      */
-    void deliverErrorToDevice(String deviceId, String sequenceId, Class<?> payloadClass, Throwable error);
+    void deliverErrorToDevice(DeliveryAddress address, String sequenceId, Class<?> payloadClass, Throwable error);
 }

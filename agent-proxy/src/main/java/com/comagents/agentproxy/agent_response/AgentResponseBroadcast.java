@@ -3,6 +3,7 @@ package com.comagents.agentproxy.agent_response;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.communication.ComagentsMessageDeliveryService;
+import com.comagents.commons.communication.DeliveryAddress;
 import com.comagents.commons.response.AgentSessionResponse;
 import io.micronaut.context.event.ApplicationEventListener;
 import jakarta.inject.Singleton;
@@ -42,7 +43,8 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         try {
             agentResponseService.readResponse(event.agent(), event.sessionId()).ifPresent(response -> {
                 String orchestratorDeviceId = response.request().orchestratorDeviceId();
-                messageDeliveryService.deliverToDevice(orchestratorDeviceId, response);
+                messageDeliveryService.deliverToDevice(DeliveryAddress.agentOrchestrator(orchestratorDeviceId),
+                        response);
                 LOG.info("[{} {}] response sent to orchestrator device {}", agentName, event.sessionId(),
                         orchestratorDeviceId);
                 agentResponseService.scheduleCleanup(event.agent(), event.sessionId());
