@@ -8,13 +8,13 @@ import jakarta.inject.Singleton;
 import java.util.UUID;
 
 @Singleton
-public class AgentInfoService {
+public class AgentExecutorInfoService {
 
     private final String version;
     private final String deviceId;
     private final ClaudeAgentSessionRegistry sessionRegistry;
 
-    public AgentInfoService(AgentProxyConf agentProxyConf, ClaudeAgentSessionRegistry sessionRegistry) {
+    public AgentExecutorInfoService(AgentProxyConf agentProxyConf, ClaudeAgentSessionRegistry sessionRegistry) {
         this.version = agentProxyConf.getVersion();
         this.deviceId = agentProxyConf.getDeviceId();
         this.sessionRegistry = sessionRegistry;

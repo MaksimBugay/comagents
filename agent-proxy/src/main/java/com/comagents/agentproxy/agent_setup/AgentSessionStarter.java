@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.agent_status.AgentInfoService;
+import com.comagents.agentproxy.agent_status.AgentExecutorInfoService;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.StartAgentSessionRequest;
@@ -13,11 +13,11 @@ import jakarta.validation.Valid;
 public class AgentSessionStarter {
 
     private final AgentSetupServices agentSetupServices;
-    private final AgentInfoService agentInfoService;
+    private final AgentExecutorInfoService agentExecutorInfoService;
 
-    public AgentSessionStarter(AgentSetupServices agentSetupServices, AgentInfoService agentInfoService) {
+    public AgentSessionStarter(AgentSetupServices agentSetupServices, AgentExecutorInfoService agentExecutorInfoService) {
         this.agentSetupServices = agentSetupServices;
-        this.agentInfoService = agentInfoService;
+        this.agentExecutorInfoService = agentExecutorInfoService;
     }
 
     /**
@@ -41,7 +41,7 @@ public class AgentSessionStarter {
                         request.createdAt()
                 )
         );
-        return agentInfoService.getInfo(request.agent().getAgentName(), request.sequenceId());
+        return agentExecutorInfoService.getInfo(request.agent().getAgentName(), request.sequenceId());
     }
 
     private AgentSetupService setupServiceFor(AiAgent agent) {

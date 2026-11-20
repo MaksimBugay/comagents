@@ -4,7 +4,7 @@ import com.comagents.agentproxy.agent_setup.AgentSessionStarter;
 import com.comagents.agentproxy.agent_setup.NoAgentSetupServiceException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
-import com.comagents.agentproxy.agent_status.AgentInfoService;
+import com.comagents.agentproxy.agent_status.AgentExecutorInfoService;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
 import com.comagents.commons.request.StartAgentSessionRequest;
@@ -32,18 +32,18 @@ import java.util.Optional;
 @Controller("/{agentName}")
 public class AgentController {
 
-    private final AgentInfoService agentInfoService;
+    private final AgentExecutorInfoService agentExecutorInfoService;
     private final AgentSessionStarter agentSessionStarter;
 
-    public AgentController(AgentInfoService agentInfoService,
+    public AgentController(AgentExecutorInfoService agentExecutorInfoService,
                            AgentSessionStarter agentSessionStarter) {
-        this.agentInfoService = agentInfoService;
+        this.agentExecutorInfoService = agentExecutorInfoService;
         this.agentSessionStarter = agentSessionStarter;
     }
 
     @Get("/info")
     public AgentInfo info(@PathVariable String agentName) {
-        return agentInfoService.getInfo(agentName);
+        return agentExecutorInfoService.getInfo(agentName);
     }
 
     /**
