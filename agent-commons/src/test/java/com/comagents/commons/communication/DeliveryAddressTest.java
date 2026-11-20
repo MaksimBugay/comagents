@@ -32,6 +32,12 @@ class DeliveryAddressTest {
     }
 
     @Test
+    void agentOrchestratorsAreAllDevicesOfTheOrchestratorApplication() {
+        assertEquals(new DeliveryAddress("agent-orchestrator@comagents.com", null, "AGENT_ORCHESTRATOR"),
+                DeliveryAddress.agentOrchestrators());
+    }
+
+    @Test
     void agentAddressesNeedTheDevice() {
         assertThrows(IllegalArgumentException.class,
                 () -> DeliveryAddress.agentExecutor(" ", AiHarnessProvider.CLAUDE_CODE));

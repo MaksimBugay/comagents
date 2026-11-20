@@ -51,6 +51,11 @@ public record DeliveryAddress(String accountId, String deviceId, String applicat
         return new DeliveryAddress(ORCHESTRATOR_ACCOUNT_ID, deviceId, ORCHESTRATOR_APPLICATION_ID);
     }
 
+    /** Every agent orchestrator, on whatever device. */
+    public static DeliveryAddress agentOrchestrators() {
+        return new DeliveryAddress(ORCHESTRATOR_ACCOUNT_ID, null, ORCHESTRATOR_APPLICATION_ID);
+    }
+
     private static String nullIfBlank(String id) {
         return StringUtils.defaultIfBlank(id, null);
     }
