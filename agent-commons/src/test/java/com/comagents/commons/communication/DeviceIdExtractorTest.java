@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.conf;
+package com.comagents.commons.communication;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

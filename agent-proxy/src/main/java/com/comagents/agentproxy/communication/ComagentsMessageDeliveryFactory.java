@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.conf;
+package com.comagents.agentproxy.communication;
 
 import com.comagents.commons.communication.ComagentsMessageDeliveryService;
 import com.comagents.commons.communication.ComagentsMessageQueue;

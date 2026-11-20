@@ -6,7 +6,6 @@ import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.client.model.PClient;
 import bmv.org.pushca.core.ChannelMessage;
 import bmv.org.pushca.core.PChannel;
-import com.comagents.agentproxy.conf.PushcaConnectionFactoryProvider;
 import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
 import io.micronaut.context.annotation.Replaces;
 import jakarta.inject.Singleton;

@@ -1,5 +1,6 @@
-package com.comagents.agentproxy.conf;
+package com.comagents.agentproxy.communication.pushca;
 
+import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;

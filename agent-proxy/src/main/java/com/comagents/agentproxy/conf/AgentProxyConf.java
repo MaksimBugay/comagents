@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.conf;
 
+import com.comagents.commons.communication.DeviceIdExtractor;
 import com.comagents.commons.domain.AiHarnessProvider;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;

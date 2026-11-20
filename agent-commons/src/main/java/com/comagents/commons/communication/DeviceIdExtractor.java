@@ -1,9 +1,7 @@
-package com.comagents.agentproxy.conf;
+package com.comagents.commons.communication;
 
-import io.micronaut.context.annotation.Value;
-import io.micronaut.core.annotation.Nullable;
-import jakarta.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,13 +13,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Which agent-proxy this is, in this order: {@code agent-proxy.device-id} when set; the container id under Docker
+ * Which device this process is, in this order: the configured device id when set; the container id under Docker
  * (Swarm too); the pod UID under Kubernetes; otherwise the host name. Both ids are read from the container's mount
  * table, the only place cgroup v2 still shows them: Docker mounts {@code /etc/hostname} from
  * {@code .../docker/containers/<container id>/hostname}, the kubelet {@code /etc/hosts} from
  * {@code .../pods/<pod UID>/etc-hosts}.
  */
-@Singleton
 public class DeviceIdExtractor {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceIdExtractor.class);
@@ -30,13 +27,15 @@ public class DeviceIdExtractor {
     private static final Pattern DOCKER_CONTAINER_ID = Pattern.compile("/docker/containers/([0-9a-f]{64})/");
     private static final Pattern KUBERNETES_POD_UID = Pattern.compile(
             "/pods/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/");
-    private static final String NO_HOSTNAME = "local";
 
-    private final String configuredDeviceId;
+    private final @Nullable String configuredDeviceId;
     private final String hostname;
 
-    public DeviceIdExtractor(@Value("${agent-proxy.device-id:}") String configuredDeviceId,
-                             @Value("${HOSTNAME:" + NO_HOSTNAME + "}") String hostname) {
+    /**
+     * @param configuredDeviceId the device id to use as is; null or blank to find one
+     * @param hostname           the last resort
+     */
+    public DeviceIdExtractor(@Nullable String configuredDeviceId, String hostname) {
         this.configuredDeviceId = configuredDeviceId;
         this.hostname = hostname;
     }
