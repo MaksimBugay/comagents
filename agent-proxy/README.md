@@ -6,7 +6,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 
 | Method | Path                  | Description                     |
 |--------|-----------------------|---------------------------------|
-| GET    | `/{agentName}/info`   | Info about the given agent      |
+| GET    | `/{agentName}/info`   | Info about the given agent, with the executor's `freeSlots` (`claude.session.max-concurrent` minus its sessions running, waiting or being set up) and `archivedSessions` (archived sessions on disk: no slot now, one each on resume); the start reply has them too |
 | POST   | `/{agentName}/start`  | Set up an agent session (clone repo, copy agent files) and start the agent in the background: **202 Accepted**; **409** if the session id is already in use or still has data on disk |
 | GET    | `/agent-status/{agentName}/{sessionId}` | Session state (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`, `KILLED`, `ARCHIVED`), times, and whether a response is available |
 | GET    | `/agent-response/{agentName}/{sessionId}` | The agent's final answer as an agent context (per the agent's `responseSchema`, or one `STRING` item `response`), with the start request. As soon as it is on disk, the same response, as a `ComagentsMessage` (`<base64 of {"payloadString": "com.comagents.commons.response.AgentSessionResponse::<the JSON>", "payloadClassName": "com.comagents.commons.response.AgentSessionResponse"}>`), is sent from the executor's own Pushca client (`comagents-main`, application `<AI_HARNESS_PROVIDER>_EXECUTOR`, e.g. `CLAUDE_CODE_EXECUTOR`, device id = `deviceId`) with the start request's `sequenceId` as the message id, to the start request's `orchestratorDeviceId` device of `agent-orchestrator@comagents.com` (`comagents-main`, `AGENT_ORCHESTRATOR`). Session files and chat are deleted 5 minutes after it was sent or first fetched, or 1 hour after the session finished if never fetched (archived sessions are kept). After a restart, sessions that are not archived are deleted with their chats |
@@ -15,7 +15,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 
 ```console
 $ curl localhost:8080/code_review/info
-{"name":"code_review","version":"0.1","deviceId":"cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3","sequenceId":"3f1c9a52-7d4e-4b8a-9c21-5e6f7a8b9c0d"}
+{"name":"code_review","version":"0.1","deviceId":"cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3","freeSlots":3,"archivedSessions":0,"sequenceId":"3f1c9a52-7d4e-4b8a-9c21-5e6f7a8b9c0d"}
 ```
 
 ### Over Pushca

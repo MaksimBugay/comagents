@@ -247,6 +247,27 @@ public class ClaudeAgentSessionRegistry {
         return session;
     }
 
+    /** How many more sessions can start: the concurrent session limit minus the sessions running, waiting or being set up. */
+    public int freeSlots() {
+        return sessionSlots.availablePermits();
+    }
+
+    /**
+     * How many sessions are archived on disk, also from before a restart. They take no slot until resumed (archiving
+     * frees the run's slot), and each takes one again on resume.
+     */
+    public int archivedSessions() {
+        try (Stream<Path> sessionFolderStream = Files.list(sessionFolders.root())) {
+            return (int) sessionFolderStream.filter(Files::isDirectory)
+                    .map(ClaudeAgentSessionRegistry::sessionIdOf)
+                    .flatMap(Optional::stream)
+                    .filter(sessionId -> findArchive(sessionId).isPresent())
+                    .count();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to list " + sessionFolders.root(), e);
+        }
+    }
+
     public Optional<ClaudeAgentSession> findSession(UUID sessionId) {
         return Optional.ofNullable(sessions.get(sessionId));
     }

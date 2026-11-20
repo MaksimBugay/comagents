@@ -626,6 +626,31 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
+    void countsFreeSlotsAndArchivedSessions() throws Exception {
+        registry = registry(fakeClaude("exec sleep 60"), 3, WAIT.multipliedBy(10));
+        assertEquals(3, registry.freeSlots());
+        assertEquals(0, registry.archivedSessions());
+        UUID running = newSessionId();
+        ClaudeAgentSession runningSession = registry.createSession(running, AiAgent.CODE_REVIEW, workingDirectory);
+        UUID archived = newSessionId();
+        ClaudeAgentSession archivedSession = registry.createSession(archived, AiAgent.CODE_REVIEW, workingDirectory);
+        assertEquals(1, registry.freeSlots());
+
+        registry.archive(archived);
+        archivedSession.awaitFinished(WAIT);
+        assertEquals(2, registry.freeSlots(), "an archived session takes no slot");
+        assertEquals(1, registry.archivedSessions());
+
+        registry.killSession(running);
+        runningSession.awaitFinished(WAIT);
+        assertEquals(3, registry.freeSlots());
+        assertEquals(1, registry.archivedSessions());
+
+        registry = registry(fakeClaude("exec sleep 60"), 3, WAIT.multipliedBy(10));
+        assertEquals(1, registry.archivedSessions(), "archives from before a restart count too");
+    }
+
+    @Test
     void rejectsDuplicateSessionId() throws Exception {
         registry = registry(fakeClaude(SUCCESSFUL_RUN), 2, WAIT);
         UUID sessionId = newSessionId();
