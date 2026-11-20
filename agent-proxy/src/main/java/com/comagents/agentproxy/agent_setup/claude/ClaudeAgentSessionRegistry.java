@@ -247,6 +247,11 @@ public class ClaudeAgentSessionRegistry {
         return session;
     }
 
+    /** How many sessions run at once at most: {@code claude.session.max-concurrent}. */
+    public int maxSlots() {
+        return maxConcurrentSessions;
+    }
+
     /** How many more sessions can start: the concurrent session limit minus the sessions running, waiting or being set up. */
     public int freeSlots() {
         return sessionSlots.availablePermits();

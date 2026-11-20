@@ -51,6 +51,7 @@ class AgentDiscoveryClientTest {
         AgentInfo info = (AgentInfo) message.comagentsMessagePayload().payload();
         assertEquals(AiHarnessProvider.CLAUDE_CODE, info.harnessProvider());
         assertEquals("executor-device-1", info.deviceId());
+        assertEquals(3, info.maxSlots());
         assertEquals(3, info.freeSlots());
         assertEquals(message.id(), info.sequenceId());
     }

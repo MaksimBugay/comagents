@@ -628,6 +628,7 @@ class ClaudeAgentSessionRegistryTest {
     @Test
     void countsFreeSlotsAndArchivedSessions() throws Exception {
         registry = registry(fakeClaude("exec sleep 60"), 3, WAIT.multipliedBy(10));
+        assertEquals(3, registry.maxSlots());
         assertEquals(3, registry.freeSlots());
         assertEquals(0, registry.archivedSessions());
         UUID running = newSessionId();

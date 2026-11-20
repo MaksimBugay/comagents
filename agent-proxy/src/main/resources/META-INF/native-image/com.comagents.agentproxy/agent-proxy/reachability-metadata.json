@@ -231,5 +231,14 @@
         }
       ]
     }
-  ]
+  ],
+  "foreign": {
+    "downcalls": [
+      {
+        "returnType": "jint",
+        "parameterTypes": ["jint", "jlong"],
+        "options": {"firstVariadicArg": 1}
+      }
+    ]
+  }
 }
