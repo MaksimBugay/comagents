@@ -106,6 +106,11 @@
       <artifactId>agent-commons</artifactId>
       <version>${agent-commons.version}</version>
     </dependency>
+    <!-- the discovered agent executors, each forgotten when it stops reporting (AgentDiscoveryRegistry) -->
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
     <!-- the native-image Feature that registers introspected types for Jackson's reflection; provided by the builder -->
     <dependency>
       <groupId>org.graalvm.sdk</groupId>
