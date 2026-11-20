@@ -2,6 +2,8 @@ package com.comagents.agentproxy.communication;
 
 import bmv.org.pushca.client.model.ClientFilter;
 import bmv.org.pushca.core.PChannel;
+import com.comagents.commons.communication.BrokenConnectionRetry;
+import com.comagents.commons.communication.pushca.PushcaConnectionFailures;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -32,19 +34,21 @@ public interface AgentSessionPrivateChannelService {
     Duration getRetryTimeout();
 
     default PChannel createClosePrivateChannelWithRetry(String name) {
-        return callWithRetry(() -> createClosePrivateChannel(name), retryDeadline());
+        return callWithRetry(() -> createClosePrivateChannel(name), retryDeadline(),
+                PushcaConnectionFailures::isBrokenConnection);
     }
 
     default void addMembersWithRetry(PChannel channel, ClientFilter... members) {
-        runWithRetry(() -> addMembers(channel, members), retryDeadline());
+        runWithRetry(() -> addMembers(channel, members), retryDeadline(), PushcaConnectionFailures::isBrokenConnection);
     }
 
     default void sendMessageWithRetry(PChannel channel, String message) {
-        runWithRetry(() -> sendMessage(channel, message), retryDeadline());
+        runWithRetry(() -> sendMessage(channel, message), retryDeadline(),
+                PushcaConnectionFailures::isBrokenConnection);
     }
 
     default void removeChannelWithRetry(PChannel channel) {
-        runWithRetry(() -> removeChannel(channel), retryDeadline());
+        runWithRetry(() -> removeChannel(channel), retryDeadline(), PushcaConnectionFailures::isBrokenConnection);
     }
 
     private Instant retryDeadline() {

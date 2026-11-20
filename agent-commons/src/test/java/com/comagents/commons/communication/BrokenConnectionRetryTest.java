@@ -1,13 +1,11 @@
 package com.comagents.commons.communication;
 
-import bmv.org.pushca.client.exception.PushcaCommandException;
-import bmv.org.pushca.client.exception.WebsocketConnectionIsBrokenException;
-import bmv.org.pushca.client.exception.WebsocketConnectionIsNotOpenException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -16,6 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BrokenConnectionRetryTest {
 
+    // what the transport throws on a broken connection
+    private static final Predicate<RuntimeException> IS_BROKEN_CONNECTION = e -> e instanceof BrokenConnection;
+
     private final AtomicInteger calls = new AtomicInteger();
 
     @Test
@@ -23,14 +24,11 @@ class BrokenConnectionRetryTest {
         long start = System.nanoTime();
 
         String result = BrokenConnectionRetry.callWithRetry(() -> {
-            switch (calls.incrementAndGet()) {
-                case 1 -> throw new WebsocketConnectionIsNotOpenException();
-                case 2 -> throw new WebsocketConnectionIsBrokenException(new IllegalStateException("no ack"));
-                default -> {
-                    return "done";
-                }
+            if (calls.incrementAndGet() < 3) {
+                throw new BrokenConnection();
             }
-        }, Instant.now().plusSeconds(10));
+            return "done";
+        }, Instant.now().plusSeconds(10), IS_BROKEN_CONNECTION);
 
         assertEquals("done", result);
         assertEquals(3, calls.get());
@@ -39,25 +37,28 @@ class BrokenConnectionRetryTest {
 
     @Test
     void givesUpWithTheLastFailureOnceTheDeadlinePassed() {
-        WebsocketConnectionIsNotOpenException broken = new WebsocketConnectionIsNotOpenException();
+        BrokenConnection broken = new BrokenConnection();
 
-        assertSame(broken, assertThrows(WebsocketConnectionIsNotOpenException.class,
+        assertSame(broken, assertThrows(BrokenConnection.class,
                 () -> BrokenConnectionRetry.runWithRetry(() -> {
                     calls.incrementAndGet();
                     throw broken;
-                }, Instant.now().plusMillis(1500))));
+                }, Instant.now().plusMillis(1500), IS_BROKEN_CONNECTION)));
         assertEquals(2, calls.get(), "no try after the deadline");
     }
 
     @Test
     void failsAtOnceForAnythingButABrokenConnection() {
-        PushcaCommandException rejected = new PushcaCommandException("Send message", "no such receiver");
+        IllegalStateException rejected = new IllegalStateException("no such receiver");
 
-        assertSame(rejected, assertThrows(PushcaCommandException.class,
+        assertSame(rejected, assertThrows(IllegalStateException.class,
                 () -> BrokenConnectionRetry.runWithRetry(() -> {
                     calls.incrementAndGet();
                     throw rejected;
-                }, Instant.now().plusSeconds(10))));
+                }, Instant.now().plusSeconds(10), IS_BROKEN_CONNECTION)));
         assertEquals(1, calls.get());
+    }
+
+    private static final class BrokenConnection extends RuntimeException {
     }
 }

@@ -13,14 +13,18 @@ public interface ComagentsQueueConsumer {
      */
     void consume(QueuedComagentsMessage message);
 
+    /** Whether {@code e}, thrown by {@link #consume}, means the transport's connection is broken. */
+    boolean isBrokenConnection(RuntimeException e);
+
     /**
-     * {@link #consume}s {@code message}; while the connection is broken, tries again every second until the message
-     * expires (the Pushca client reconnects by itself meanwhile). Any other failure ends it at once.
+     * {@link #consume}s {@code message}; while the connection is broken ({@link #isBrokenConnection}), tries again
+     * every second until the message expires (the transport's client reconnects by itself meanwhile). Any other
+     * failure ends it at once.
      *
      * @throws RuntimeException when it can't be sent: the last failure, a broken connection's once it expired
      */
     default void consumeWithRetry(QueuedComagentsMessage message) {
-        BrokenConnectionRetry.runWithRetry(() -> consume(message), message.expiresAt());
+        BrokenConnectionRetry.runWithRetry(() -> consume(message), message.expiresAt(), this::isBrokenConnection);
     }
 
     /**

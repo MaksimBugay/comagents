@@ -11,6 +11,7 @@ import com.comagents.commons.communication.ComagentsQueueConsumer;
 import com.comagents.commons.communication.QueuedComagentsMessage;
 import com.comagents.commons.communication.pushca.ClientFilterUtils;
 import com.comagents.commons.communication.pushca.PushcaConnectionFactory;
+import com.comagents.commons.communication.pushca.PushcaConnectionFailures;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import jakarta.annotation.PreDestroy;
@@ -102,6 +103,11 @@ public class AgentExecutorPushcaClient
     public synchronized void consume(QueuedComagentsMessage message) {
         Validate.validState(connection != null, "Pushca connection of executor %s not open", client.deviceId);
         connection.broadcastMessage(ClientFilterUtils.of(message.address()), message.message().toString());
+    }
+
+    @Override
+    public boolean isBrokenConnection(RuntimeException e) {
+        return PushcaConnectionFailures.isBrokenConnection(e);
     }
 
     /**
