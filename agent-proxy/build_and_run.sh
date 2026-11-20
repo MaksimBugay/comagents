@@ -1,6 +1,7 @@
 #!/bin/sh
-# Rebuilds agent-proxy:0.1 (build-image.sh), starts it with DeepSeek's Anthropic-compatible API as the model
-# provider, and follows its logs (Ctrl+C stops following; the container keeps running).
+# Rebuilds agent-proxy:0.1 (build-image.sh) and agent-orchestrator:0.1 (../agent-orchestrator/build-image.sh), starts
+# agent-proxy with DeepSeek's Anthropic-compatible API as the model provider and agent-orchestrator with the same
+# Pushca key, and follows agent-proxy's logs (Ctrl+C stops following; the containers keep running).
 #
 # Usage: ./build_and_run.sh <sources repo access token> <anthropic api key> <pushca api key>
 #
@@ -22,8 +23,11 @@ export SOURCES_REPO_ACCESS_TOKEN ANTHROPIC_API_KEY PUSHCA_API_KEY
 
 NAME=agent-proxy
 IMAGE="${NAME}:0.1"
+ORCHESTRATOR_NAME=agent-orchestrator
+ORCHESTRATOR_IMAGE="${ORCHESTRATOR_NAME}:0.1"
 
 ./build-image.sh
+../agent-orchestrator/build-image.sh
 
 echo "Starting ${NAME}"
 docker run -d --name "$NAME" -p 8087:8080 \
@@ -35,5 +39,10 @@ docker run -d --name "$NAME" -p 8087:8080 \
   -e CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
   -e PUSHCA_API_KEY \
   "$IMAGE" >/dev/null
+
+echo "Starting ${ORCHESTRATOR_NAME}"
+docker run -d --name "$ORCHESTRATOR_NAME" -p 8088:8080 \
+  -e PUSHCA_API_KEY \
+  "$ORCHESTRATOR_IMAGE" >/dev/null
 
 docker logs -f "$NAME"
