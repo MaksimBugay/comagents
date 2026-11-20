@@ -41,7 +41,7 @@ public class AgentSessionStarter {
                         request.createdAt()
                 )
         );
-        return agentExecutorInfoService.getInfo(request.agent().getAgentName(), request.sequenceId());
+        return agentExecutorInfoService.getInfo(request.sequenceId());
     }
 
     private AgentSetupService setupServiceFor(AiAgent agent) {

@@ -29,7 +29,7 @@ import tools.jackson.core.JacksonException;
 
 import java.util.Optional;
 
-@Controller("/{agentName}")
+@Controller
 public class AgentController {
 
     private final AgentExecutorInfoService agentExecutorInfoService;
@@ -41,9 +41,10 @@ public class AgentController {
         this.agentSessionStarter = agentSessionStarter;
     }
 
+    /** This agent executor, whatever agent it runs. */
     @Get("/info")
-    public AgentInfo info(@PathVariable String agentName) {
-        return agentExecutorInfoService.getInfo(agentName);
+    public AgentInfo info() {
+        return agentExecutorInfoService.getInfo();
     }
 
     /**
@@ -51,7 +52,7 @@ public class AgentController {
      * {@code GET /agent-status/{agentName}/{sessionId}}, then fetch {@code GET /agent-response/{agentName}/{sessionId}}.
      */
     // setup downloads and copies files (blocking I/O), which must not run on the Netty event loop
-    @Post("/start")
+    @Post("/{agentName}/start")
     @ExecuteOn(TaskExecutors.BLOCKING)
     public HttpResponse<AgentInfo> start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentSessionRequest startAgentRequest) {
         requireSameAgent(agentName, startAgentRequest.agent());

@@ -40,9 +40,9 @@ class AgentControllerTest {
 
     @Test
     void returnsAgentInfo() {
-        var info = client.toBlocking().retrieve("/code_review/info", AgentInfo.class);
+        var info = client.toBlocking().retrieve("/info", AgentInfo.class);
 
-        assertEquals("code_review", info.name());
+        assertEquals(AiHarnessProvider.CLAUDE_CODE, info.harnessProvider());
     }
 }
 ```
