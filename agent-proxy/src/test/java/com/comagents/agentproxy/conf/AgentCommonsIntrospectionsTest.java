@@ -2,8 +2,10 @@ package com.comagents.agentproxy.conf;
 
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessage;
+import com.comagents.commons.domain.AiHarnessProvider;
 import com.comagents.commons.request.AgentResponseRequest;
 import com.comagents.commons.request.AgentStatusRequest;
+import com.comagents.commons.response.AgentInfo;
 import com.comagents.commons.response.AgentResponseReply;
 import com.comagents.commons.response.AgentSessionResponse;
 import com.comagents.commons.response.AgentStatusResponse;
@@ -21,7 +23,7 @@ class AgentCommonsIntrospectionsTest {
     void typesSentOverPushcaAreIntrospected() {
         for (Class<?> type : List.of(ComagentsMessage.class, ComagentsError.class, AgentSessionResponse.class,
                 AgentStatusRequest.class, AgentStatusResponse.class, AgentResponseRequest.class,
-                AgentResponseReply.class)) {
+                AgentResponseReply.class, AgentInfo.class, AiHarnessProvider.class)) {
             assertTrue(BeanIntrospector.SHARED.findIntrospection(type).isPresent(), type.getName());
         }
     }
