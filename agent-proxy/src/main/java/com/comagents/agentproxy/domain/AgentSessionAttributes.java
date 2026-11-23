@@ -10,19 +10,21 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * @param agentContext       what the session works with (see {@code StartAgentSessionRequest}); null for none
- * @param sequenceId         the start request's sequence id, which the session's response carries
- * @param originatorDeviceId the orchestrator device that gets the session's response
- * @param agentCallSequence  the start request's agent call sequence; empty when not given
- * @param actorAccountId     the Pushca account that started the session: the only member of the session's chat
- * @param loggingLevel       what the session's chat shows; {@link AgentSessionLoggingLevel#INFO} when not given
- * @param createdAt          when the start request was created, in epoch milliseconds
+ * @param agentContext                what the session works with (see {@code StartAgentSessionRequest}); null for none
+ * @param sequenceId                  the start request's sequence id, which the session's response carries
+ * @param originatorDeviceId          the orchestrator device that gets the session's response
+ * @param agentResponseWaiterDeviceId the start request's device that waits for the session's response
+ * @param agentCallSequence           the start request's agent call sequence; empty when not given
+ * @param actorAccountId              the Pushca account that started the session: the only member of the session's chat
+ * @param loggingLevel                what the session's chat shows; {@link AgentSessionLoggingLevel#INFO} when not given
+ * @param createdAt                   when the start request was created, in epoch milliseconds
  */
 @Introspected
 public record AgentSessionAttributes(@NotNull UUID sessionId,
                                      @Nullable AgentContext agentContext,
                                      @NotNull String sequenceId,
                                      @NotNull String originatorDeviceId,
+                                     @Nullable String agentResponseWaiterDeviceId,
                                      List<String> agentCallSequence,
                                      @Nullable String actorAccountId,
                                      AgentSessionLoggingLevel loggingLevel,

@@ -66,6 +66,7 @@ public class StartAgentSessionHelper {
                 agentContext,
                 UUID.randomUUID().toString(),
                 conf.getDeviceId(),
+                conf.getDeviceId(),
                 agentCallSequence,
                 actorAccountId,
                 loggingLevel == null ? AgentSessionLoggingLevel.INFO : loggingLevel,

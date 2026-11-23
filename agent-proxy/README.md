@@ -62,7 +62,7 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
 ```
 
 ```json
-{"sessionId": "…", "agent": "CODE_REVIEW", "sequenceId": "…", "originatorDeviceId": "…", "agentCallSequence": [], "actorAccountId": "Maks", "loggingLevel": "INFO",
+{"sessionId": "…", "agent": "CODE_REVIEW", "sequenceId": "…", "originatorDeviceId": "…", "agentResponseWaiterDeviceId": "…", "agentCallSequence": [], "actorAccountId": "Maks", "loggingLevel": "INFO",
  "agentContext": {"items": [
    {"type": "GITHUB_REPOSITORY", "value": "https://github.com/<org>/kn-challenge.git", "primary": true},
    {"type": "FILE", "name": "requirements.md", "value": "<S3 download URL>", "description": "acceptance criteria"},

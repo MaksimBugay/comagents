@@ -15,7 +15,7 @@ class StartAgentSessionRequestTest {
     @Test
     void readsBackFromJson() {
         StartAgentSessionRequest request = new StartAgentSessionRequest(UUID.randomUUID(), AiAgent.CODE_REVIEW, null,
-                "sequence-1", "orchestrator-device-1", List.of("orchestrator", "CODE_REVIEW"), "MBugai",
+                "sequence-1", "orchestrator-device-1", "waiter-device-1", List.of("orchestrator", "CODE_REVIEW"), "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
 
         assertEquals(request, JsonUtility.fromJson(JsonUtility.toJson(request), StartAgentSessionRequest.class));

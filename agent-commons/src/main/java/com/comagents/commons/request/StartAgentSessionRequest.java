@@ -14,17 +14,20 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * @param agentContext       what the session works with: its primary repository is cloned as the working directory,
- *                           and all its items are added to the kick-off prompt; without one nothing is cloned
- * @param sequenceId         the sender's id of the request, which the responses to it carry
- * @param originatorDeviceId the orchestrator device that gets the session's response
- * @param agentCallSequence  the agent call sequence the session belongs to; empty when not given
+ * @param agentContext                what the session works with: its primary repository is cloned as the working
+ *                                    directory, and all its items are added to the kick-off prompt; without one nothing
+ *                                    is cloned
+ * @param sequenceId                  the sender's id of the request, which the responses to it carry
+ * @param originatorDeviceId          the orchestrator device that gets the session's response
+ * @param agentResponseWaiterDeviceId the device that waits for the session's response
+ * @param agentCallSequence           the agent call sequence the session belongs to; empty when not given
  */
 public record StartAgentSessionRequest(UUID sessionId,
                                        @NotNull AiAgent agent,
                                        @Nullable AgentContext agentContext,
                                        @NotBlank String sequenceId,
                                        @NotBlank String originatorDeviceId,
+                                       @Nullable String agentResponseWaiterDeviceId,
                                        List<String> agentCallSequence,
                                        String actorAccountId,
                                        AgentSessionLoggingLevel loggingLevel,
@@ -35,6 +38,6 @@ public record StartAgentSessionRequest(UUID sessionId,
     }
 
     public StartAgentSessionRequest(UUID sessionId, AiAgent agent, @Nullable AgentContext agentContext, String sequenceId, String originatorDeviceId, String actorAccountId) {
-        this(sessionId, agent, agentContext, sequenceId, originatorDeviceId, List.of(), actorAccountId, AgentSessionLoggingLevel.INFO, Instant.now().toEpochMilli());
+        this(sessionId, agent, agentContext, sequenceId, originatorDeviceId, null, List.of(), actorAccountId, AgentSessionLoggingLevel.INFO, Instant.now().toEpochMilli());
     }
 }
