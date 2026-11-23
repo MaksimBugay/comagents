@@ -1,6 +1,15 @@
 {
   "reflection": [
     {
+      "type": "com.comagents.commons.exception.ClaudeSessionLimitException",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String"]
+        }
+      ]
+    },
+    {
       "type": "bmv.org.pushca.client.model.Binary",
       "allDeclaredFields": true,
       "allDeclaredConstructors": true,

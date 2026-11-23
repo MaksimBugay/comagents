@@ -3,7 +3,7 @@ package com.comagents.agentproxy.agent_setup;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
-import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
+import com.comagents.commons.exception.ClaudeSessionLimitException;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;

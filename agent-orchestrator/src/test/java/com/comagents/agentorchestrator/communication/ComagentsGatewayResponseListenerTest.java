@@ -3,6 +3,7 @@ package com.comagents.agentorchestrator.communication;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.WithSequenceId;
+import com.comagents.commons.exception.ClaudeSessionLimitException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -42,6 +43,14 @@ class ComagentsGatewayResponseListenerTest {
 
         assertInstanceOf(TimeoutException.class, error);
         assertEquals("too late", error.getMessage());
+    }
+
+    @Test
+    void recreatesAnExecutorsSessionLimitException() {
+        Throwable error = receivedError(new ComagentsError(new ClaudeSessionLimitException(3)));
+
+        assertInstanceOf(ClaudeSessionLimitException.class, error);
+        assertEquals("All 3 Claude Code session slots are busy, try again later", error.getMessage());
     }
 
     @Test

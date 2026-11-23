@@ -35,8 +35,8 @@ class AgentInfoListenerTest {
                 ComagentsMessage.ofPayload(AGENT_DISCOVERY_SEQUENCE_ID, info, AgentInfoResponse.class).toString());
 
         await("handled on a thread of its own").atMost(Duration.ofSeconds(5))
-                .until(() -> registry.getBestAvailable(false).isPresent());
-        AgentInfoResponse registered = registry.getBestAvailable(false).orElseThrow();
+                .until(() -> registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, false).isPresent());
+        AgentInfoResponse registered = registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, false).orElseThrow();
         assertEquals("executor-device-1", registered.deviceId());
         assertEquals(2, registered.freeSlots());
     }

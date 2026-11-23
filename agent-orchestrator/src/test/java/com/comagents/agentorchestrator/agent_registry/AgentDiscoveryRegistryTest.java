@@ -21,11 +21,33 @@ class AgentDiscoveryRegistryTest {
         registry.update(info("executor-1", 3, 3, 0, 2_000));
 
         registry.update(info("executor-1", 3, 1, 0, 1_000));
-        assertEquals(3, registry.getBestAvailable(false).orElseThrow().freeSlots(), "an older info is ignored");
+        assertEquals(3, registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, false).orElseThrow().freeSlots(), "an older info is ignored");
 
         registry.update(info("executor-1", 3, 2, 0, 3_000));
-        assertEquals(2, registry.getBestAvailable(false).orElseThrow().freeSlots(), "a fresher one replaces it");
+        assertEquals(2, registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, false).orElseThrow().freeSlots(), "a fresher one replaces it");
         assertEquals(1, registry.getAllAvailable(false).size());
+    }
+
+    @Test
+    void aRemovedExecutorIsBackWithItsNextReport() {
+        registry.update(info("executor-1", 3, 3, 0, 1_000));
+        registry.update(info("executor-2", 3, 1, 0, 1_000));
+
+        registry.remove("executor-1");
+        assertEquals(List.of("executor-2"), registry.getAll().stream().map(AgentInfoResponse::deviceId).toList());
+
+        registry.update(info("executor-1", 3, 2, 0, 2_000));
+        assertEquals("executor-1", registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, false).orElseThrow().deviceId());
+    }
+
+    @Test
+    void theBestAvailableRunsTheGivenHarness() {
+        registry.update(new AgentInfoResponse(AiHarnessProvider.CODEX, "0.1", "codex-1", 3, 3, 0, "sequence-1", 1_000));
+        registry.update(info("claude-1", 3, 1, 0, 1_000));
+
+        assertEquals("claude-1",
+                registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, false).orElseThrow().deviceId());
+        assertEquals("codex-1", registry.getBestAvailable(AiHarnessProvider.CODEX, false).orElseThrow().deviceId());
     }
 
     @Test
@@ -37,7 +59,7 @@ class AgentDiscoveryRegistryTest {
 
         assertEquals(List.of("two-free-one-archived", "two-free-two-archived", "one-free"),
                 registry.getAllAvailable(false).stream().map(AgentInfoResponse::deviceId).toList());
-        assertEquals("two-free-one-archived", registry.getBestAvailable(false).orElseThrow().deviceId());
+        assertEquals("two-free-one-archived", registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, false).orElseThrow().deviceId());
     }
 
     @Test
@@ -63,8 +85,8 @@ class AgentDiscoveryRegistryTest {
     void nothingAvailable() {
         registry.update(info("full", 1, 0, 0, 1_000));
 
-        assertEquals(Optional.empty(), registry.getBestAvailable(false));
-        assertEquals(Optional.empty(), registry.getBestAvailable(true));
+        assertEquals(Optional.empty(), registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, false));
+        assertEquals(Optional.empty(), registry.getBestAvailable(AiHarnessProvider.CLAUDE_CODE, true));
     }
 
     @Test

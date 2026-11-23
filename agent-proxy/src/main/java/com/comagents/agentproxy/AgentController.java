@@ -3,7 +3,7 @@ package com.comagents.agentproxy;
 import com.comagents.agentproxy.agent_setup.AgentSessionStarter;
 import com.comagents.agentproxy.agent_setup.NoAgentSetupServiceException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException;
-import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionLimitException;
+import com.comagents.commons.exception.ClaudeSessionLimitException;
 import com.comagents.agentproxy.agent_status.AgentExecutorInfoService;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;

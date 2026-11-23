@@ -1,10 +1,10 @@
 package com.comagents.agentorchestrator.agent_registry;
 
+import com.comagents.commons.domain.AiHarnessProvider;
 import com.comagents.commons.response.AgentInfoResponse;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import org.apache.commons.lang3.Validate;
 
@@ -59,6 +59,19 @@ public class AgentDiscoveryRegistry {
         }
     }
 
+    /**
+     * Forgets the executor on {@code deviceId} until its next discovery report, e.g. after it refused a session for
+     * lack of slots.
+     */
+    public void remove(String deviceId) {
+        lock.writeLock().lock();
+        try {
+            agentInfos.invalidate(deviceId);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
     /** All executors known now, also those without a free slot, best first. */
     public List<AgentInfoResponse> getAll() {
         return find(_ -> true);
@@ -79,12 +92,14 @@ public class AgentDiscoveryRegistry {
         return find(available);
     }
 
-    public Optional<AgentInfoResponse> getBestAvailable(boolean oneSessionPerExecutor) {
-        List<AgentInfoResponse> all = getAllAvailable(oneSessionPerExecutor);
-        if (CollectionUtils.isEmpty(all)) {
-            return Optional.empty();
-        }
-        return Optional.of(all.getFirst());
+    /**
+     * The best executor of {@code harnessProvider} that can take a session now ({@link #getAllAvailable}).
+     */
+    public Optional<AgentInfoResponse> getBestAvailable(AiHarnessProvider harnessProvider,
+                                                        boolean oneSessionPerExecutor) {
+        return getAllAvailable(oneSessionPerExecutor).stream()
+                .filter(info -> info.harnessProvider() == harnessProvider)
+                .findFirst();
     }
 
     private List<AgentInfoResponse> find(Predicate<AgentInfoResponse> filter) {
