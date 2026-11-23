@@ -12,13 +12,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Hands every agent response to the device that waits for it as soon as it is on disk: the
+ * Hands every agent response to the devices that wait for it as soon as it is on disk: the
  * {@link AgentSessionResponse}, as {@code GET /agent-response} returns it, goes as a {@link ComagentsMessage} through
- * the {@link ComagentsMessageDeliveryService} (the executor's own Pushca client) to the device named by the start
- * request's {@code agentResponseWaiterDeviceId}, or its {@code originatorDeviceId} when there is none, whatever that
- * device's account and application, with the start request's {@code sequenceId} as the message id. Once sent, the
- * session's files are deleted after {@code agent-response.cleanup-delay}, as after a first fetch. When it can't be
- * sent, the response stays to be fetched until {@code agent-response.retention}.
+ * the {@link ComagentsMessageDeliveryService} (the executor's own Pushca client) to the start request's
+ * {@code originatorDeviceId} device, then also to its {@code agentResponseWaiterDeviceId} device when there is one,
+ * whatever those devices' account and application, with the start request's {@code sequenceId} as the message id.
+ * Once sent to all, the session's files are deleted after {@code agent-response.cleanup-delay}, as after a first fetch.
+ * When it can't be sent, the response stays to be fetched until {@code agent-response.retention}.
  */
 @Singleton
 public class AgentResponseBroadcast implements ApplicationEventListener<AgentResponseReady> {
@@ -44,18 +44,25 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         String agentName = event.agent().getAgentName();
         try {
             agentResponseService.readResponse(event.agent(), event.sessionId()).ifPresent(response -> {
-                String waiterDeviceId = response.request().agentResponseWaiterDeviceId();
-                String agentResponseWaiterDeviceId = StringUtils.isNotBlank(waiterDeviceId)
-                        ? waiterDeviceId
-                        : response.request().originatorDeviceId();
-                messageDeliveryService.deliverToAddress(DeliveryAddress.deviceWithId(agentResponseWaiterDeviceId),
-                        response);
-                LOG.info("[{} {}] response sent to device {}", agentName, event.sessionId(),
-                        agentResponseWaiterDeviceId);
+                messageDeliveryService.deliverToAddress(
+                        DeliveryAddress.deviceWithId(response.request().originatorDeviceId()),
+                        response
+                );
+                LOG.info("[{} {}] response sent to the originator device {}", agentName, event.sessionId(),
+                        response.request().originatorDeviceId());
+                String agentResponseWaiterDeviceId = response.request().agentResponseWaiterDeviceId();
+                if (StringUtils.isNotBlank(agentResponseWaiterDeviceId)) {
+                    messageDeliveryService.deliverToAddress(
+                            DeliveryAddress.deviceWithId(agentResponseWaiterDeviceId),
+                            response
+                    );
+                    LOG.info("[{} {}] response sent to device {}", agentName, event.sessionId(),
+                            agentResponseWaiterDeviceId);
+                }
                 agentResponseService.scheduleCleanup(event.agent(), event.sessionId());
             });
         } catch (RuntimeException e) {
-            LOG.error("[{} {}] sending the response to the waiter device failed", agentName, event.sessionId(), e);
+            LOG.error("[{} {}] sending the response failed", agentName, event.sessionId(), e);
         }
     }
 }

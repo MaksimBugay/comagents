@@ -48,13 +48,13 @@ public class StartAgentSessionHelper {
     /**
      * Sends a start request for a new session of {@code agent} to the best executor available for it and waits for
      * its reply. Retrying is the caller's: an executor that refuses it for lack of slots is removed from the registry
-     * until it reports again, so a retry goes elsewhere. The executor sends its replies to this orchestrator's own
-     * device, and the session's response to {@code agentResponseWaiterDeviceId}. A started session is registered in
-     * the {@link RunningAgentSessionRegistry}.
+     * until it reports again, so a retry goes elsewhere. The executor sends its replies and the session's response
+     * to this orchestrator's own device, and the response to {@code agentResponseWaiterDeviceId} too. A started
+     * session is registered in the {@link RunningAgentSessionRegistry}.
      *
      * @param sessionId                   the id of the new session
-     * @param agentResponseWaiterDeviceId the device that gets the session's response; this orchestrator's own device
-     *                                    when null or blank
+     * @param agentResponseWaiterDeviceId another device that gets the session's response too; none when null or
+     *                                    blank
      * @return the executor that runs the session, as it was right after taking it
      * @throws IllegalStateException       when no executor of the agent's harness has a free slot now, or no reply
      *                                     came in time ({@link ComagentsGateway#exchange})

@@ -75,7 +75,7 @@ class AgentResponseControllerTest {
 
         AgentSessionResponse response = client.toBlocking().retrieve(uri(), AgentSessionResponse.class);
 
-        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "sequence-1", "orchestrator-device-1", "waiter-device-1", "executor-device-1", List.of("orchestrator"), "MBugai",
+        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "sequence-1", "orchestrator-device-1", "waiter-device-1", List.of("orchestrator"), "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());
         assertEquals("# Report\n\nAll good", response.agentContext().items().getFirst().getValue());

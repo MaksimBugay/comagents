@@ -74,7 +74,7 @@ class AgentResponseBroadcastTest {
     }
 
     @Test
-    void sendsTheResponseToTheWaiterDeviceAndDeletesSessionFilesAfterDelay() throws Exception {
+    void sendsTheResponseToTheOriginatorAndTheWaiterDevicesAndDeletesSessionFilesAfterDelay() throws Exception {
         startSession(attributes);
         writeAllGoodResponse();
 
@@ -87,18 +87,22 @@ class AgentResponseBroadcastTest {
         assertEquals("executor-device-1", executor.client.deviceId);
         assertEquals("CLAUDE_CODE_EXECUTOR", executor.client.applicationId);
         List<FakePushcaConnectionFactory.Broadcast> broadcasts = executor.broadcasts;
-        assertEquals(1, broadcasts.size());
-        assertEquals("comagents-main", broadcasts.getFirst().receivers().workSpaceId);
-        // the device alone, whatever its account and application
-        assertNull(broadcasts.getFirst().receivers().accountId);
-        assertEquals("waiter-device-1", broadcasts.getFirst().receivers().deviceId);
-        assertNull(broadcasts.getFirst().receivers().applicationId);
+        assertEquals(2, broadcasts.size());
+        assertEquals(List.of("orchestrator-device-1", "waiter-device-1"),
+                broadcasts.stream().map(sent -> sent.receivers().deviceId).toList(), "the originator first");
+        for (FakePushcaConnectionFactory.Broadcast sent : broadcasts) {
+            assertEquals("comagents-main", sent.receivers().workSpaceId);
+            // the device alone, whatever its account and application
+            assertNull(sent.receivers().accountId);
+            assertNull(sent.receivers().applicationId);
+            assertEquals(broadcasts.getFirst().message(), sent.message(), "the same response to both");
+        }
         // a ComagentsMessage, read as the waiter reads it
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(broadcasts.getFirst().message());
         assertEquals("sequence-1", message.id(), "the start request's sequence id");
         assertEquals(AgentSessionResponse.class.getName(), message.payloadClassName());
         AgentSessionResponse response = (AgentSessionResponse) message.comagentsMessagePayload().payload();
-        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "sequence-1", "orchestrator-device-1", "waiter-device-1", "executor-device-1", List.of("orchestrator"), "MBugai",
+        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "sequence-1", "orchestrator-device-1", "waiter-device-1", List.of("orchestrator"), "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());
 
@@ -107,7 +111,7 @@ class AgentResponseBroadcastTest {
     }
 
     @Test
-    void withoutAWaiterTheResponseGoesToTheOriginatorDevice() throws Exception {
+    void withoutAWaiterOnlyTheOriginatorDeviceGetsTheResponse() throws Exception {
         startSession(new AgentSessionAttributes(sessionId, null, "sequence-1", "orchestrator-device-1", null, "executor-device-1", List.of(),
                 "MBugai", AgentSessionLoggingLevel.INFO, 1_700_000_000_000L));
         writeAllGoodResponse();
