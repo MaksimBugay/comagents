@@ -45,13 +45,13 @@ class StartAgentSessionHelperTest {
         registry.update(discovered("codex-1", AiHarnessProvider.CODEX, 3));
         AgentInfoResponse started = new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 3, 1, 0,
                 "sequence-1");
-        when(gateway.processRequest(any(), any(), eq(AgentInfoResponse.class))).thenReturn(started);
+        when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(started);
 
         assertSame(started, helper.startAgentSession(AiAgent.CODE_REVIEW, null, List.of("CODE_REVIEW"), "Maks",
                 "waiter-device-1", AgentSessionLoggingLevel.DEBUG));
 
         ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
-        verify(gateway).processRequest(eq(DeliveryAddress.agentExecutor("claude-2", AiHarnessProvider.CLAUDE_CODE)),
+        verify(gateway).exchange(eq(DeliveryAddress.agentExecutor("claude-2", AiHarnessProvider.CLAUDE_CODE)),
                 request.capture(), eq(AgentInfoResponse.class));
         StartAgentSessionRequest sent = request.getValue();
         assertNotNull(sent.sessionId());
@@ -69,7 +69,7 @@ class StartAgentSessionHelperTest {
         AgentInfoResponse discovered = discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1);
         registry.update(discovered);
         // made after the discovery report, as the executor's reply always is
-        when(gateway.processRequest(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
+        when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1",
                         discovered.createdAt() + 1));
 
@@ -84,23 +84,23 @@ class StartAgentSessionHelperTest {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 2));
         registry.update(discovered("claude-2", AiHarnessProvider.CLAUDE_CODE, 1));
         ClaudeSessionLimitException full = new ClaudeSessionLimitException(3);
-        when(gateway.processRequest(eq(executor("claude-1")), any(), eq(AgentInfoResponse.class))).thenThrow(full);
+        when(gateway.exchange(eq(executor("claude-1")), any(), eq(AgentInfoResponse.class))).thenThrow(full);
 
         assertSame(full, assertThrows(ClaudeSessionLimitException.class, () -> helper.startAgentSession(
                 AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));
 
         assertEquals(List.of("claude-2"), registry.getAll().stream().map(AgentInfoResponse::deviceId).toList(),
                 "claude-1 is gone until it reports again");
-        verify(gateway, times(1)).processRequest(any(), any(), eq(AgentInfoResponse.class));
+        verify(gateway, times(1)).exchange(any(), any(), eq(AgentInfoResponse.class));
     }
 
     @Test
     void theCallersRetryGoesToAnotherExecutor() {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 2));
         registry.update(discovered("claude-2", AiHarnessProvider.CLAUDE_CODE, 1));
-        when(gateway.processRequest(eq(executor("claude-1")), any(), eq(AgentInfoResponse.class)))
+        when(gateway.exchange(eq(executor("claude-1")), any(), eq(AgentInfoResponse.class)))
                 .thenThrow(new ClaudeSessionLimitException(3));
-        when(gateway.processRequest(eq(executor("claude-2")), any(), eq(AgentInfoResponse.class))).thenReturn(
+        when(gateway.exchange(eq(executor("claude-2")), any(), eq(AgentInfoResponse.class))).thenReturn(
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 3, 0, 0, "sequence-2"));
         assertThrows(ClaudeSessionLimitException.class, () -> helper.startAgentSession(AiAgent.CODE_REVIEW, null,
                 null, "Maks", null, null));
@@ -112,13 +112,13 @@ class StartAgentSessionHelperTest {
     @Test
     void theLoggingLevelIsInfoWhenNotGiven() {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
-        when(gateway.processRequest(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
+        when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1"));
 
         helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
 
         ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
-        verify(gateway).processRequest(any(), request.capture(), eq(AgentInfoResponse.class));
+        verify(gateway).exchange(any(), request.capture(), eq(AgentInfoResponse.class));
         assertEquals(AgentSessionLoggingLevel.INFO, request.getValue().loggingLevel());
         assertEquals(List.of(), request.getValue().agentCallSequence());
     }
@@ -137,7 +137,7 @@ class StartAgentSessionHelperTest {
     void passesOnWhyTheExecutorDidNotStartTheSession() {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
         IllegalArgumentException refused = new IllegalArgumentException("Duplicate item STRING focus");
-        when(gateway.processRequest(any(), any(), eq(AgentInfoResponse.class))).thenThrow(refused);
+        when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenThrow(refused);
 
         assertSame(refused, assertThrows(IllegalArgumentException.class, () -> helper.startAgentSession(
                 AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));

@@ -59,7 +59,7 @@ public class ComagentsGateway {
      * @throws ClassCastException       when the response isn't a {@code responseClass}
      * @throws RuntimeException         the error received in place of the response, or the one sending failed with
      */
-    public <P, R> R processRequest(DeliveryAddress address, P request, Class<R> responseClass) {
+    public <P, R> R exchange(DeliveryAddress address, P request, Class<R> responseClass) {
         Validate.notNull(request, "request must not be null");
         long deadline = System.nanoTime() + responseTimeout.toNanos();
         String sequenceId = sequenceIdOf(request);
