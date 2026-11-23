@@ -8,7 +8,7 @@ import com.comagents.agentproxy.agent_status.AgentExecutorInfoService;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
 import com.comagents.commons.request.StartAgentSessionRequest;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import io.micronaut.core.convert.exceptions.ConversionErrorException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -43,7 +43,7 @@ public class AgentController {
 
     /** This agent executor, whatever agent it runs. */
     @Get("/info")
-    public AgentInfo info() {
+    public AgentInfoResponse info() {
         return agentExecutorInfoService.getInfo();
     }
 
@@ -54,7 +54,7 @@ public class AgentController {
     // setup downloads and copies files (blocking I/O), which must not run on the Netty event loop
     @Post("/{agentName}/start")
     @ExecuteOn(TaskExecutors.BLOCKING)
-    public HttpResponse<AgentInfo> start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentSessionRequest startAgentRequest) {
+    public HttpResponse<AgentInfoResponse> start(@PathVariable @NotBlank String agentName, @Body @Valid StartAgentSessionRequest startAgentRequest) {
         requireSameAgent(agentName, startAgentRequest.agent());
         return HttpResponse.accepted().body(agentSessionStarter.start(startAgentRequest));
     }

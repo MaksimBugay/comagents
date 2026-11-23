@@ -1,6 +1,6 @@
 package com.comagents.agentorchestrator.agent_registry;
 
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micronaut.context.annotation.Value;
@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 
 /**
- * The agent executors that reported themselves lately, by device id: each is kept with its latest {@link AgentInfo}
+ * The agent executors that reported themselves lately, by device id: each is kept with its latest {@link AgentInfoResponse}
  * and forgotten {@code agent-orchestrator.discovery-ttl} (10 s by default, twice the executors' report interval) after
  * that info came in.
  */
@@ -25,10 +25,10 @@ import java.util.function.Predicate;
 public class AgentDiscoveryRegistry {
 
     // most free slots first; on a tie, fewest archived sessions, which each take a slot again on resume
-    private static final Comparator<AgentInfo> BEST_FIRST = Comparator.comparingInt(AgentInfo::freeSlots).reversed()
-            .thenComparingInt(AgentInfo::archivedSessions);
+    private static final Comparator<AgentInfoResponse> BEST_FIRST = Comparator.comparingInt(AgentInfoResponse::freeSlots).reversed()
+            .thenComparingInt(AgentInfoResponse::archivedSessions);
 
-    private final Cache<String, AgentInfo> agentInfos;
+    private final Cache<String, AgentInfoResponse> agentInfos;
     // updates one at a time, so an info that arrives meanwhile isn't overwritten by an older one; reads together,
     // never in the middle of an update
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -46,11 +46,11 @@ public class AgentDiscoveryRegistry {
      * @throws NullPointerException     when the device id is null
      * @throws IllegalArgumentException when the device id is blank
      */
-    public void update(AgentInfo agentInfo) {
+    public void update(AgentInfoResponse agentInfo) {
         Validate.notBlank(agentInfo.deviceId(), "deviceId must not be blank");
         lock.writeLock().lock();
         try {
-            AgentInfo kept = agentInfos.getIfPresent(agentInfo.deviceId());
+            AgentInfoResponse kept = agentInfos.getIfPresent(agentInfo.deviceId());
             if (kept == null || agentInfo.createdAt() > kept.createdAt()) {
                 agentInfos.put(agentInfo.deviceId(), agentInfo);
             }
@@ -60,7 +60,7 @@ public class AgentDiscoveryRegistry {
     }
 
     /** All executors known now, also those without a free slot, best first. */
-    public List<AgentInfo> getAll() {
+    public List<AgentInfoResponse> getAll() {
         return find(_ -> true);
     }
 
@@ -71,23 +71,23 @@ public class AgentDiscoveryRegistry {
      *                              ({@code maxSlots - freeSlots + archivedSessions == 0}), so a session never shares an
      *                              executor with another
      */
-    public List<AgentInfo> getAllAvailable(boolean oneSessionPerExecutor) {
-        Predicate<AgentInfo> available = info -> info.freeSlots() > 0;
+    public List<AgentInfoResponse> getAllAvailable(boolean oneSessionPerExecutor) {
+        Predicate<AgentInfoResponse> available = info -> info.freeSlots() > 0;
         if (oneSessionPerExecutor) {
             available = available.and(AgentDiscoveryRegistry::isIdle);
         }
         return find(available);
     }
 
-    public Optional<AgentInfo> getBestAvailable(boolean oneSessionPerExecutor) {
-        List<AgentInfo> all = getAllAvailable(oneSessionPerExecutor);
+    public Optional<AgentInfoResponse> getBestAvailable(boolean oneSessionPerExecutor) {
+        List<AgentInfoResponse> all = getAllAvailable(oneSessionPerExecutor);
         if (CollectionUtils.isEmpty(all)) {
             return Optional.empty();
         }
         return Optional.of(all.getFirst());
     }
 
-    private List<AgentInfo> find(Predicate<AgentInfo> filter) {
+    private List<AgentInfoResponse> find(Predicate<AgentInfoResponse> filter) {
         lock.readLock().lock();
         try {
             // the map view leaves out expired entries
@@ -100,7 +100,7 @@ public class AgentDiscoveryRegistry {
         }
     }
 
-    private static boolean isIdle(AgentInfo info) {
+    private static boolean isIdle(AgentInfoResponse info) {
         return info.maxSlots() - info.freeSlots() + info.archivedSessions() == 0;
     }
 }

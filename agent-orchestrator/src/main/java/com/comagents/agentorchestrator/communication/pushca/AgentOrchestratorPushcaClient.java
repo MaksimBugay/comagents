@@ -32,7 +32,7 @@ import static com.comagents.commons.communication.pushca.PushcaConnectionFactory
  * The orchestrator's own Pushca client: one per orchestrator, signed in to the comagents workspace as account
  * {@code agent-orchestrator@comagents.com}, application {@code AGENT_ORCHESTRATOR}, with the orchestrator's device id
  * ({@link AgentOrchestratorConf#getDeviceId()}). It passes the agent executors' messages (their discovery
- * {@code AgentInfo}s, replies and agent responses) to the {@link ComagentsMessageListener}s, and sends the queued
+ * {@code AgentInfoResponse}s, replies and agent responses) to the {@link ComagentsMessageListener}s, and sends the queued
  * {@link ComagentsMessage}s ({@link ComagentsMessageQueue}) one by one to the address each is for. The connection is
  * opened once, on service startup; the Pushca client signs in and reconnects by itself whenever it isn't open. Sends
  * meanwhile are retried until their message expires ({@link #consumeWithRetry}).

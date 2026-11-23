@@ -19,9 +19,9 @@ import java.util.Objects;
  * @param sequenceId       the start request's sequence id; a new random UUID when this answers no request ({@code GET /info})
  * @param createdAt        when the executor made it, in epoch millis; now when not given (0)
  */
-public record AgentInfo(AiHarnessProvider harnessProvider, String version, String deviceId, int maxSlots, int freeSlots, int archivedSessions, String sequenceId, long createdAt) implements WithSequenceId {
+public record AgentInfoResponse(AiHarnessProvider harnessProvider, String version, String deviceId, int maxSlots, int freeSlots, int archivedSessions, String sequenceId, long createdAt) implements WithSequenceId {
 
-    public AgentInfo {
+    public AgentInfoResponse {
         // the id of the ComagentsMessage that carries it
         Validate.notBlank(sequenceId, "sequenceId must not be blank");
         if (createdAt <= 0) {
@@ -30,15 +30,15 @@ public record AgentInfo(AiHarnessProvider harnessProvider, String version, Strin
     }
 
     /** Created now. */
-    public AgentInfo(AiHarnessProvider harnessProvider, String version, String deviceId, int maxSlots, int freeSlots,
-                     int archivedSessions, String sequenceId) {
+    public AgentInfoResponse(AiHarnessProvider harnessProvider, String version, String deviceId, int maxSlots, int freeSlots,
+                             int archivedSessions, String sequenceId) {
         this(harnessProvider, version, deviceId, maxSlots, freeSlots, archivedSessions, sequenceId,
                 System.currentTimeMillis());
     }
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof AgentInfo info && Objects.equals(deviceId, info.deviceId);
+        return other instanceof AgentInfoResponse info && Objects.equals(deviceId, info.deviceId);
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.comagents.agentorchestrator.agent_registry;
 
 import com.comagents.commons.domain.AiHarnessProvider;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -36,7 +36,7 @@ class AgentDiscoveryRegistryTest {
         registry.update(info("full", 3, 0, 0, 1_000));
 
         assertEquals(List.of("two-free-one-archived", "two-free-two-archived", "one-free"),
-                registry.getAllAvailable(false).stream().map(AgentInfo::deviceId).toList());
+                registry.getAllAvailable(false).stream().map(AgentInfoResponse::deviceId).toList());
         assertEquals("two-free-one-archived", registry.getBestAvailable(false).orElseThrow().deviceId());
     }
 
@@ -48,7 +48,7 @@ class AgentDiscoveryRegistryTest {
         registry.update(info("archived", 1, 1, 1, 1_000));
 
         assertEquals(List.of("idle-with-more-slots", "idle"),
-                registry.getAllAvailable(true).stream().map(AgentInfo::deviceId).toList());
+                registry.getAllAvailable(true).stream().map(AgentInfoResponse::deviceId).toList());
     }
 
     @Test
@@ -56,7 +56,7 @@ class AgentDiscoveryRegistryTest {
         registry.update(info("full", 3, 0, 0, 1_000));
         registry.update(info("one-free", 3, 1, 0, 1_000));
 
-        assertEquals(List.of("one-free", "full"), registry.getAll().stream().map(AgentInfo::deviceId).toList());
+        assertEquals(List.of("one-free", "full"), registry.getAll().stream().map(AgentInfoResponse::deviceId).toList());
     }
 
     @Test
@@ -81,8 +81,8 @@ class AgentDiscoveryRegistryTest {
         assertThrows(IllegalArgumentException.class, () -> registry.update(info(" ", 3, 3, 0, 1_000)));
     }
 
-    private static AgentInfo info(String deviceId, int maxSlots, int freeSlots, int archivedSessions, long createdAt) {
-        return new AgentInfo(AiHarnessProvider.CLAUDE_CODE, "0.1", deviceId, maxSlots, freeSlots, archivedSessions,
+    private static AgentInfoResponse info(String deviceId, int maxSlots, int freeSlots, int archivedSessions, long createdAt) {
+        return new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", deviceId, maxSlots, freeSlots, archivedSessions,
                 "sequence-1", createdAt);
     }
 }

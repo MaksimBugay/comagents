@@ -3,7 +3,7 @@ package com.comagents.agentproxy.agent_status;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.domain.AiHarnessProvider;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import jakarta.inject.Singleton;
 
 import java.util.UUID;
@@ -24,14 +24,14 @@ public class AgentExecutorInfoService {
     }
 
     /** This executor: its harness, version, device and free session slots. */
-    public AgentInfo getInfo() {
+    public AgentInfoResponse getInfo() {
         // answers no start request: a sequence id of its own
         return getInfo(UUID.randomUUID().toString());
     }
 
     /** This executor, in answer to the request {@code sequenceId}. */
-    public AgentInfo getInfo(String sequenceId) {
-        return new AgentInfo(harnessProvider, version, deviceId, sessionRegistry.maxSlots(), sessionRegistry.freeSlots(),
+    public AgentInfoResponse getInfo(String sequenceId) {
+        return new AgentInfoResponse(harnessProvider, version, deviceId, sessionRegistry.maxSlots(), sessionRegistry.freeSlots(),
                 sessionRegistry.archivedSessions(), sequenceId);
     }
 }

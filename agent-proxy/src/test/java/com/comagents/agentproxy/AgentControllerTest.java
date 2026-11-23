@@ -3,7 +3,7 @@ package com.comagents.agentproxy;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AiHarnessProvider;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MediaType;
@@ -36,7 +36,7 @@ class AgentControllerTest {
 
     @Test
     void returnsAgentInfo() {
-        AgentInfo info = client.toBlocking().retrieve("/info", AgentInfo.class);
+        AgentInfoResponse info = client.toBlocking().retrieve("/info", AgentInfoResponse.class);
 
         assertEquals(AiHarnessProvider.CLAUDE_CODE, info.harnessProvider());
         // answers no start request: a new random UUID

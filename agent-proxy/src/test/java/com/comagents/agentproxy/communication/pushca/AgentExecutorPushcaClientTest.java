@@ -18,7 +18,7 @@ import com.comagents.commons.domain.AiHarnessProvider;
 import com.comagents.commons.domain.agent_context.AgentContext;
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import com.comagents.commons.request.StartAgentSessionRequest;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import com.comagents.commons.response.AgentSessionResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -158,7 +158,7 @@ class AgentExecutorPushcaClientTest {
     void aMissingAddressIsRejected() {
         assertThrows(NullPointerException.class, () -> delivery.deliverToAddress(null, "sequence-1", RESPONSE));
         assertThrows(NullPointerException.class, () -> delivery.deliverErrorToAddress(null, "sequence-1",
-                AgentInfo.class, new IllegalStateException("agent failed")));
+                AgentInfoResponse.class, new IllegalStateException("agent failed")));
 
         assertTrue(connectionFactory.connections.getFirst().broadcasts.isEmpty());
     }
@@ -197,7 +197,7 @@ class AgentExecutorPushcaClientTest {
 
         ComagentsMessage message = sentMessage(0);
         assertEquals("sequence-1", message.id());
-        assertEquals(AgentInfo.class.getName(), message.payloadClassName());
+        assertEquals(AgentInfoResponse.class.getName(), message.payloadClassName());
         assertNull(message.payloadString());
         assertEquals(IllegalStateException.class.getName(), message.error().errorClassName());
         assertEquals("agent failed", message.error().errorMessage());
@@ -231,7 +231,7 @@ class AgentExecutorPushcaClientTest {
     }
 
     private void deliverErrorToOrchestrator(String sequenceId) {
-        delivery.deliverErrorToAddress(ORCHESTRATOR, sequenceId, AgentInfo.class,
+        delivery.deliverErrorToAddress(ORCHESTRATOR, sequenceId, AgentInfoResponse.class,
                 new IllegalStateException("agent failed"));
     }
 

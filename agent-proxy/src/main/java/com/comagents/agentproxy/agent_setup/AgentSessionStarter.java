@@ -4,7 +4,7 @@ import com.comagents.agentproxy.agent_status.AgentExecutorInfoService;
 import com.comagents.agentproxy.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.StartAgentSessionRequest;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import jakarta.inject.Singleton;
 import jakarta.validation.Valid;
 
@@ -28,7 +28,7 @@ public class AgentSessionStarter {
      * @throws NoAgentSetupServiceException                    when the agent's harness has no setup service yet
      */
     // @Valid: Micronaut validates the request before the call, as the controller does for its body
-    public AgentInfo start(@Valid StartAgentSessionRequest request) {
+    public AgentInfoResponse start(@Valid StartAgentSessionRequest request) {
         setupServiceFor(request.agent()).setup(
                 request.agent(),
                 new AgentSessionAttributes(

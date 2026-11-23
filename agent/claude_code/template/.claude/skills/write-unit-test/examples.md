@@ -40,7 +40,7 @@ class AgentControllerTest {
 
     @Test
     void returnsAgentInfo() {
-        var info = client.toBlocking().retrieve("/info", AgentInfo.class);
+        var info = client.toBlocking().retrieve("/info", AgentInfoResponse.class);
 
         assertEquals(AiHarnessProvider.CLAUDE_CODE, info.harnessProvider());
     }

@@ -2,14 +2,14 @@ package com.comagents.agentproxy.agent_status;
 
 import com.comagents.commons.communication.ComagentsMessageDeliveryService;
 import com.comagents.commons.communication.DeliveryAddress;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Lets the orchestrators discover this executor: sends a fresh {@link AgentInfo} (harness, device, free slots,
+ * Lets the orchestrators discover this executor: sends a fresh {@link AgentInfoResponse} (harness, device, free slots,
  * archived sessions) to all of them every {@code agent-proxy.discovery-interval} (5 s by default).
  */
 @Singleton

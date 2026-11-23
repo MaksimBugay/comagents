@@ -4,7 +4,7 @@ import bmv.org.pushca.client.exception.PushcaCommandException;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AiHarnessProvider;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -47,8 +47,8 @@ class AgentDiscoveryClientTest {
         assertEquals("AGENT_ORCHESTRATOR", broadcasts.getFirst().receivers().applicationId);
         // a ComagentsMessage, read as the orchestrator reads it
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(broadcasts.getFirst().message());
-        assertEquals(AgentInfo.class.getName(), message.payloadClassName());
-        AgentInfo info = (AgentInfo) message.comagentsMessagePayload().payload();
+        assertEquals(AgentInfoResponse.class.getName(), message.payloadClassName());
+        AgentInfoResponse info = (AgentInfoResponse) message.comagentsMessagePayload().payload();
         assertEquals(AiHarnessProvider.CLAUDE_CODE, info.harnessProvider());
         assertEquals("executor-device-1", info.deviceId());
         assertEquals(3, info.maxSlots());

@@ -8,7 +8,7 @@ import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.StartAgentSessionRequest;
-import com.comagents.commons.response.AgentInfo;
+import com.comagents.commons.response.AgentInfoResponse;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolationException;
@@ -76,14 +76,14 @@ class StartAgentSessionListenerTest {
         }
     }
 
-    // the only message sent: an error in place of the AgentInfo, to the requesting device, with the request's id
+    // the only message sent: an error in place of the AgentInfoResponse, to the requesting device, with the request's id
     private ComagentsMessage sentError() {
         FakePushcaConnectionFactory.Broadcast sent = connectionFactory.connections.getLast().broadcasts.getFirst();
         assertEquals(1, connectionFactory.connections.getLast().broadcasts.size());
         assertEquals("orchestrator-device-1", sent.receivers().deviceId);
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(sent.message());
         assertEquals("sequence-1", message.id());
-        assertEquals(AgentInfo.class.getName(), message.payloadClassName());
+        assertEquals(AgentInfoResponse.class.getName(), message.payloadClassName());
         assertNull(message.payloadString());
         return message;
     }
