@@ -51,7 +51,7 @@ public class StartAgentSessionHelper {
      *                                    when null or blank
      * @return the executor that runs the session, as it was right after taking it
      * @throws IllegalStateException        when no executor of the agent's harness has a free slot now, or no reply
-     *                                      came in time ({@link ComagentsGateway#registerRequest})
+     *                                      came in time ({@link ComagentsGateway#processRequest})
      * @throws ClaudeSessionLimitException when the executor had no free slot after all
      * @throws RuntimeException             why else the executor didn't start the session
      */
@@ -84,7 +84,7 @@ public class StartAgentSessionHelper {
     // an executor without a free slot after all is forgotten until its next discovery report
     private AgentInfoResponse startOn(AgentInfoResponse executor, StartAgentSessionRequest request) {
         try {
-            return gateway.registerRequest(
+            return gateway.processRequest(
                     DeliveryAddress.agentExecutor(executor.deviceId(), executor.harnessProvider()),
                     request,
                     AgentInfoResponse.class

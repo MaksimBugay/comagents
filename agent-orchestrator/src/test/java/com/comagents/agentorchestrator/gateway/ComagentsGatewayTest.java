@@ -35,7 +35,7 @@ class ComagentsGatewayTest {
     void returnsTheResponseWithTheRequestsSequenceId() {
         delivery.onDeliver = sent -> gateway.completeWithResponse(sent.sequenceId(), "pong");
 
-        assertEquals("pong", gateway.registerRequest(EXECUTOR, "ping", String.class));
+        assertEquals("pong", gateway.processRequest(EXECUTOR, "ping", String.class));
         assertEquals(EXECUTOR, delivery.sent.getFirst().address());
     }
 
@@ -45,7 +45,7 @@ class ComagentsGatewayTest {
                 new AgentStatusRequest(AiAgent.CODE_REVIEW, UUID.randomUUID(), "sequence-1", "orchestrator-device-1");
         delivery.onDeliver = sent -> gateway.completeWithResponse(sent.sequenceId(), "status");
 
-        gateway.registerRequest(EXECUTOR, request, String.class);
+        gateway.processRequest(EXECUTOR, request, String.class);
 
         assertEquals("sequence-1", delivery.sent.getFirst().sequenceId());
     }
@@ -53,9 +53,9 @@ class ComagentsGatewayTest {
     @Test
     void aRequestWithBlankSequenceIdIsRejected() {
         assertThrows(IllegalArgumentException.class,
-                () -> gateway.registerRequest(EXECUTOR, new Ping(" "), String.class));
+                () -> gateway.processRequest(EXECUTOR, new Ping(" "), String.class));
         assertThrows(NullPointerException.class,
-                () -> gateway.registerRequest(EXECUTOR, new Ping(null), String.class));
+                () -> gateway.processRequest(EXECUTOR, new Ping(null), String.class));
 
         assertTrue(delivery.sent.isEmpty(), "never sent");
     }
@@ -64,8 +64,8 @@ class ComagentsGatewayTest {
     void aRequestWithoutSequenceIdGetsANewOneEachTime() {
         delivery.onDeliver = sent -> gateway.completeWithResponse(sent.sequenceId(), "pong");
 
-        gateway.registerRequest(EXECUTOR, "ping", String.class);
-        gateway.registerRequest(EXECUTOR, "ping", String.class);
+        gateway.processRequest(EXECUTOR, "ping", String.class);
+        gateway.processRequest(EXECUTOR, "ping", String.class);
 
         assertNotNull(delivery.sent.getFirst().sequenceId());
         assertNotEquals(delivery.sent.getFirst().sequenceId(), delivery.sent.get(1).sequenceId());
@@ -77,7 +77,7 @@ class ComagentsGatewayTest {
         delivery.onDeliver = sent -> gateway.completeWithError(sent.sequenceId(), error);
 
         assertSame(error, assertThrows(IllegalStateException.class,
-                () -> gateway.registerRequest(EXECUTOR, "ping", String.class)));
+                () -> gateway.processRequest(EXECUTOR, "ping", String.class)));
     }
 
     @Test
@@ -85,7 +85,7 @@ class ComagentsGatewayTest {
         ComagentsGateway impatient = new ComagentsGateway(delivery, Duration.ofMillis(200));
 
         IllegalStateException timedOut = assertThrows(IllegalStateException.class,
-                () -> impatient.registerRequest(EXECUTOR, "ping", String.class));
+                () -> impatient.processRequest(EXECUTOR, "ping", String.class));
 
         assertInstanceOf(TimeoutException.class, timedOut.getCause());
     }
@@ -93,7 +93,7 @@ class ComagentsGatewayTest {
     @Test
     void aLateResponseIsIgnored() {
         ComagentsGateway impatient = new ComagentsGateway(delivery, Duration.ofMillis(200));
-        assertThrows(IllegalStateException.class, () -> impatient.registerRequest(EXECUTOR, "ping", String.class));
+        assertThrows(IllegalStateException.class, () -> impatient.processRequest(EXECUTOR, "ping", String.class));
 
         // no one waits for it any more
         impatient.completeWithResponse(delivery.sent.getFirst().sequenceId(), "pong");
@@ -107,14 +107,14 @@ class ComagentsGatewayTest {
         };
 
         assertSame(notSent, assertThrows(IllegalStateException.class,
-                () -> gateway.registerRequest(EXECUTOR, "ping", String.class)));
+                () -> gateway.processRequest(EXECUTOR, "ping", String.class)));
     }
 
     @Test
     void aResponseOfAnotherClassIsRejected() {
         delivery.onDeliver = sent -> gateway.completeWithResponse(sent.sequenceId(), 42);
 
-        assertThrows(ClassCastException.class, () -> gateway.registerRequest(EXECUTOR, "ping", String.class));
+        assertThrows(ClassCastException.class, () -> gateway.processRequest(EXECUTOR, "ping", String.class));
     }
 
     @Test
@@ -123,11 +123,11 @@ class ComagentsGatewayTest {
                 new AgentStatusRequest(AiAgent.CODE_REVIEW, UUID.randomUUID(), "sequence-1", "orchestrator-device-1");
         // the same request again while the first one waits: rejected before it is sent
         delivery.onDeliver = sent -> {
-            assertThrows(IllegalArgumentException.class, () -> gateway.registerRequest(EXECUTOR, request, String.class));
+            assertThrows(IllegalArgumentException.class, () -> gateway.processRequest(EXECUTOR, request, String.class));
             gateway.completeWithResponse(sent.sequenceId(), "status");
         };
 
-        assertEquals("status", gateway.registerRequest(EXECUTOR, request, String.class));
+        assertEquals("status", gateway.processRequest(EXECUTOR, request, String.class));
     }
 
     private record Ping(String sequenceId) implements WithSequenceId {

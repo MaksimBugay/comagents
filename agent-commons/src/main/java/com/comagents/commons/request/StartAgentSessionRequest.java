@@ -18,8 +18,10 @@ import java.util.UUID;
  *                                    directory, and all its items are added to the kick-off prompt; without one nothing
  *                                    is cloned
  * @param sequenceId                  the sender's id of the request, which the responses to it carry
- * @param originatorDeviceId          the orchestrator device that gets the session's response
- * @param agentResponseWaiterDeviceId the device that waits for the session's response
+ * @param originatorDeviceId          the orchestrator device that sent the request and gets the replies to it; it
+ *                                    also gets the session's response when there is no agentResponseWaiterDeviceId
+ * @param agentResponseWaiterDeviceId the device that waits for the session's response; the originator's when null
+ *                                    or blank
  * @param agentCallSequence           the agent call sequence the session belongs to; empty when not given
  */
 public record StartAgentSessionRequest(UUID sessionId,
