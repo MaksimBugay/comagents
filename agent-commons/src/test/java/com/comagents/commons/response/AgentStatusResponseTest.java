@@ -1,6 +1,7 @@
 package com.comagents.commons.response;
 
 import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AgentStatus;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.AgentStatusRequest;
 import org.junit.jupiter.api.Test;

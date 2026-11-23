@@ -36,7 +36,7 @@ public class AgentInfoListener extends ComagentsGatewayResponseListener<AgentInf
             super.consumePayload(sequenceId, agentInfo);
         } else {
             agentDiscoveryRegistry.update(agentInfo);
-            LOG.info("Agent executors after AgentInfoResponse {} from {}: {}", sequenceId, agentInfo.deviceId(),
+            LOG.debug("Agent executors after AgentInfoResponse {} from {}: {}", sequenceId, agentInfo.deviceId(),
                     agentDiscoveryRegistry.getAll().stream().map(AgentInfoListener::describe).toList());
         }
     }

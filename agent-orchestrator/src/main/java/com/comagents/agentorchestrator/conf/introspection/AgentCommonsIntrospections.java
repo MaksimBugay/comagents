@@ -4,6 +4,7 @@ import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AgentStatus;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.AiHarnessProvider;
 import com.comagents.commons.domain.agent_context.AgentContext;
@@ -19,7 +20,6 @@ import com.comagents.commons.response.AgentInfoResponse;
 import com.comagents.commons.response.AgentResponseReply;
 import com.comagents.commons.response.AgentResponseUnavailable;
 import com.comagents.commons.response.AgentSessionResponse;
-import com.comagents.commons.response.AgentStatus;
 import com.comagents.commons.response.AgentStatusResponse;
 import io.micronaut.core.annotation.Introspected;
 

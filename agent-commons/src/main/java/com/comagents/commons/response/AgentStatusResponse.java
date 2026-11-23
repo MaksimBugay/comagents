@@ -1,6 +1,7 @@
 package com.comagents.commons.response;
 
 import com.comagents.commons.communication.WithSequenceId;
+import com.comagents.commons.domain.AgentStatus;
 import com.comagents.commons.request.AgentStatusRequest;
 import org.apache.commons.lang3.Validate;
 

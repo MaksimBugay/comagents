@@ -2,8 +2,8 @@ package com.comagents.agentproxy.agent_status;
 
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
 import com.comagents.agentproxy.workspace.SessionFolders;
+import com.comagents.commons.domain.AgentStatus;
 import com.comagents.commons.domain.AiAgent;
-import com.comagents.commons.response.AgentStatus;
 import jakarta.inject.Singleton;
 
 import java.nio.file.Files;

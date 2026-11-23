@@ -1,7 +1,5 @@
-package com.comagents.commons.response;
+package com.comagents.commons.domain;
 
-import com.comagents.commons.domain.AgentSessionState;
-import com.comagents.commons.domain.AiAgent;
 import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;

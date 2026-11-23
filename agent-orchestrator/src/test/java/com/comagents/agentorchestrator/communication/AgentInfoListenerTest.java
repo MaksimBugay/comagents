@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
+import static com.comagents.commons.response.AgentInfoResponse.AGENT_DISCOVERY_SEQUENCE_ID;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -27,11 +28,11 @@ class AgentInfoListenerTest {
     @Test
     void anExecutorsReportReachesTheRegistry() {
         AgentInfoResponse info = new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "executor-device-1", 3, 2, 0,
-                "sequence-1");
+                AGENT_DISCOVERY_SEQUENCE_ID);
 
         // as an executor's AgentDiscoveryClient sends it
         connectionFactory.connections.getFirst().receive(
-                ComagentsMessage.ofPayload("sequence-1", info, AgentInfoResponse.class).toString());
+                ComagentsMessage.ofPayload(AGENT_DISCOVERY_SEQUENCE_ID, info, AgentInfoResponse.class).toString());
 
         await("handled on a thread of its own").atMost(Duration.ofSeconds(5))
                 .until(() -> registry.getBestAvailable(false).isPresent());
