@@ -8,7 +8,7 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.comagents.commons.communication.CommunicationUtils.AGENT_DISCOVERY_SEQUENCE_ID;
+import static com.comagents.commons.response.AgentInfoResponse.AGENT_DISCOVERY_SEQUENCE_ID;
 
 /**
  * Lets the orchestrators discover this executor: sends a fresh {@link AgentInfoResponse} (harness, device, free slots,

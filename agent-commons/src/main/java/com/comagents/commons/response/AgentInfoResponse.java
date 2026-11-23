@@ -21,6 +21,9 @@ import java.util.Objects;
  */
 public record AgentInfoResponse(AiHarnessProvider harnessProvider, String version, String deviceId, int maxSlots, int freeSlots, int archivedSessions, String sequenceId, long createdAt) implements WithSequenceId {
 
+    // the sequence id of every AgentInfoResponse an executor sends unasked, to let the orchestrators discover it
+    public static final String AGENT_DISCOVERY_SEQUENCE_ID = "SCHEDULED_AGENT_DISCOVERY_UPDATE";
+
     public AgentInfoResponse {
         // the id of the ComagentsMessage that carries it
         Validate.notBlank(sequenceId, "sequenceId must not be blank");
