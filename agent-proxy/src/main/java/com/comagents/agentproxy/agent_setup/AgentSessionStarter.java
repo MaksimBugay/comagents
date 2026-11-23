@@ -1,6 +1,7 @@
 package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_status.AgentExecutorInfoService;
+import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.StartAgentSessionRequest;
@@ -14,10 +15,13 @@ public class AgentSessionStarter {
 
     private final AgentSetupServices agentSetupServices;
     private final AgentExecutorInfoService agentExecutorInfoService;
+    private final AgentProxyConf conf;
 
-    public AgentSessionStarter(AgentSetupServices agentSetupServices, AgentExecutorInfoService agentExecutorInfoService) {
+    public AgentSessionStarter(AgentSetupServices agentSetupServices, AgentExecutorInfoService agentExecutorInfoService,
+                               AgentProxyConf conf) {
         this.agentSetupServices = agentSetupServices;
         this.agentExecutorInfoService = agentExecutorInfoService;
+        this.conf = conf;
     }
 
     /**
@@ -37,6 +41,7 @@ public class AgentSessionStarter {
                         request.sequenceId(),
                         request.originatorDeviceId(),
                         request.agentResponseWaiterDeviceId(),
+                        conf.getDeviceId(),
                         request.agentCallSequence(),
                         request.actorAccountId(),
                         request.loggingLevel(),

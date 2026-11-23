@@ -5,6 +5,7 @@ import com.comagents.agentorchestrator.conf.AgentOrchestratorConf;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.communication.DeliveryAddress;
 import com.comagents.commons.communication.DeviceIdExtractor;
+import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.AiHarnessProvider;
@@ -16,6 +17,8 @@ import org.mockito.ArgumentCaptor;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static com.comagents.commons.response.AgentInfoResponse.AGENT_DISCOVERY_SEQUENCE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +37,8 @@ class StartAgentSessionHelperTest {
 
     private final ComagentsGateway gateway = mock(ComagentsGateway.class);
     private final AgentDiscoveryRegistry registry = new AgentDiscoveryRegistry(Duration.ofMinutes(1));
-    private final StartAgentSessionHelper helper = new StartAgentSessionHelper(gateway, registry,
+    private final RunningAgentSessionRegistry sessions = new RunningAgentSessionRegistry(Duration.ofMinutes(1));
+    private final StartAgentSessionHelper helper = new StartAgentSessionHelper(gateway, registry, sessions,
             new AgentOrchestratorConf("0.1", "https://pushca.example", "pushca-key",
                     new DeviceIdExtractor("orchestrator-own", "host")));
 
@@ -47,14 +51,15 @@ class StartAgentSessionHelperTest {
                 "sequence-1");
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(started);
 
-        assertSame(started, helper.startAgentSession(AiAgent.CODE_REVIEW, null, List.of("CODE_REVIEW"), "Maks",
-                "waiter-device-1", AgentSessionLoggingLevel.DEBUG));
+        UUID sessionId = UUID.randomUUID();
+        assertSame(started, helper.startAgentSession(sessionId, AiAgent.CODE_REVIEW, null, List.of("CODE_REVIEW"),
+                "Maks", "waiter-device-1", AgentSessionLoggingLevel.DEBUG));
 
         ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
         verify(gateway).exchange(eq(DeliveryAddress.agentExecutor("claude-2", AiHarnessProvider.CLAUDE_CODE)),
                 request.capture(), eq(AgentInfoResponse.class));
         StartAgentSessionRequest sent = request.getValue();
-        assertNotNull(sent.sessionId());
+        assertEquals(sessionId, sent.sessionId());
         assertNotNull(sent.sequenceId());
         assertEquals(AiAgent.CODE_REVIEW, sent.agent());
         assertEquals("orchestrator-own", sent.originatorDeviceId(), "this orchestrator's own device");
@@ -62,6 +67,9 @@ class StartAgentSessionHelperTest {
         assertEquals(List.of("CODE_REVIEW"), sent.agentCallSequence());
         assertEquals("Maks", sent.actorAccountId());
         assertEquals(AgentSessionLoggingLevel.DEBUG, sent.loggingLevel());
+        assertEquals(Optional.of(new AgentSessionAttributes(sessionId, null, sent.sequenceId(), "orchestrator-own",
+                "waiter-device-1", "claude-2", List.of("CODE_REVIEW"), "Maks", AgentSessionLoggingLevel.DEBUG,
+                sent.createdAt())), sessions.get(sessionId), "the started session is registered with its executor");
     }
 
     @Test
@@ -73,7 +81,7 @@ class StartAgentSessionHelperTest {
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1",
                         discovered.createdAt() + 1));
 
-        helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
+        helper.startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
 
         assertEquals(0, registry.getAll().getFirst().freeSlots());
         assertEquals(List.of(), registry.getAllAvailable(false));
@@ -85,9 +93,11 @@ class StartAgentSessionHelperTest {
         registry.update(discovered("claude-2", AiHarnessProvider.CLAUDE_CODE, 1));
         ClaudeSessionLimitException full = new ClaudeSessionLimitException(3);
         when(gateway.exchange(eq(executor("claude-1")), any(), eq(AgentInfoResponse.class))).thenThrow(full);
+        UUID sessionId = UUID.randomUUID();
 
         assertSame(full, assertThrows(ClaudeSessionLimitException.class, () -> helper.startAgentSession(
-                AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));
+                sessionId, AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));
+        assertEquals(Optional.empty(), sessions.get(sessionId), "a session not started isn't registered");
 
         assertEquals(List.of("claude-2"), registry.getAll().stream().map(AgentInfoResponse::deviceId).toList(),
                 "claude-1 is gone until it reports again");
@@ -102,10 +112,10 @@ class StartAgentSessionHelperTest {
                 .thenThrow(new ClaudeSessionLimitException(3));
         when(gateway.exchange(eq(executor("claude-2")), any(), eq(AgentInfoResponse.class))).thenReturn(
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 3, 0, 0, "sequence-2"));
-        assertThrows(ClaudeSessionLimitException.class, () -> helper.startAgentSession(AiAgent.CODE_REVIEW, null,
-                null, "Maks", null, null));
+        assertThrows(ClaudeSessionLimitException.class, () -> helper.startAgentSession(UUID.randomUUID(),
+                AiAgent.CODE_REVIEW, null, null, "Maks", null, null));
 
-        assertEquals("claude-2", helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks",
+        assertEquals("claude-2", helper.startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, null, "Maks",
                 null, null).deviceId());
     }
 
@@ -115,7 +125,7 @@ class StartAgentSessionHelperTest {
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1"));
 
-        helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
+        helper.startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
 
         ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
         verify(gateway).exchange(any(), request.capture(), eq(AgentInfoResponse.class));
@@ -128,8 +138,8 @@ class StartAgentSessionHelperTest {
         registry.update(discovered("codex-1", AiHarnessProvider.CODEX, 3));
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 0));
 
-        assertThrows(IllegalStateException.class, () -> helper.startAgentSession(AiAgent.CODE_REVIEW, null,
-                null, "Maks", null, null));
+        assertThrows(IllegalStateException.class, () -> helper.startAgentSession(UUID.randomUUID(),
+                AiAgent.CODE_REVIEW, null, null, "Maks", null, null));
         verifyNoInteractions(gateway);
     }
 
@@ -138,9 +148,11 @@ class StartAgentSessionHelperTest {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
         IllegalArgumentException refused = new IllegalArgumentException("Duplicate item STRING focus");
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenThrow(refused);
+        UUID sessionId = UUID.randomUUID();
 
         assertSame(refused, assertThrows(IllegalArgumentException.class, () -> helper.startAgentSession(
-                AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));
+                sessionId, AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));
+        assertEquals(Optional.empty(), sessions.get(sessionId), "a refused session isn't registered");
     }
 
     private static DeliveryAddress executor(String deviceId) {

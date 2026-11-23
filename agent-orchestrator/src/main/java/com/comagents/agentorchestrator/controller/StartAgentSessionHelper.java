@@ -4,6 +4,7 @@ import com.comagents.agentorchestrator.agent_registry.AgentDiscoveryRegistry;
 import com.comagents.agentorchestrator.conf.AgentOrchestratorConf;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.communication.DeliveryAddress;
+import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.AgentContext;
@@ -32,12 +33,15 @@ public class StartAgentSessionHelper {
 
     private final ComagentsGateway gateway;
     private final AgentDiscoveryRegistry agentDiscoveryRegistry;
+    private final RunningAgentSessionRegistry runningAgentSessionRegistry;
     private final AgentOrchestratorConf conf;
 
     public StartAgentSessionHelper(ComagentsGateway gateway, AgentDiscoveryRegistry agentDiscoveryRegistry,
+                                   RunningAgentSessionRegistry runningAgentSessionRegistry,
                                    AgentOrchestratorConf conf) {
         this.gateway = gateway;
         this.agentDiscoveryRegistry = agentDiscoveryRegistry;
+        this.runningAgentSessionRegistry = runningAgentSessionRegistry;
         this.conf = conf;
     }
 
@@ -45,26 +49,30 @@ public class StartAgentSessionHelper {
      * Sends a start request for a new session of {@code agent} to the best executor available for it and waits for
      * its reply. Retrying is the caller's: an executor that refuses it for lack of slots is removed from the registry
      * until it reports again, so a retry goes elsewhere. The executor sends its replies to this orchestrator's own
-     * device, and the session's response to {@code agentResponseWaiterDeviceId}.
+     * device, and the session's response to {@code agentResponseWaiterDeviceId}. A started session is registered in
+     * the {@link RunningAgentSessionRegistry}.
      *
+     * @param sessionId                   the id of the new session
      * @param agentResponseWaiterDeviceId the device that gets the session's response; this orchestrator's own device
      *                                    when null or blank
      * @return the executor that runs the session, as it was right after taking it
-     * @throws IllegalStateException        when no executor of the agent's harness has a free slot now, or no reply
-     *                                      came in time ({@link ComagentsGateway#exchange})
+     * @throws IllegalStateException       when no executor of the agent's harness has a free slot now, or no reply
+     *                                     came in time ({@link ComagentsGateway#exchange})
      * @throws ClaudeSessionLimitException when the executor had no free slot after all
-     * @throws RuntimeException             why else the executor didn't start the session
+     * @throws RuntimeException            why else the executor didn't start the session
      */
-    public AgentInfoResponse startAgentSession(@NotNull AiAgent agent,
+    public AgentInfoResponse startAgentSession(@NotNull UUID sessionId,
+                                               @NotNull AiAgent agent,
                                                @Nullable AgentContext agentContext,
                                                List<String> agentCallSequence,
                                                String actorAccountId,
                                                String agentResponseWaiterDeviceId,
                                                AgentSessionLoggingLevel loggingLevel) {
+        Validate.notNull(sessionId, "sessionId must not be null");
         Validate.notNull(agent, "agent must not be null");
         AgentInfoResponse executor = findExecutor(agent);
         StartAgentSessionRequest request = new StartAgentSessionRequest(
-                UUID.randomUUID(),
+                sessionId,
                 agent,
                 agentContext,
                 UUID.randomUUID().toString(),
@@ -77,6 +85,7 @@ public class StartAgentSessionHelper {
         AgentInfoResponse started = startOn(executor, request);
         // its slots as they are now, before its next discovery report
         agentDiscoveryRegistry.update(started);
+        runningAgentSessionRegistry.append(request.sessionId(), attributesOf(request, started.deviceId()));
         LOG.info("Session {} of {} started on executor {}", request.sessionId(), agent, started.deviceId());
         return started;
     }
@@ -93,6 +102,22 @@ public class StartAgentSessionHelper {
             agentDiscoveryRegistry.remove(executor.deviceId());
             throw e;
         }
+    }
+
+    private static AgentSessionAttributes attributesOf(StartAgentSessionRequest request,
+                                                       String agentExecutorDeviceId) {
+        return new AgentSessionAttributes(
+                request.sessionId(),
+                request.agentContext(),
+                request.sequenceId(),
+                request.originatorDeviceId(),
+                request.agentResponseWaiterDeviceId(),
+                agentExecutorDeviceId,
+                request.agentCallSequence(),
+                request.actorAccountId(),
+                request.loggingLevel(),
+                request.createdAt()
+        );
     }
 
     private AgentInfoResponse findExecutor(AiAgent agent) {

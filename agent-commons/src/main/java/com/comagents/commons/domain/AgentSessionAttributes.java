@@ -14,6 +14,7 @@ import java.util.UUID;
  *                                    it also gets the session's response when there is no agentResponseWaiterDeviceId
  * @param agentResponseWaiterDeviceId the start request's device that waits for the session's response; the
  *                                    originator's when null or blank
+ * @param agentExecutorDeviceId       the agent executor device that runs the session
  * @param agentCallSequence           the start request's agent call sequence; empty when not given
  * @param actorAccountId              the Pushca account that started the session: the only member of the session's chat
  * @param loggingLevel                what the session's chat shows; {@link AgentSessionLoggingLevel#INFO} when not given
@@ -24,6 +25,7 @@ public record AgentSessionAttributes(@NotNull UUID sessionId,
                                      @NotNull String sequenceId,
                                      @NotNull String originatorDeviceId,
                                      @Nullable String agentResponseWaiterDeviceId,
+                                     @NotNull String agentExecutorDeviceId,
                                      List<String> agentCallSequence,
                                      @Nullable String actorAccountId,
                                      AgentSessionLoggingLevel loggingLevel,
