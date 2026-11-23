@@ -16,7 +16,7 @@
     <jackson.version>3.2.4</jackson.version>
     <commons-lang3.version>3.22.0</commons-lang3.version>
     <jspecify.version>1.0.0</jspecify.version>
-    <jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
+    <micronaut-validation.version>5.2.1</micronaut-validation.version>
     <slf4j.version>2.0.20</slf4j.version>
     <pushca-client.version>2.1.2</pushca-client.version>
 
@@ -59,12 +59,11 @@
       <artifactId>pushca-client</artifactId>
       <version>${pushca-client.version}</version>
     </dependency>
-    <!-- constraint annotations only; the consuming application brings the validator -->
+    <!-- Jakarta Bean Validation of request bodies and path variables -->
     <dependency>
-      <groupId>jakarta.validation</groupId>
-      <artifactId>jakarta.validation-api</artifactId>
-      <version>${jakarta.validation-api.version}</version>
-      <scope>provided</scope>
+      <groupId>io.micronaut.validation</groupId>
+      <artifactId>micronaut-validation</artifactId>
+      <version>${micronaut-validation.version}</version>
     </dependency>
 
     <!-- test -->

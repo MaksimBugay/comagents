@@ -111,12 +111,6 @@
       <artifactId>nativeimage</artifactId>
       <scope>provided</scope>
     </dependency>
-    <!-- Jakarta Bean Validation of request bodies and path variables -->
-    <dependency>
-      <groupId>io.micronaut.validation</groupId>
-      <artifactId>micronaut-validation</artifactId>
-      <scope>compile</scope>
-    </dependency>
     <!-- downloads agent sources from the GitHub REST API -->
     <dependency>
       <groupId>io.micronaut</groupId>
