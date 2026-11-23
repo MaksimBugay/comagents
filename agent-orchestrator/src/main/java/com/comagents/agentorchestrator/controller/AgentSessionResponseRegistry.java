@@ -22,10 +22,9 @@ public class AgentSessionResponseRegistry {
             .expireAfterWrite(TTL)
             .build();
 
-    public void append(UUID sessionId, AgentSessionResponse response) {
-        Validate.notNull(sessionId, "sessionId must not be null");
+    public void append(AgentSessionResponse response) {
         Validate.notNull(response, "response must not be null");
-        responses.put(sessionId, response);
+        responses.put(response.request().sessionId(), response);
     }
 
     public void remove(UUID sessionId) {

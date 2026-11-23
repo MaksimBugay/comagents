@@ -19,7 +19,7 @@ class AgentSessionResponseRegistryTest {
     void keepsAnAppendedResponseUntilRemoved() {
         UUID sessionId = UUID.randomUUID();
         AgentSessionResponse response = response(sessionId);
-        registry.append(sessionId, response);
+        registry.append(response);
         assertEquals(Optional.of(response), registry.get(sessionId));
 
         registry.remove(sessionId);
@@ -32,9 +32,8 @@ class AgentSessionResponseRegistryTest {
     }
 
     @Test
-    void rejectsAResponseWithoutSessionIdOrResponse() {
-        assertThrows(NullPointerException.class, () -> registry.append(null, response(UUID.randomUUID())));
-        assertThrows(NullPointerException.class, () -> registry.append(UUID.randomUUID(), null));
+    void rejectsANullResponse() {
+        assertThrows(NullPointerException.class, () -> registry.append(null));
     }
 
     private static AgentSessionResponse response(UUID sessionId) {
