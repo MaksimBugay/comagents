@@ -11,6 +11,9 @@ public final class CommunicationUtils {
     public static final String ORCHESTRATOR_APPLICATION_ID = "AGENT_ORCHESTRATOR";
     public static final String ORCHESTRATOR_ACCOUNT_ID = "agent-orchestrator@comagents.com";
 
+    // the sequence id of every AgentInfoResponse an executor sends unasked, to let the orchestrators discover it
+    public static final String AGENT_DISCOVERY_SEQUENCE_ID = "SCHEDULED_AGENT_DISCOVERY_UPDATE";
+
     private CommunicationUtils() {
     }
 

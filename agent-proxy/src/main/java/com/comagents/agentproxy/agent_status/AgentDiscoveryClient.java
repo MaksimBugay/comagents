@@ -8,6 +8,8 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.comagents.commons.communication.CommunicationUtils.AGENT_DISCOVERY_SEQUENCE_ID;
+
 /**
  * Lets the orchestrators discover this executor: sends a fresh {@link AgentInfoResponse} (harness, device, free slots,
  * archived sessions) to all of them every {@code agent-proxy.discovery-interval} (5 s by default).
@@ -32,7 +34,7 @@ public class AgentDiscoveryClient {
         try {
             messageDeliveryService.deliverToAddress(
                     DeliveryAddress.agentOrchestrators(),
-                    agentExecutorInfoService.getInfo()
+                    agentExecutorInfoService.getInfo(AGENT_DISCOVERY_SEQUENCE_ID)
             );
         } catch (RuntimeException e) {
             LOG.warn("Sending the agent info to the orchestrators failed: {}", e.getMessage());
