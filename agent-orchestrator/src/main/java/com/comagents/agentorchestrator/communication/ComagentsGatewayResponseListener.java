@@ -4,6 +4,7 @@ import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessageListener;
 import com.comagents.commons.communication.WithSequenceId;
+import com.comagents.commons.response.AgentInfoResponse;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Optional;
@@ -18,12 +19,20 @@ public abstract class ComagentsGatewayResponseListener<R extends WithSequenceId>
 
     @Override
     public void consumePayload(String sequenceId, R payload) {
-        gateway.completeWithResponse(sequenceId, payload);
+        if (isNotDiscoveryClientUpdate(sequenceId)) {
+            gateway.completeWithResponse(sequenceId, payload);
+        }
     }
 
     @Override
     public void consumeError(String sequenceId, ComagentsError error) {
-        gateway.completeWithError(sequenceId, toThrowable(error));
+        if (isNotDiscoveryClientUpdate(sequenceId)) {
+            gateway.completeWithError(sequenceId, toThrowable(error));
+        }
+    }
+
+    protected boolean isNotDiscoveryClientUpdate(String sequenceId) {
+        return !AgentInfoResponse.AGENT_DISCOVERY_SEQUENCE_ID.equals(sequenceId);
     }
 
     /**
