@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
-import com.comagents.agentproxy.domain.AgentSessionAttributes;
+import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
 import io.micronaut.core.annotation.Introspected;

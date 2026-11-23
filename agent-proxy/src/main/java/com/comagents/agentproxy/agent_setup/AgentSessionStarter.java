@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_status.AgentExecutorInfoService;
-import com.comagents.agentproxy.domain.AgentSessionAttributes;
+import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.request.StartAgentSessionRequest;
 import com.comagents.commons.response.AgentInfoResponse;
