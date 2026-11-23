@@ -13,6 +13,7 @@ class DeviceIdExtractorTest {
 
     private static final String CONTAINER_ID = "cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3";
     private static final String POD_UID = "0f6c8a3e-2b1d-4c5e-9f7a-1a2b3c4d5e6f";
+    private static final String SUFFIX = "a1b2c3d4e5f6";
 
     // as in a Docker (Docker Desktop, Swarm) container
     private static final String DOCKER_MOUNTS = """
@@ -34,23 +35,33 @@ class DeviceIdExtractorTest {
 
     @Test
     void configuredDeviceIdWins() throws IOException {
-        assertEquals("proxy-1", DeviceIdExtractor.extract(" proxy-1 ", mountInfo(DOCKER_MOUNTS), "host"));
+        assertEquals("proxy-1", DeviceIdExtractor.extract(" proxy-1 ", mountInfo(DOCKER_MOUNTS), "host", SUFFIX));
     }
 
     @Test
     void dockerContainerId() throws IOException {
-        assertEquals(CONTAINER_ID, DeviceIdExtractor.extract("", mountInfo(DOCKER_MOUNTS), "host"));
+        assertEquals(CONTAINER_ID, DeviceIdExtractor.extract("", mountInfo(DOCKER_MOUNTS), "host", SUFFIX),
+                "one container in the whole Swarm: no suffix");
     }
 
     @Test
     void kubernetesPodUid() throws IOException {
-        assertEquals(POD_UID, DeviceIdExtractor.extract(null, mountInfo(KUBERNETES_MOUNTS), "host"));
+        assertEquals(POD_UID + "-" + SUFFIX, DeviceIdExtractor.extract(null, mountInfo(KUBERNETES_MOUNTS), "host", SUFFIX),
+                "shared by the pod's containers");
     }
 
     @Test
     void hostnameOtherwise() throws IOException {
-        assertEquals("host", DeviceIdExtractor.extract(" ", mountInfo("213 180 0:52 / / rw - overlay overlay rw\n"), "host"));
-        assertEquals("host", DeviceIdExtractor.extract(null, dir.resolve("no-mountinfo"), "host"));
+        assertEquals("host-" + SUFFIX,
+                DeviceIdExtractor.extract(" ", mountInfo("213 180 0:52 / / rw - overlay overlay rw\n"), "host", SUFFIX));
+        assertEquals("host-" + SUFFIX, DeviceIdExtractor.extract(null, dir.resolve("no-mountinfo"), "host", SUFFIX));
+    }
+
+    @Test
+    void oneExtractorIsOneDevice() {
+        DeviceIdExtractor extractor = new DeviceIdExtractor(null, "host");
+
+        assertEquals(extractor.extract(), extractor.extract());
     }
 
     private Path mountInfo(String content) throws IOException {

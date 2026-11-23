@@ -230,7 +230,7 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 |--------------------------|---------|------------------------|
 | `MICRONAUT_SERVER_PORT`  | `8080`  | HTTP port              |
 | `AGENT_PROXY_VERSION`    | `0.1`   | Reported `version`     |
-| `AGENT_PROXY_DEVICE_ID`  | —       | Reported `deviceId` (`agent-proxy.device-id`); when not set: the Docker container id, the Kubernetes pod UID, or `HOSTNAME` (`local` without it) |
+| `AGENT_PROXY_DEVICE_ID`  | —       | Reported `deviceId` (`agent-proxy.device-id`); when not set: the Docker container id, or the Kubernetes pod UID or `HOSTNAME` (`local` without it) with a random suffix, so every instance is a device of its own; a set one must be unique in the cluster |
 | `AI_HARNESS_PROVIDER`    | set by the image: `CLAUDE_CODE` | The installed harness that runs the sessions (`agent-proxy.ai-harness-provider`); required outside the image |
 | `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`) |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |

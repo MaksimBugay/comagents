@@ -50,7 +50,7 @@ The Docker image is a mostly-static native binary on `gcr.io/distroless/base-deb
 |--------------------------|---------|------------------------|
 | `MICRONAUT_SERVER_PORT`  | `8080`  | HTTP port              |
 | `AGENT_ORCHESTRATOR_VERSION`   | `0.1` | Version (`agent-orchestrator.version`) |
-| `AGENT_ORCHESTRATOR_DEVICE_ID` | —     | Pushca device id (`agent-orchestrator.device-id`); when not set: the Docker container id, the Kubernetes pod UID, or `HOSTNAME` (`local` without it) |
+| `AGENT_ORCHESTRATOR_DEVICE_ID` | —     | Pushca device id (`agent-orchestrator.device-id`); when not set: the Docker container id, or the Kubernetes pod UID or `HOSTNAME` (`local` without it) with a random suffix, so every instance is a device of its own; a set one must be unique in the cluster |
 | `PUSHCA_API_KEY`               | — (required) | API key of the organization registered in Pushca (`pushca.api-key`); a key Pushca refuses stops the startup |
 | `PUSHCA_API_URL`               | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |
 | `PUSHCA_CONNECT_TIMEOUT`       | `10s` | How long signing in, opening the socket and waiting for the server to accept commands may each take (`pushca.connect-timeout`) |
