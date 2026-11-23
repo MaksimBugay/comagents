@@ -35,7 +35,8 @@ public class AgentSessionStarter {
                         request.sessionId(),
                         request.agentContext(),
                         request.sequenceId(),
-                        request.orchestratorDeviceId(),
+                        request.originatorDeviceId(),
+                        request.agentCallSequence(),
                         request.actorAccountId(),
                         request.loggingLevel(),
                         request.createdAt()

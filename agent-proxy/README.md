@@ -9,7 +9,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 | GET    | `/info`               | This agent executor, whatever agent it runs: its `harnessProvider` (`agent-proxy.ai-harness-provider`), version, device id, `maxSlots` (`claude.session.max-concurrent`), `freeSlots` (`maxSlots` minus its sessions running, waiting or being set up) and `archivedSessions` (archived sessions on disk: no slot now, one each on resume); the start reply has them too |
 | POST   | `/{agentName}/start`  | Set up an agent session (clone repo, copy agent files) and start the agent in the background: **202 Accepted**; **409** if the session id is already in use or still has data on disk |
 | GET    | `/agent-status/{agentName}/{sessionId}` | Session state (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`, `KILLED`, `ARCHIVED`), times, and whether a response is available |
-| GET    | `/agent-response/{agentName}/{sessionId}` | The agent's final answer as an agent context (per the agent's `responseSchema`, or one `STRING` item `response`), with the start request. As soon as it is on disk, the same response, as a `ComagentsMessage` (`<base64 of {"payloadString": "com.comagents.commons.response.AgentSessionResponse::<the JSON>", "payloadClassName": "com.comagents.commons.response.AgentSessionResponse"}>`), is sent from the executor's own Pushca client (`comagents-main`, application `<AI_HARNESS_PROVIDER>_EXECUTOR`, e.g. `CLAUDE_CODE_EXECUTOR`, device id = `deviceId`) with the start request's `sequenceId` as the message id, to the start request's `orchestratorDeviceId` device of `agent-orchestrator@comagents.com` (`comagents-main`, `AGENT_ORCHESTRATOR`). Session files and chat are deleted 5 minutes after it was sent or first fetched, or 1 hour after the session finished if never fetched (archived sessions are kept). After a restart, sessions that are not archived are deleted with their chats |
+| GET    | `/agent-response/{agentName}/{sessionId}` | The agent's final answer as an agent context (per the agent's `responseSchema`, or one `STRING` item `response`), with the start request. As soon as it is on disk, the same response, as a `ComagentsMessage` (`<base64 of {"payloadString": "com.comagents.commons.response.AgentSessionResponse::<the JSON>", "payloadClassName": "com.comagents.commons.response.AgentSessionResponse"}>`), is sent from the executor's own Pushca client (`comagents-main`, application `<AI_HARNESS_PROVIDER>_EXECUTOR`, e.g. `CLAUDE_CODE_EXECUTOR`, device id = `deviceId`) with the start request's `sequenceId` as the message id, to the start request's `originatorDeviceId` device of `agent-orchestrator@comagents.com` (`comagents-main`, `AGENT_ORCHESTRATOR`). Session files and chat are deleted 5 minutes after it was sent or first fetched, or 1 hour after the session finished if never fetched (archived sessions are kept). After a restart, sessions that are not archived are deleted with their chats |
 | GET    | `/health/liveness`    | Kubernetes liveness probe       |
 | GET    | `/health/readiness`   | Kubernetes readiness probe      |
 
@@ -28,7 +28,7 @@ The same API works over Pushca, between orchestrators and the agent executor (th
   A `PUSHCA_API_KEY` that Pushca refuses (HTTP 401/403) stops the startup.
 - **Requests:** an orchestrator sends a `ComagentsMessage` whose payload is one of the requests below, with the
   request's `sequenceId` as the message id. Each request is handled on its own thread.
-- **Replies:** the reply goes back to the request's `orchestratorDeviceId` device of
+- **Replies:** the reply goes back to the request's `originatorDeviceId` device of
   `agent-orchestrator@comagents.com` (`comagents-main`, `AGENT_ORCHESTRATOR`), with the request's `sequenceId` as the
   message id. When the request fails, the reply carries an `error` (`errorMessage`, `errorClassName`) in place of the
   payload, under the class the payload would have had.
@@ -36,8 +36,8 @@ The same API works over Pushca, between orchestrators and the agent executor (th
 | Request (`com.comagents.commons.request`) | As over HTTP | Reply (`com.comagents.commons.response`) | Errors |
 |---|---|---|---|
 | `StartAgentSessionRequest` | `POST /{agentName}/start` | `AgentInfo` | anything that stops the start: an invalid request (`ConstraintViolationException`), a session id in use (`ClaudeSessionExistsException`), no setup service for the agent's harness (`NoAgentSetupServiceException`), … |
-| `AgentStatusRequest` (`agent`, `sessionId`, `sequenceId`, `orchestratorDeviceId`) | `GET /agent-status/{agentName}/{sessionId}` | `AgentStatusResponse` (the request and the `AgentStatus`) | `AgentSessionNotFoundException`: never started, or already cleaned up |
-| `AgentResponseRequest` (`agent`, `sessionId`, `sequenceId`, `orchestratorDeviceId`) | `GET /agent-response/{agentName}/{sessionId}` | `AgentResponseReply` (the `AgentSessionResponse`, which keeps the start request's `sequenceId`); as a fetch over HTTP, the session's files are deleted 5 minutes later | `AgentSessionNotFoundException`; `AgentResponseNotReadyException` while the session is `RUNNING`, `WAITING` or `ARCHIVED` (every session leaves a response when it ends) |
+| `AgentStatusRequest` (`agent`, `sessionId`, `sequenceId`, `originatorDeviceId`) | `GET /agent-status/{agentName}/{sessionId}` | `AgentStatusResponse` (the request and the `AgentStatus`) | `AgentSessionNotFoundException`: never started, or already cleaned up |
+| `AgentResponseRequest` (`agent`, `sessionId`, `sequenceId`, `originatorDeviceId`) | `GET /agent-response/{agentName}/{sessionId}` | `AgentResponseReply` (the `AgentSessionResponse`, which keeps the start request's `sequenceId`); as a fetch over HTTP, the session's files are deleted 5 minutes later | `AgentSessionNotFoundException`; `AgentResponseNotReadyException` while the session is `RUNNING`, `WAITING` or `ARCHIVED` (every session leaves a response when it ends) |
 
 Every message to an orchestrator (replies, errors, and the `AgentSessionResponse` sent once a response is on disk)
 goes through one queue and over the one connection, one by one. A send that finds the connection broken is retried
@@ -62,7 +62,7 @@ https://secure.fileshare.ovh/chat-room.html?channelId=code_review_session_<sessi
 ```
 
 ```json
-{"sessionId": "…", "agent": "CODE_REVIEW", "sequenceId": "…", "orchestratorDeviceId": "…", "actorAccountId": "Maks", "loggingLevel": "INFO",
+{"sessionId": "…", "agent": "CODE_REVIEW", "sequenceId": "…", "originatorDeviceId": "…", "agentCallSequence": [], "actorAccountId": "Maks", "loggingLevel": "INFO",
  "agentContext": {"items": [
    {"type": "GITHUB_REPOSITORY", "value": "https://github.com/<org>/kn-challenge.git", "primary": true},
    {"type": "FILE", "name": "requirements.md", "value": "<S3 download URL>", "description": "acceptance criteria"},

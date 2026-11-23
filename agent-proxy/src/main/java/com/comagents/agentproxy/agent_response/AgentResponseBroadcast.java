@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
  * Hands every agent response to the orchestrator device that started the session as soon as it is on disk: the
  * {@link AgentSessionResponse}, as {@code GET /agent-response} returns it, goes as a {@link ComagentsMessage} through
  * the {@link ComagentsMessageDeliveryService} (the executor's own Pushca client) to the device named by the start
- * request's {@code orchestratorDeviceId}, with the start request's {@code sequenceId} as the message id. Once sent, the
+ * request's {@code originatorDeviceId}, with the start request's {@code sequenceId} as the message id. Once sent, the
  * session's files are deleted after {@code agent-response.cleanup-delay}, as after a first fetch. When it can't be
  * sent, the response stays to be fetched until {@code agent-response.retention}.
  */
@@ -42,11 +42,11 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         String agentName = event.agent().getAgentName();
         try {
             agentResponseService.readResponse(event.agent(), event.sessionId()).ifPresent(response -> {
-                String orchestratorDeviceId = response.request().orchestratorDeviceId();
-                messageDeliveryService.deliverToAddress(DeliveryAddress.agentOrchestrator(orchestratorDeviceId),
+                String originatorDeviceId = response.request().originatorDeviceId();
+                messageDeliveryService.deliverToAddress(DeliveryAddress.agentOrchestrator(originatorDeviceId),
                         response);
                 LOG.info("[{} {}] response sent to orchestrator device {}", agentName, event.sessionId(),
-                        orchestratorDeviceId);
+                        originatorDeviceId);
                 agentResponseService.scheduleCleanup(event.agent(), event.sessionId());
             });
         } catch (RuntimeException e) {

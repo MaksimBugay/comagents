@@ -119,7 +119,7 @@ class AgentResponseListenerTest {
         Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
                 {"kickOffPrompt": "Review it"}""");
         AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId, null, "sequence-1",
-                "orchestrator-device-1", "MBugai", AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
+                "orchestrator-device-1", List.of(), "MBugai", AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
         try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
             slot.start(AiAgent.CODE_REVIEW, agentFolder, new ClaudeSessionOptions(false, "MBugai", attributes))
                     .awaitFinished(Duration.ofSeconds(20));

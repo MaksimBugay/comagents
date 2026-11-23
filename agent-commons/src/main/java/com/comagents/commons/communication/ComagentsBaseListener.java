@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
  * @param <T> the request
  * @param <R> the response
  */
-public abstract class ComagentsBaseListener<T extends WithOrchestratorDeviceId, R>
+public abstract class ComagentsBaseListener<T extends WithOriginatorDeviceId, R>
         implements ComagentsMessageListener<T> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ComagentsBaseListener.class);
@@ -24,13 +24,13 @@ public abstract class ComagentsBaseListener<T extends WithOrchestratorDeviceId, 
     // the message's sequence id is the request's: ComagentsMessageDispatcher checked it
     @Override
     public void consumePayload(String sequenceId, T request) {
-        DeliveryAddress orchestrator = DeliveryAddress.agentOrchestrator(request.orchestratorDeviceId());
+        DeliveryAddress orchestrator = DeliveryAddress.agentOrchestrator(request.originatorDeviceId());
         R response;
         try {
             response = prepareResponse(request);
         } catch (RuntimeException e) {
             LOG.warn("{} {} of orchestrator device {} failed: {}", getPayloadClass().getSimpleName(), sequenceId,
-                    request.orchestratorDeviceId(), e.getMessage());
+                    request.originatorDeviceId(), e.getMessage());
             messageDeliveryService.deliverErrorToAddress(orchestrator, sequenceId, getResponseClass(), e);
             return;
         }

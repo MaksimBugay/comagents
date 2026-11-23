@@ -111,7 +111,7 @@ public class AgentResponseService {
 
     private static StartAgentSessionRequest request(AiAgent agent, AgentSessionAttributes attributes) {
         return new StartAgentSessionRequest(attributes.sessionId(), agent, attributes.agentContext(),
-                attributes.sequenceId(), attributes.orchestratorDeviceId(), attributes.actorAccountId(), attributes.loggingLevel(), attributes.createdAt());
+                attributes.sequenceId(), attributes.originatorDeviceId(), attributes.agentCallSequence(), attributes.actorAccountId(), attributes.loggingLevel(), attributes.createdAt());
     }
 
     private AgentSetupService setupServiceFor(AiAgent agent) {

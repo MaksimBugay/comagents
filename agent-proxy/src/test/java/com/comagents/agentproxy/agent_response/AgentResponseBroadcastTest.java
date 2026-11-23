@@ -45,7 +45,7 @@ class AgentResponseBroadcastTest {
 
     private final UUID sessionId = UUID.randomUUID();
     private final AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId,
-            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "sequence-1", "orchestrator-device-1", "MBugai",
+            new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "sequence-1", "orchestrator-device-1", List.of("orchestrator"), "MBugai",
             AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
 
     @Inject
@@ -96,7 +96,7 @@ class AgentResponseBroadcastTest {
         assertEquals("sequence-1", message.id(), "the start request's sequence id");
         assertEquals(AgentSessionResponse.class.getName(), message.payloadClassName());
         AgentSessionResponse response = (AgentSessionResponse) message.comagentsMessagePayload().payload();
-        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "sequence-1", "orchestrator-device-1", "MBugai",
+        assertEquals(new StartAgentSessionRequest(sessionId, AiAgent.CODE_REVIEW, attributes.agentContext(), "sequence-1", "orchestrator-device-1", List.of("orchestrator"), "MBugai",
                 AgentSessionLoggingLevel.INFO, 1_700_000_000_000L), response.request());
         assertEquals(ALL_GOOD, response.agentContext());
 
