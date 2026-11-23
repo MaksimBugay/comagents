@@ -7,14 +7,16 @@ import com.comagents.commons.communication.DeliveryAddress;
 import com.comagents.commons.response.AgentSessionResponse;
 import io.micronaut.context.event.ApplicationEventListener;
 import jakarta.inject.Singleton;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Hands every agent response to the orchestrator device that started the session as soon as it is on disk: the
+ * Hands every agent response to the device that waits for it as soon as it is on disk: the
  * {@link AgentSessionResponse}, as {@code GET /agent-response} returns it, goes as a {@link ComagentsMessage} through
  * the {@link ComagentsMessageDeliveryService} (the executor's own Pushca client) to the device named by the start
- * request's {@code originatorDeviceId}, with the start request's {@code sequenceId} as the message id. Once sent, the
+ * request's {@code agentResponseWaiterDeviceId}, or its {@code originatorDeviceId} when there is none, whatever that
+ * device's account and application, with the start request's {@code sequenceId} as the message id. Once sent, the
  * session's files are deleted after {@code agent-response.cleanup-delay}, as after a first fetch. When it can't be
  * sent, the response stays to be fetched until {@code agent-response.retention}.
  */
@@ -42,15 +44,18 @@ public class AgentResponseBroadcast implements ApplicationEventListener<AgentRes
         String agentName = event.agent().getAgentName();
         try {
             agentResponseService.readResponse(event.agent(), event.sessionId()).ifPresent(response -> {
-                String originatorDeviceId = response.request().originatorDeviceId();
-                messageDeliveryService.deliverToAddress(DeliveryAddress.agentOrchestrator(originatorDeviceId),
+                String waiterDeviceId = response.request().agentResponseWaiterDeviceId();
+                String agentResponseWaiterDeviceId = StringUtils.isNotBlank(waiterDeviceId)
+                        ? waiterDeviceId
+                        : response.request().originatorDeviceId();
+                messageDeliveryService.deliverToAddress(DeliveryAddress.deviceWithId(agentResponseWaiterDeviceId),
                         response);
-                LOG.info("[{} {}] response sent to orchestrator device {}", agentName, event.sessionId(),
-                        originatorDeviceId);
+                LOG.info("[{} {}] response sent to device {}", agentName, event.sessionId(),
+                        agentResponseWaiterDeviceId);
                 agentResponseService.scheduleCleanup(event.agent(), event.sessionId());
             });
         } catch (RuntimeException e) {
-            LOG.error("[{} {}] sending the response to the orchestrator failed", agentName, event.sessionId(), e);
+            LOG.error("[{} {}] sending the response to the waiter device failed", agentName, event.sessionId(), e);
         }
     }
 }

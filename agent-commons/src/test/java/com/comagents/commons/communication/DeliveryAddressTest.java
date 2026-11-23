@@ -38,6 +38,12 @@ class DeliveryAddressTest {
     }
 
     @Test
+    void aDeviceIsAddressedByItsIdAlone() {
+        assertEquals(new DeliveryAddress(null, "waiter-device-1", null), DeliveryAddress.deviceWithId("waiter-device-1"));
+        assertThrows(IllegalArgumentException.class, () -> DeliveryAddress.deviceWithId(" "));
+    }
+
+    @Test
     void agentAddressesNeedTheDevice() {
         assertThrows(IllegalArgumentException.class,
                 () -> DeliveryAddress.agentExecutor(" ", AiHarnessProvider.CLAUDE_CODE));

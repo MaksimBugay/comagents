@@ -48,7 +48,7 @@ class StartAgentSessionHelperTest {
         when(gateway.registerRequest(any(), any(), eq(AgentInfoResponse.class))).thenReturn(started);
 
         assertSame(started, helper.startAgentSession(AiAgent.CODE_REVIEW, null, List.of("CODE_REVIEW"), "Maks",
-                AgentSessionLoggingLevel.DEBUG));
+                "waiter-device-1", AgentSessionLoggingLevel.DEBUG));
 
         ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
         verify(gateway).registerRequest(eq(DeliveryAddress.agentExecutor("claude-2", AiHarnessProvider.CLAUDE_CODE)),
@@ -58,6 +58,7 @@ class StartAgentSessionHelperTest {
         assertNotNull(sent.sequenceId());
         assertEquals(AiAgent.CODE_REVIEW, sent.agent());
         assertEquals("orchestrator-own", sent.originatorDeviceId(), "this orchestrator's own device");
+        assertEquals("waiter-device-1", sent.agentResponseWaiterDeviceId());
         assertEquals(List.of("CODE_REVIEW"), sent.agentCallSequence());
         assertEquals("Maks", sent.actorAccountId());
         assertEquals(AgentSessionLoggingLevel.DEBUG, sent.loggingLevel());
@@ -72,7 +73,7 @@ class StartAgentSessionHelperTest {
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1",
                         discovered.createdAt() + 1));
 
-        helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks", null);
+        helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
 
         assertEquals(0, registry.getAll().getFirst().freeSlots());
         assertEquals(List.of(), registry.getAllAvailable(false));
@@ -86,7 +87,7 @@ class StartAgentSessionHelperTest {
         when(gateway.registerRequest(eq(executor("claude-1")), any(), eq(AgentInfoResponse.class))).thenThrow(full);
 
         assertSame(full, assertThrows(ClaudeSessionLimitException.class, () -> helper.startAgentSession(
-                AiAgent.CODE_REVIEW, null, null, "Maks", null)));
+                AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));
 
         assertEquals(List.of("claude-2"), registry.getAll().stream().map(AgentInfoResponse::deviceId).toList(),
                 "claude-1 is gone until it reports again");
@@ -102,10 +103,10 @@ class StartAgentSessionHelperTest {
         when(gateway.registerRequest(eq(executor("claude-2")), any(), eq(AgentInfoResponse.class))).thenReturn(
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 3, 0, 0, "sequence-2"));
         assertThrows(ClaudeSessionLimitException.class, () -> helper.startAgentSession(AiAgent.CODE_REVIEW, null,
-                null, "Maks", null));
+                null, "Maks", null, null));
 
         assertEquals("claude-2", helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks",
-                null).deviceId());
+                null, null).deviceId());
     }
 
     @Test
@@ -114,7 +115,7 @@ class StartAgentSessionHelperTest {
         when(gateway.registerRequest(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
                 new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1"));
 
-        helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks", null);
+        helper.startAgentSession(AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
 
         ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
         verify(gateway).registerRequest(any(), request.capture(), eq(AgentInfoResponse.class));
@@ -128,7 +129,7 @@ class StartAgentSessionHelperTest {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 0));
 
         assertThrows(IllegalStateException.class, () -> helper.startAgentSession(AiAgent.CODE_REVIEW, null,
-                null, "Maks", null));
+                null, "Maks", null, null));
         verifyNoInteractions(gateway);
     }
 
@@ -139,7 +140,7 @@ class StartAgentSessionHelperTest {
         when(gateway.registerRequest(any(), any(), eq(AgentInfoResponse.class))).thenThrow(refused);
 
         assertSame(refused, assertThrows(IllegalArgumentException.class, () -> helper.startAgentSession(
-                AiAgent.CODE_REVIEW, null, null, "Maks", null)));
+                AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));
     }
 
     private static DeliveryAddress executor(String deviceId) {

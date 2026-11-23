@@ -44,9 +44,11 @@ public class StartAgentSessionHelper {
     /**
      * Sends a start request for a new session of {@code agent} to the best executor available for it and waits for
      * its reply. Retrying is the caller's: an executor that refuses it for lack of slots is removed from the registry
-     * until it reports again, so a retry goes elsewhere. The executor sends its replies, the session's response
-     * included, to this orchestrator's own device.
+     * until it reports again, so a retry goes elsewhere. The executor sends its replies to this orchestrator's own
+     * device, and the session's response to {@code agentResponseWaiterDeviceId}.
      *
+     * @param agentResponseWaiterDeviceId the device that gets the session's response; this orchestrator's own device
+     *                                    when null or blank
      * @return the executor that runs the session, as it was right after taking it
      * @throws IllegalStateException        when no executor of the agent's harness has a free slot now, or no reply
      *                                      came in time ({@link ComagentsGateway#registerRequest})
@@ -57,6 +59,7 @@ public class StartAgentSessionHelper {
                                                @Nullable AgentContext agentContext,
                                                List<String> agentCallSequence,
                                                String actorAccountId,
+                                               String agentResponseWaiterDeviceId,
                                                AgentSessionLoggingLevel loggingLevel) {
         Validate.notNull(agent, "agent must not be null");
         AgentInfoResponse executor = findExecutor(agent);
@@ -66,7 +69,7 @@ public class StartAgentSessionHelper {
                 agentContext,
                 UUID.randomUUID().toString(),
                 conf.getDeviceId(),
-                conf.getDeviceId(),
+                agentResponseWaiterDeviceId,
                 agentCallSequence,
                 actorAccountId,
                 loggingLevel == null ? AgentSessionLoggingLevel.INFO : loggingLevel,

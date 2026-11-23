@@ -51,9 +51,23 @@ public record DeliveryAddress(String accountId, String deviceId, String applicat
         return new DeliveryAddress(ORCHESTRATOR_ACCOUNT_ID, deviceId, ORCHESTRATOR_APPLICATION_ID);
     }
 
-    /** Every agent orchestrator, on whatever device. */
+    /**
+     * Every agent orchestrator, on whatever device.
+     */
     public static DeliveryAddress agentOrchestrators() {
         return new DeliveryAddress(ORCHESTRATOR_ACCOUNT_ID, null, ORCHESTRATOR_APPLICATION_ID);
+    }
+
+    /**
+     * The device {@code deviceId}, whatever its account and application: one device id is one agent-proxy or
+     * orchestrator in the cluster.
+     *
+     * @throws NullPointerException     when the device id is null
+     * @throws IllegalArgumentException when the device id is blank
+     */
+    public static DeliveryAddress deviceWithId(String deviceId) {
+        Validate.notBlank(deviceId, "deviceId must not be blank");
+        return new DeliveryAddress(null, deviceId, null);
     }
 
     private static String nullIfBlank(String id) {

@@ -31,6 +31,7 @@ import java.util.UUID;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // "false" stands in for Claude Code: it exits with an error at once, so a started session ends FAILED without a
@@ -73,8 +74,8 @@ class AgentResponseBroadcastTest {
     }
 
     @Test
-    void sendsTheResponseToTheOrchestratorDeviceAndDeletesSessionFilesAfterDelay() throws Exception {
-        startSession();
+    void sendsTheResponseToTheWaiterDeviceAndDeletesSessionFilesAfterDelay() throws Exception {
+        startSession(attributes);
         writeAllGoodResponse();
 
         broadcast.send(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId));
@@ -88,10 +89,11 @@ class AgentResponseBroadcastTest {
         List<FakePushcaConnectionFactory.Broadcast> broadcasts = executor.broadcasts;
         assertEquals(1, broadcasts.size());
         assertEquals("comagents-main", broadcasts.getFirst().receivers().workSpaceId);
-        assertEquals("agent-orchestrator@comagents.com", broadcasts.getFirst().receivers().accountId);
-        assertEquals("orchestrator-device-1", broadcasts.getFirst().receivers().deviceId);
-        assertEquals("AGENT_ORCHESTRATOR", broadcasts.getFirst().receivers().applicationId);
-        // a ComagentsMessage, read as the orchestrator reads it
+        // the device alone, whatever its account and application
+        assertNull(broadcasts.getFirst().receivers().accountId);
+        assertEquals("waiter-device-1", broadcasts.getFirst().receivers().deviceId);
+        assertNull(broadcasts.getFirst().receivers().applicationId);
+        // a ComagentsMessage, read as the waiter reads it
         ComagentsMessage message = ComagentsMessage.fromComagentsMessageString(broadcasts.getFirst().message());
         assertEquals("sequence-1", message.id(), "the start request's sequence id");
         assertEquals(AgentSessionResponse.class.getName(), message.payloadClassName());
@@ -105,8 +107,21 @@ class AgentResponseBroadcastTest {
     }
 
     @Test
+    void withoutAWaiterTheResponseGoesToTheOriginatorDevice() throws Exception {
+        startSession(new AgentSessionAttributes(sessionId, null, "sequence-1", "orchestrator-device-1", null, List.of(),
+                "MBugai", AgentSessionLoggingLevel.INFO, 1_700_000_000_000L));
+        writeAllGoodResponse();
+
+        broadcast.send(new AgentResponseReady(AiAgent.CODE_REVIEW, sessionId));
+
+        List<FakePushcaConnectionFactory.Broadcast> broadcasts = connectionFactory.connections.getFirst().broadcasts;
+        assertEquals(1, broadcasts.size());
+        assertEquals("orchestrator-device-1", broadcasts.getFirst().receivers().deviceId);
+    }
+
+    @Test
     void responseThatCannotBeSentStaysToBeFetched() throws Exception {
-        startSession();
+        startSession(attributes);
         writeAllGoodResponse();
         FakePushcaConnectionFactory.FakeConnection executor = connectionFactory.connections.getFirst();
         // refused, as by Pushca: not retried
@@ -120,7 +135,7 @@ class AgentResponseBroadcastTest {
                 .until(() -> Files.exists(sessionFolders.agentResponseFile(sessionId, AiAgent.CODE_REVIEW)));
     }
 
-    private void startSession() throws Exception {
+    private void startSession(AgentSessionAttributes attributes) throws Exception {
         Path agentFolder = sessionFolders.agentFolder(sessionId, AiAgent.CODE_REVIEW);
         Files.createDirectories(agentFolder);
         Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
