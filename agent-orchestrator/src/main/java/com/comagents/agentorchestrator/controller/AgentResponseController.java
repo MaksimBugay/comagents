@@ -1,5 +1,6 @@
 package com.comagents.agentorchestrator.controller;
 
+import com.comagents.agentorchestrator.controller.response.AgentSessionExternalResponse;
 import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.commons.exception.AgentResponseNotReadyException;
 import com.comagents.commons.exception.AgentSessionNotFoundException;
@@ -28,15 +29,21 @@ public class AgentResponseController {
     }
 
     /**
-     * 200 with the agent's response, or 404 with {@link AgentResponseUnavailable}: with the session's {@code state}
+     * 200 with the agent's response ({@link AgentSessionExternalResponse}), or 404 with {@link AgentResponseUnavailable}: with the session's {@code state}
      * when the response isn't ready yet (try again), without one when the session is unknown; 504 when the session's
      * executor didn't reply in time.
      */
     // may wait for the executor's reply, which must not block the Netty event loop
     @Get("/{sessionId}")
     @ExecuteOn(TaskExecutors.BLOCKING)
-    public AgentSessionResponse agentResponse(@PathVariable UUID sessionId) {
-        return agentSessionResponseHelper.getResponse(sessionId);
+    public AgentSessionExternalResponse agentResponse(@PathVariable UUID sessionId) {
+        return externalResponse(agentSessionResponseHelper.getResponse(sessionId));
+    }
+
+    // without the start request and the executor's device, which stay inside
+    private static AgentSessionExternalResponse externalResponse(AgentSessionResponse response) {
+        return new AgentSessionExternalResponse(response.request().sessionId(), response.agentContext(),
+                response.createdAt());
     }
 
     @Error(exception = AgentResponseNotReadyException.class)

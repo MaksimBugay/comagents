@@ -1,5 +1,6 @@
 package com.comagents.agentorchestrator.controller;
 
+import com.comagents.agentorchestrator.controller.response.AgentSessionExternalResponse;
 import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.communication.DeliveryAddress;
@@ -7,6 +8,8 @@ import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.AiHarnessProvider;
+import com.comagents.commons.domain.agent_context.AgentContext;
+import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import com.comagents.commons.exception.AgentResponseNotReadyException;
 import com.comagents.commons.exception.AgentSessionNotFoundException;
 import com.comagents.commons.request.AgentResponseRequest;
@@ -24,6 +27,9 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -42,8 +48,11 @@ import static org.mockito.Mockito.when;
 class AgentResponseControllerTest {
 
     private final UUID sessionId = UUID.randomUUID();
+    private final AgentContext answer = new AgentContext(List.of(new StringAgentContextItem("response", "all good")));
     private final AgentSessionResponse response = new AgentSessionResponse(new StartAgentSessionRequest(sessionId,
-            AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-own", "Maks"), null, 2_000, "claude-1");
+            AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-own", "Maks"), answer, 2_000, "claude-1");
+    private final AgentSessionExternalResponse externalResponse = new AgentSessionExternalResponse(sessionId, answer,
+            2_000);
 
     @Inject
     @Client("/")
@@ -67,7 +76,7 @@ class AgentResponseControllerTest {
     void returnsTheResponseTheExecutorSent() {
         responses.append(response);
 
-        assertEquals(response, fetch());
+        assertEquals(externalResponse, fetch());
         verifyNoInteractions(gateway);
     }
 
@@ -76,7 +85,7 @@ class AgentResponseControllerTest {
         runningSessions.append(sessionId, running());
         when(gateway.exchange(any(), any(), eq(AgentResponseReply.class))).thenReturn(new AgentResponseReply(response));
 
-        assertEquals(response, fetch());
+        assertEquals(externalResponse, fetch());
 
         ArgumentCaptor<AgentResponseRequest> request = ArgumentCaptor.forClass(AgentResponseRequest.class);
         verify(gateway).exchange(eq(DeliveryAddress.agentExecutor("claude-1", AiHarnessProvider.CLAUDE_CODE)),
@@ -137,8 +146,17 @@ class AgentResponseControllerTest {
                 "claude-1", null, "Maks", null, 1_000);
     }
 
-    private AgentSessionResponse fetch() {
-        return client.toBlocking().retrieve("/agent-response/" + sessionId, AgentSessionResponse.class);
+    @Test
+    void leavesTheStartRequestAndTheExecutorInside() {
+        responses.append(response);
+
+        Map<?, ?> body = client.toBlocking().retrieve("/agent-response/" + sessionId, Map.class);
+
+        assertEquals(Set.of("sessionId", "agentContext", "createdAt"), body.keySet());
+    }
+
+    private AgentSessionExternalResponse fetch() {
+        return client.toBlocking().retrieve("/agent-response/" + sessionId, AgentSessionExternalResponse.class);
     }
 
     private AgentResponseUnavailable notFound() {
