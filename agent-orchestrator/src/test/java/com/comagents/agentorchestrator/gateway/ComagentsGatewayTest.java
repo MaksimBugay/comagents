@@ -1,5 +1,6 @@
 package com.comagents.agentorchestrator.gateway;
 
+import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.commons.communication.ComagentsMessageDeliveryService;
 import com.comagents.commons.communication.DeliveryAddress;
 import com.comagents.commons.communication.WithSequenceId;
@@ -84,7 +85,7 @@ class ComagentsGatewayTest {
     void failsWhenNoResponseComesWithinTheTimeout() {
         ComagentsGateway impatient = new ComagentsGateway(delivery, Duration.ofMillis(200));
 
-        IllegalStateException timedOut = assertThrows(IllegalStateException.class,
+        ComagentsResponseTimeoutException timedOut = assertThrows(ComagentsResponseTimeoutException.class,
                 () -> impatient.exchange(EXECUTOR, "ping", String.class));
 
         assertInstanceOf(TimeoutException.class, timedOut.getCause());
@@ -93,7 +94,7 @@ class ComagentsGatewayTest {
     @Test
     void aLateResponseIsIgnored() {
         ComagentsGateway impatient = new ComagentsGateway(delivery, Duration.ofMillis(200));
-        assertThrows(IllegalStateException.class, () -> impatient.exchange(EXECUTOR, "ping", String.class));
+        assertThrows(ComagentsResponseTimeoutException.class, () -> impatient.exchange(EXECUTOR, "ping", String.class));
 
         // no one waits for it any more
         impatient.completeWithResponse(delivery.sent.getFirst().sequenceId(), "pong");

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
+ * @param agent                       the agent the session runs
  * @param agentContext                what the session works with (see {@code StartAgentSessionRequest}); null for none
  * @param sequenceId                  the start request's sequence id, which the session's response carries
  * @param originatorDeviceId          the orchestrator device that sent the start request and gets the replies to it
@@ -21,6 +22,7 @@ import java.util.UUID;
  * @param createdAt                   when the start request was created, in epoch milliseconds
  */
 public record AgentSessionAttributes(@NotNull UUID sessionId,
+                                     @NotNull AiAgent agent,
                                      @Nullable AgentContext agentContext,
                                      @NotNull String sequenceId,
                                      @NotNull String originatorDeviceId,

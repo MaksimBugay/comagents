@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.agent_status;
+package com.comagents.commons.exception;
 
 import com.comagents.commons.domain.AiAgent;
 
@@ -9,5 +9,10 @@ public class AgentSessionNotFoundException extends RuntimeException {
 
     public AgentSessionNotFoundException(AiAgent agent, UUID sessionId) {
         super("No session " + sessionId + " for agent " + agent.getAgentName());
+    }
+
+    /** With the message as received: how an orchestrator recreates it from an executor's error. */
+    public AgentSessionNotFoundException(String message) {
+        super(message);
     }
 }

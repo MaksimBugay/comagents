@@ -2,6 +2,8 @@ package com.comagents.agentorchestrator.controller;
 
 import com.comagents.agentorchestrator.agent_registry.AgentDiscoveryRegistry;
 import com.comagents.agentorchestrator.conf.AgentOrchestratorConf;
+import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
+import com.comagents.agentorchestrator.exception.TooManyStartSessionRequestsException;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.communication.DeliveryAddress;
 import com.comagents.commons.communication.DeviceIdExtractor;
@@ -19,6 +21,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import static com.comagents.commons.response.AgentInfoResponse.AGENT_DISCOVERY_SEQUENCE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,7 +70,7 @@ class StartAgentSessionHelperTest {
         assertEquals(List.of("CODE_REVIEW"), sent.agentCallSequence());
         assertEquals("Maks", sent.actorAccountId());
         assertEquals(AgentSessionLoggingLevel.DEBUG, sent.loggingLevel());
-        assertEquals(Optional.of(new AgentSessionAttributes(sessionId, null, sent.sequenceId(), "orchestrator-own",
+        assertEquals(Optional.of(new AgentSessionAttributes(sessionId, AiAgent.CODE_REVIEW, null, sent.sequenceId(), "orchestrator-own",
                 "waiter-device-1", "claude-2", List.of("CODE_REVIEW"), "Maks", AgentSessionLoggingLevel.DEBUG,
                 sent.createdAt())), sessions.get(sessionId), "the started session is registered with its executor");
     }
@@ -138,9 +141,20 @@ class StartAgentSessionHelperTest {
         registry.update(discovered("codex-1", AiHarnessProvider.CODEX, 3));
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 0));
 
-        assertThrows(IllegalStateException.class, () -> helper.startAgentSession(UUID.randomUUID(),
+        assertThrows(TooManyStartSessionRequestsException.class, () -> helper.startAgentSession(UUID.randomUUID(),
                 AiAgent.CODE_REVIEW, null, null, "Maks", null, null));
         verifyNoInteractions(gateway);
+    }
+
+    @Test
+    void noReplyInTimeIsPassedOn() {
+        registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
+        ComagentsResponseTimeoutException late = new ComagentsResponseTimeoutException("No response in time",
+                new TimeoutException());
+        when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenThrow(late);
+
+        assertSame(late, assertThrows(ComagentsResponseTimeoutException.class, () -> helper.startAgentSession(
+                UUID.randomUUID(), AiAgent.CODE_REVIEW, null, null, "Maks", null, null)));
     }
 
     @Test

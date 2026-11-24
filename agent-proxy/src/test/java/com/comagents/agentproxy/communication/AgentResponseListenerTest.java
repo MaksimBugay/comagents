@@ -1,10 +1,8 @@
 package com.comagents.agentproxy.communication;
 
-import com.comagents.agentproxy.agent_response.AgentResponseNotReadyException;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
-import com.comagents.agentproxy.agent_status.AgentSessionNotFoundException;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.communication.ComagentsError;
@@ -14,6 +12,8 @@ import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.AgentContext;
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;
+import com.comagents.commons.exception.AgentResponseNotReadyException;
+import com.comagents.commons.exception.AgentSessionNotFoundException;
 import com.comagents.commons.request.AgentResponseRequest;
 import com.comagents.commons.response.AgentResponseReply;
 import com.comagents.commons.serialization.JsonUtility;
@@ -118,7 +118,7 @@ class AgentResponseListenerTest {
         Files.createDirectories(agentFolder);
         Files.writeString(agentFolder.resolve(ClaudeAgentConfig.FILE_NAME), """
                 {"kickOffPrompt": "Review it"}""");
-        AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId, null, "sequence-1",
+        AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId, AiAgent.CODE_REVIEW, null, "sequence-1",
                 "orchestrator-device-1", "waiter-device-1", "executor-device-1", List.of(), "MBugai", AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
         try (ClaudeAgentSessionRegistry.SessionSlot slot = registry.reserve(sessionId)) {
             slot.start(AiAgent.CODE_REVIEW, agentFolder, new ClaudeSessionOptions(false, "MBugai", attributes))

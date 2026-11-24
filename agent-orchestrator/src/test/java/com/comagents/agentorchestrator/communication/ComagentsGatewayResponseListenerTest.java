@@ -3,10 +3,14 @@ package com.comagents.agentorchestrator.communication;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.WithSequenceId;
+import com.comagents.commons.domain.AgentSessionState;
+import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.exception.AgentResponseNotReadyException;
 import com.comagents.commons.exception.ClaudeSessionLimitException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -54,12 +58,20 @@ class ComagentsGatewayResponseListenerTest {
     }
 
     @Test
+    void recreatesAnExecutorsNotReadyExceptionWithItsState() {
+        Throwable error = receivedError(new ComagentsError(new AgentResponseNotReadyException(AiAgent.CODE_REVIEW,
+                UUID.randomUUID(), AgentSessionState.WAITING)));
+
+        assertEquals(AgentSessionState.WAITING, assertInstanceOf(AgentResponseNotReadyException.class, error).getState());
+    }
+
+    @Test
     void anExceptionUnknownHereBecomesAnIllegalStateException() {
         Throwable error = receivedError(new ComagentsError(0, "session in use",
-                "com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException"));
+                "com.acme.ExecutorOnlyException"));
 
         assertInstanceOf(IllegalStateException.class, error);
-        assertEquals("com.comagents.agentproxy.agent_setup.claude.ClaudeSessionExistsException: session in use",
+        assertEquals("com.acme.ExecutorOnlyException: session in use",
                 error.getMessage());
     }
 

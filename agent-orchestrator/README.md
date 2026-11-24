@@ -7,6 +7,8 @@ executors (agent-proxy) over Pushca.
 
 | Method | Path                  | Description                     |
 |--------|-----------------------|---------------------------------|
+| POST   | `/start`              | Start a session of the body's `agent` (`agentContext`, `agentCallSequence`, `actorAccountId`, `agentResponseWaiterDeviceId`, `loggingLevel`) with a new session id on the discovered executor of the agent's harness with most free slots: **202 Accepted** with `{"sessionId": …}`. **400** for an invalid request or agent context, **429** when no discovered executor of the agent's harness has a free slot, or the executor has none after all (try again: it goes to another), **501** when the executor has no setup service for the agent, **409** when the session id is in use; **504** when the executor didn't reply within `AGENT_ORCHESTRATOR_RESPONSE_TIMEOUT` |
+| GET    | `/agent-response/{sessionId}` | The session's `AgentSessionResponse`: the one its executor sent (kept 5 minutes), else asked from the executor that runs it. **404** with `AgentResponseUnavailable`: with the session's `state` when the response isn't ready yet (try again), without one when the session is unknown; **504** when the session's executor didn't reply within `AGENT_ORCHESTRATOR_RESPONSE_TIMEOUT` |
 | GET    | `/health/liveness`    | Kubernetes liveness probe       |
 | GET    | `/health/readiness`   | Kubernetes readiness probe      |
 
@@ -19,7 +21,11 @@ executors (agent-proxy) over Pushca.
 - **Incoming:** every `ComagentsMessage` from the executors (discovery `AgentInfoResponse`s, replies, agent responses) is
   passed to the `ComagentsMessageListener`s of its payload class, each on its own thread. Every `AgentInfoResponse` (discovery
   report or start reply) updates the `AgentDiscoveryRegistry` (`AgentInfoListener`), which keeps each executor until
-  `AGENT_ORCHESTRATOR_DISCOVERY_TTL` passes without a fresher one.
+  `AGENT_ORCHESTRATOR_DISCOVERY_TTL` passes without a fresher one. A session started here is kept with its executor
+  (`RunningAgentSessionRegistry`) until its `AgentSessionResponse` comes (`AgentSessionResponseListener`), or for
+  `AGENT_ORCHESTRATOR_RUNNING_SESSION_TTL`.
+- **Errors:** an executor's error reply becomes the executor's exception again, when it is known here with a
+  `(String)` constructor (the agent-commons exceptions), so the HTTP API answers it with the status it maps that exception to.
 - **Outgoing:** every message to an executor goes through one queue and over the one connection, one by one. A send
   that finds the connection broken is retried every second until `AGENT_ORCHESTRATOR_MESSAGE_TIMEOUT` (30 s) has
   passed since it was queued; a message not sent by then is dropped with an error logged.

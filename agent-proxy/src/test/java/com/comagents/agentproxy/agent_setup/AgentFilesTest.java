@@ -131,7 +131,7 @@ class AgentFilesTest {
         String json = JsonUtility.toJson(request);
         System.out.println(json);
 
-        // the printed body is what POST /{agentName}/start accepts
+        // the printed body is what a StartAgentSessionRequest over Pushca carries
         assertEquals(request, JsonUtility.fromJson(json, StartAgentSessionRequest.class));
     }
 }

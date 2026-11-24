@@ -1,7 +1,52 @@
 {
   "reflection": [
     {
+      "type": "com.comagents.commons.domain.agent_context.InvalidAgentContextException",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "com.comagents.commons.exception.AgentResponseNotReadyException",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "com.comagents.commons.exception.AgentSessionNotFoundException",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "com.comagents.commons.exception.ClaudeSessionExistsException",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String"]
+        }
+      ]
+    },
+    {
       "type": "com.comagents.commons.exception.ClaudeSessionLimitException",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "com.comagents.commons.exception.NoAgentSetupServiceException",
       "methods": [
         {
           "name": "<init>",

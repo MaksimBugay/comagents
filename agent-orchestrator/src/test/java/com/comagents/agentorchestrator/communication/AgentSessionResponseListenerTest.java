@@ -35,7 +35,7 @@ class AgentSessionResponseListenerTest {
     @Test
     void aSessionsResponseEndsItsRunAndIsKept() {
         UUID sessionId = UUID.randomUUID();
-        runningSessions.append(sessionId, new AgentSessionAttributes(sessionId, null, "sequence-1",
+        runningSessions.append(sessionId, new AgentSessionAttributes(sessionId, AiAgent.CODE_REVIEW, null, "sequence-1",
                 "orchestrator-own", null, "executor-1", null, "Maks", null, 1_000));
         AgentSessionResponse response = new AgentSessionResponse(new StartAgentSessionRequest(sessionId,
                 AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-own", "Maks"), null, 2_000, "executor-1");

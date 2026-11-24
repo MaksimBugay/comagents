@@ -1,6 +1,7 @@
 package com.comagents.agentorchestrator.controller;
 
 import com.comagents.commons.domain.AgentSessionAttributes;
+import com.comagents.commons.domain.AiAgent;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -47,7 +48,7 @@ class RunningAgentSessionRegistryTest {
     }
 
     private static AgentSessionAttributes attributes() {
-        return new AgentSessionAttributes(UUID.randomUUID(), null, "sequence-1", "orchestrator-own", null, "executor-1",
+        return new AgentSessionAttributes(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-own", null, "executor-1",
                 null, "Maks", null, 1_000);
     }
 }

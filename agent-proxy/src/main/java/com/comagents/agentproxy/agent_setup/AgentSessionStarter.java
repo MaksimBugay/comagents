@@ -4,12 +4,13 @@ import com.comagents.agentproxy.agent_status.AgentExecutorInfoService;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.exception.NoAgentSetupServiceException;
 import com.comagents.commons.request.StartAgentSessionRequest;
 import com.comagents.commons.response.AgentInfoResponse;
 import jakarta.inject.Singleton;
 import jakarta.validation.Valid;
 
-/** Starts agent sessions, whoever asks: the HTTP API or an orchestrator over Pushca. */
+/** Starts agent sessions for the orchestrators' start requests over Pushca. */
 @Singleton
 public class AgentSessionStarter {
 
@@ -31,12 +32,13 @@ public class AgentSessionStarter {
      * @throws jakarta.validation.ConstraintViolationException when the request is invalid
      * @throws NoAgentSetupServiceException                    when the agent's harness has no setup service yet
      */
-    // @Valid: Micronaut validates the request before the call, as the controller does for its body
+    // @Valid: Micronaut validates the request before the call
     public AgentInfoResponse start(@Valid StartAgentSessionRequest request) {
         setupServiceFor(request.agent()).setup(
                 request.agent(),
                 new AgentSessionAttributes(
                         request.sessionId(),
+                        request.agent(),
                         request.agentContext(),
                         request.sequenceId(),
                         request.originatorDeviceId(),

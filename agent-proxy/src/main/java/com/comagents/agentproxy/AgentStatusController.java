@@ -1,9 +1,9 @@
 package com.comagents.agentproxy;
 
-import com.comagents.agentproxy.agent_status.AgentSessionNotFoundException;
 import com.comagents.agentproxy.agent_status.AgentStatusService;
 import com.comagents.commons.domain.AgentStatus;
 import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.exception.AgentSessionNotFoundException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;

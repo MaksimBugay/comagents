@@ -2,6 +2,8 @@ package com.comagents.agentorchestrator.controller;
 
 import com.comagents.agentorchestrator.agent_registry.AgentDiscoveryRegistry;
 import com.comagents.agentorchestrator.conf.AgentOrchestratorConf;
+import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
+import com.comagents.agentorchestrator.exception.TooManyStartSessionRequestsException;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.communication.DeliveryAddress;
 import com.comagents.commons.domain.AgentSessionAttributes;
@@ -56,10 +58,10 @@ public class StartAgentSessionHelper {
      * @param agentResponseWaiterDeviceId another device that gets the session's response too; none when null or
      *                                    blank
      * @return the executor that runs the session, as it was right after taking it
-     * @throws IllegalStateException       when no executor of the agent's harness has a free slot now, or no reply
-     *                                     came in time ({@link ComagentsGateway#exchange})
-     * @throws ClaudeSessionLimitException when the executor had no free slot after all
-     * @throws RuntimeException            why else the executor didn't start the session
+     * @throws TooManyStartSessionRequestsException when no executor of the agent's harness has a free slot now
+     * @throws ComagentsResponseTimeoutException    when no reply came in time
+     * @throws ClaudeSessionLimitException          when the executor had no free slot after all
+     * @throws RuntimeException                     why else the executor didn't start the session
      */
     public AgentInfoResponse startAgentSession(@NotNull UUID sessionId,
                                                @NotNull AiAgent agent,
@@ -108,6 +110,7 @@ public class StartAgentSessionHelper {
                                                        String agentExecutorDeviceId) {
         return new AgentSessionAttributes(
                 request.sessionId(),
+                request.agent(),
                 request.agentContext(),
                 request.sequenceId(),
                 request.originatorDeviceId(),
@@ -122,7 +125,7 @@ public class StartAgentSessionHelper {
 
     private AgentInfoResponse findExecutor(AiAgent agent) {
         return agentDiscoveryRegistry.getBestAvailable(agent.getAiHarnessProvider(), false)
-                .orElseThrow(() -> new IllegalStateException("No %s executor with a free slot for %s"
+                .orElseThrow(() -> new TooManyStartSessionRequestsException("No %s executor with a free slot for %s"
                         .formatted(agent.getAiHarnessProvider(), agent)));
     }
 }

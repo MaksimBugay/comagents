@@ -2,12 +2,12 @@ package com.comagents.agentproxy.communication;
 
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
-import com.comagents.agentproxy.agent_status.AgentSessionNotFoundException;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
+import com.comagents.commons.exception.AgentSessionNotFoundException;
 import com.comagents.commons.request.AgentStatusRequest;
 import com.comagents.commons.response.AgentStatusResponse;
 import io.micronaut.context.annotation.Property;

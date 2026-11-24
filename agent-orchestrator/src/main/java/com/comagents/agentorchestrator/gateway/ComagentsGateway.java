@@ -1,5 +1,6 @@
 package com.comagents.agentorchestrator.gateway;
 
+import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.commons.communication.ComagentsMessageDeliveryService;
 import com.comagents.commons.communication.DeliveryAddress;
 import com.comagents.commons.communication.WithSequenceId;
@@ -51,13 +52,15 @@ public class ComagentsGateway {
      * message id), otherwise a new one.
      *
      * @return the response, a {@code responseClass}
-     * @throws NullPointerException     when the request is null, or its sequence id ({@link WithSequenceId})
-     * @throws IllegalArgumentException when the request's sequence id ({@link WithSequenceId}) is blank, or another
-     *                                  request with the same sequence id is still waiting
-     * @throws IllegalStateException    when no response came within the response timeout (caused by a
-     *                                  {@link TimeoutException}), or the wait was interrupted
-     * @throws ClassCastException       when the response isn't a {@code responseClass}
-     * @throws RuntimeException         the error received in place of the response, or the one sending failed with
+     * @throws NullPointerException              when the request is null, or its sequence id
+     *                                           ({@link WithSequenceId})
+     * @throws IllegalArgumentException          when the request's sequence id ({@link WithSequenceId}) is blank, or
+     *                                           another request with the same sequence id is still waiting
+     * @throws ComagentsResponseTimeoutException when no response came within the response timeout
+     * @throws IllegalStateException             when the wait was interrupted
+     * @throws ClassCastException                when the response isn't a {@code responseClass}
+     * @throws RuntimeException                  the error received in place of the response, or the one sending
+     *                                           failed with
      */
     public <P, R> R exchange(DeliveryAddress address, P request, Class<R> responseClass) {
         Validate.notNull(request, "request must not be null");
@@ -105,7 +108,7 @@ public class ComagentsGateway {
         try {
             return response.get(remainingNanos, TimeUnit.NANOSECONDS);
         } catch (TimeoutException e) {
-            throw new IllegalStateException(
+            throw new ComagentsResponseTimeoutException(
                     "No response to request %s within %s".formatted(sequenceId, responseTimeout), e);
         } catch (ExecutionException e) {
             throw rethrown(e.getCause());

@@ -19,7 +19,6 @@ import com.comagents.commons.request.AgentStatusRequest;
 import com.comagents.commons.request.StartAgentSessionRequest;
 import com.comagents.commons.response.AgentInfoResponse;
 import com.comagents.commons.response.AgentResponseReply;
-import com.comagents.commons.response.AgentResponseUnavailable;
 import com.comagents.commons.response.AgentSessionResponse;
 import com.comagents.commons.response.AgentStatusResponse;
 import io.micronaut.core.annotation.Introspected;
@@ -39,7 +38,6 @@ import io.micronaut.core.annotation.Introspected;
         AgentStatusResponse.class,
         AgentInfoResponse.class,
         AgentResponseReply.class,
-        AgentResponseUnavailable.class,
         AiAgent.class,
         AiHarnessProvider.class,
         AgentSessionState.class,

@@ -45,7 +45,7 @@ class AgentResponseBroadcastTest {
     private static final AgentContext ALL_GOOD = new AgentContext(List.of(new StringAgentContextItem("response", "# Report\n\nAll good")));
 
     private final UUID sessionId = UUID.randomUUID();
-    private final AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId,
+    private final AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId, AiAgent.CODE_REVIEW,
             new AgentContext(List.of(new StringAgentContextItem("focus", "security"))), "sequence-1", "orchestrator-device-1", "waiter-device-1", "executor-device-1", List.of("orchestrator"), "MBugai",
             AgentSessionLoggingLevel.INFO, 1_700_000_000_000L);
 
@@ -112,7 +112,7 @@ class AgentResponseBroadcastTest {
 
     @Test
     void withoutAWaiterOnlyTheOriginatorDeviceGetsTheResponse() throws Exception {
-        startSession(new AgentSessionAttributes(sessionId, null, "sequence-1", "orchestrator-device-1", null, "executor-device-1", List.of(),
+        startSession(new AgentSessionAttributes(sessionId, AiAgent.CODE_REVIEW, null, "sequence-1", "orchestrator-device-1", null, "executor-device-1", List.of(),
                 "MBugai", AgentSessionLoggingLevel.INFO, 1_700_000_000_000L));
         writeAllGoodResponse();
 

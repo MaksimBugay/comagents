@@ -7,7 +7,7 @@ import java.util.UUID;
 /**
  * @param startedAt         when the agent run started, in epoch millis
  * @param finishedAt        when it ended, in epoch millis; null while running
- * @param responseAvailable whether {@code GET /agent-response/{agentName}/{sessionId}} has a response to return
+ * @param responseAvailable whether an {@code AgentResponseRequest} gets a response
  */
 public record AgentStatus(AiAgent aiAgent, UUID sessionId, AgentSessionState state,
                           long startedAt, @Nullable Long finishedAt, boolean responseAvailable) {

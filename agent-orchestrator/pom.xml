@@ -106,6 +106,12 @@
       <artifactId>agent-commons</artifactId>
       <version>${agent-commons.version}</version>
     </dependency>
+    <!-- @Valid request bodies of the HTTP API -->
+    <dependency>
+      <groupId>io.micronaut.validation</groupId>
+      <artifactId>micronaut-validation</artifactId>
+      <scope>compile</scope>
+    </dependency>
     <!-- the discovered agent executors, each forgotten when it stops reporting (AgentDiscoveryRegistry) -->
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
@@ -142,6 +148,12 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- the HTTP API tests' client -->
+    <dependency>
+      <groupId>io.micronaut</groupId>
+      <artifactId>micronaut-http-client</artifactId>
       <scope>test</scope>
     </dependency>
     <!-- waiting for asynchronous outcomes in tests; not managed by the Micronaut BOM -->
@@ -188,6 +200,17 @@
               <groupId>io.micronaut</groupId>
               <artifactId>micronaut-http-validation</artifactId>
               <version>${micronaut.core.version}</version>
+            </path>
+            <path>
+              <groupId>io.micronaut.validation</groupId>
+              <artifactId>micronaut-validation-processor</artifactId>
+              <version>${micronaut.validation.version}</version>
+              <exclusions>
+                <exclusion>
+                  <groupId>io.micronaut</groupId>
+                  <artifactId>micronaut-inject</artifactId>
+                </exclusion>
+              </exclusions>
             </path>
           </annotationProcessorPaths>
           <compilerArgs>

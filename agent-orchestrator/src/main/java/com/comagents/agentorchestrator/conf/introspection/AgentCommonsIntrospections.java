@@ -2,7 +2,6 @@ package com.comagents.agentorchestrator.conf.introspection;
 
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessage;
-import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AgentStatus;
@@ -44,7 +43,6 @@ import io.micronaut.core.annotation.Introspected;
         AiHarnessProvider.class,
         AgentSessionState.class,
         AgentSessionLoggingLevel.class,
-        AgentSessionAttributes.class,
         AgentContext.class,
         AgentContextItem.class,
         AgentContextItemType.class,

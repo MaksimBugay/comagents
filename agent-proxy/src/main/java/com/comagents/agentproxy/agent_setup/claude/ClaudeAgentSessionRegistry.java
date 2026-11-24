@@ -7,6 +7,7 @@ import com.comagents.commons.domain.AgentSessionState;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.AgentContext;
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;
+import com.comagents.commons.exception.ClaudeSessionExistsException;
 import com.comagents.commons.exception.ClaudeSessionLimitException;
 import com.comagents.commons.serialization.JsonUtility;
 import com.comagents.commons.serialization.SerializationException;
