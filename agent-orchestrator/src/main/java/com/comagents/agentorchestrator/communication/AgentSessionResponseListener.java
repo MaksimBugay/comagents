@@ -33,8 +33,9 @@ public class AgentSessionResponseListener implements ComagentsMessageListener<Ag
 
     @Override
     public void consumePayload(String sequenceId, AgentSessionResponse response) {
-        runningAgentSessionRegistry.remove(response.request().sessionId());
+        // kept first: a fetch in between finds the session in one registry or the other
         agentSessionResponseRegistry.append(response);
+        runningAgentSessionRegistry.remove(response.request().sessionId());
         LOG.info("Response of session {} received from executor {}", response.request().sessionId(),
                 response.executorDeviceId());
     }
