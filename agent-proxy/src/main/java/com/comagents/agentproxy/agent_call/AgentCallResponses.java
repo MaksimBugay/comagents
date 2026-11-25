@@ -18,7 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * id. While the calling tool call still waits, the response completes it; once the caller has given up waiting and
  * ended its turn on the call, the response resumes the caller
  * ({@link ClaudeAgentSessionRegistry#answerDeferredAgentCall}). A response may also come before the call waits for it
- * (the orchestrator answered the start late): it is kept for the call.
+ * (the orchestrator answered the start late): it is kept while a call is being started. A response without a caller
+ * here (killed meanwhile, or a repeated delivery) is dropped.
  */
 @Singleton
 public class AgentCallResponses {
@@ -28,6 +29,8 @@ public class AgentCallResponses {
     // provided lazily, like for ExpertAnswers: the registry reports to the session chats
     private final BeanProvider<ClaudeAgentSessionRegistry> sessions;
     private final Map<UUID, CompletableFuture<AgentSessionResponse>> pending = new ConcurrentHashMap<>();
+    // calls between their start request and expect(); guarded by this
+    private int startsInFlight;
 
     public AgentCallResponses(BeanProvider<ClaudeAgentSessionRegistry> sessions) {
         this.sessions = sessions;
@@ -36,6 +39,24 @@ public class AgentCallResponses {
     /** The agent context of a response, as an agent tool returns it and a resumed caller gets it. */
     public static String toText(AgentSessionResponse response) {
         return JsonUtility.toJson(response.agentContext());
+    }
+
+    /**
+     * Marks the start of a called session through the orchestrator, whose id is not known yet: a response that comes
+     * meanwhile is kept for the call. Every call is followed by {@link #startFinished}.
+     */
+    public synchronized void startingCall() {
+        startsInFlight++;
+    }
+
+    /**
+     * Ends {@link #startingCall}, after {@link #expect} for the started session; once no start is in flight, the
+     * responses kept for none of them are dropped.
+     */
+    public synchronized void startFinished() {
+        if (--startsInFlight == 0) {
+            pending.values().removeIf(CompletableFuture::isDone);
+        }
     }
 
     /**
@@ -65,6 +86,15 @@ public class AgentCallResponses {
             return;
         }
         if (sessions.get().answerDeferredAgentCall(calledSessionId, toText(response))) {
+            return;
+        }
+        keepForStartingCall(calledSessionId, response);
+    }
+
+    // its caller may still be starting it; otherwise there is no caller here any more (e.g. killed): dropped
+    private synchronized void keepForStartingCall(UUID calledSessionId, AgentSessionResponse response) {
+        if (startsInFlight == 0) {
+            LOG.info("Response of session {} has no caller here, dropped", calledSessionId);
             return;
         }
         LOG.info("Response of session {} came before its call waits for it", calledSessionId);

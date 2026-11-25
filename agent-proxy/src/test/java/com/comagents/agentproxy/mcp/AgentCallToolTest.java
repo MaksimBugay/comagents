@@ -166,12 +166,30 @@ class AgentCallToolTest {
 
     @Test
     void aResponseBeforeTheCallWaitsIsKeptForIt() {
-        responses.onResponse(response());
+        respondWhileStarting();
 
         CallToolResult result = tool(Duration.ofSeconds(30)).call(INTERVIEW_INSIGHTS_TOOL, INTERVIEW_REQUEST, runContext());
 
         assertFalse(result.isError());
         assertEquals(JsonUtility.toJson(INSIGHTS), text(result));
+    }
+
+    @Test
+    void aResponseWithoutCallerHereIsDropped() {
+        // no call waits for it, none is being started, no archived session waits for it: e.g. the caller was killed
+        responses.onResponse(response());
+
+        assertFalse(responses.expect(calledSessionId).isDone(), "nothing kept");
+    }
+
+    @Test
+    void aResponseKeptWhileAStartWasInFlightIsDroppedWhenNoCallClaimsIt() {
+        responses.startingCall();
+        responses.onResponse(response());
+        // the call being started was for another session
+        responses.startFinished();
+
+        assertFalse(responses.expect(calledSessionId).isDone(), "dropped with the last start");
     }
 
     @Test
@@ -276,7 +294,7 @@ class AgentCallToolTest {
     @Test
     void aResponseNotMatchingTheResponseSchemaIsAnErrorResult() {
         schemaValidator = (_, _) -> ValidationResponse.asInvalid("$.items[0].name: does not have the value \"insights\"");
-        responses.onResponse(response());
+        respondWhileStarting();
 
         CallToolResult result = tool(Duration.ofSeconds(30)).call(INTERVIEW_INSIGHTS_TOOL, INTERVIEW_REQUEST, runContext());
 
@@ -293,6 +311,14 @@ class AgentCallToolTest {
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    // the race a response can win: it comes while the orchestrator's start reply is still on its way
+    private void respondWhileStarting() {
+        when(orchestrator.start(any())).thenAnswer(_ -> {
+            responses.onResponse(response());
+            return new StartAgentSessionExternalResponse(calledSessionId);
+        });
     }
 
     private AgentSessionResponse response() {

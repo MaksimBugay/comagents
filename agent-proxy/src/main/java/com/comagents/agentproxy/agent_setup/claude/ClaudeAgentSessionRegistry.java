@@ -470,8 +470,8 @@ public class ClaudeAgentSessionRegistry implements ApplicationEventListener<Star
         try (SessionSlot slot = reserve(sessionId)) {
             ClaudeAgentSession resumed = slot.startRun(archive.agent(), Path.of(archive.workingDirectory()), true, prompt, null,
                     archive.options());
-            deleteArchive(stateFile, sessionId);
-            deleteArchive(agentResponseFile, sessionId);
+            deleteAfterResume(stateFile, sessionId);
+            deleteAfterResume(agentResponseFile, sessionId);
             return resumed;
         } catch (RuntimeException e) {
             if (archived != null) {
@@ -713,11 +713,11 @@ public class ClaudeAgentSessionRegistry implements ApplicationEventListener<Star
         }
     }
 
-    private static void deleteArchive(Path stateFile, UUID sessionId) {
+    private static void deleteAfterResume(Path file, UUID sessionId) {
         try {
-            Files.deleteIfExists(stateFile);
+            Files.deleteIfExists(file);
         } catch (IOException e) {
-            LOG.warn("[{}] removing {} after resume failed", sessionId, stateFile, e);
+            LOG.warn("[{}] removing {} after resume failed", sessionId, file, e);
         }
     }
 

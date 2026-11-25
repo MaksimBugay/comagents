@@ -42,10 +42,10 @@ import java.util.concurrent.TimeoutException;
  * agent and gets its response as the tool's result. The called agent's session is started through the orchestrator,
  * with this executor as the device that waits for its response, and the caller's call chain
  * ({@code agentCallSequence}), which the orchestrator grows by the called agent; a call that would make a loop is
- * refused. The call waits up to
- * {@code agent-question.answer-timeout}, with the session {@code WAITING}, as {@link AskExpertTool} does. Without a
- * response by then, the call is deferred: the agent is told to end its turn, the session is archived when it has, and
- * the response resumes it whenever it comes. Refusals are error results the agent reads, not exceptions.
+ * refused. The call waits up to {@code agent-question.answer-timeout}, with the session {@code WAITING}, as
+ * {@link AskExpertTool} does. Without a response by then, the call is deferred: the agent is told to end its turn, the
+ * session is archived when it has, and the response resumes it whenever it comes. A response is checked against the
+ * called agent's response schema. Refusals are error results the agent reads, not exceptions.
  */
 @Singleton
 public class AgentCallTool {
@@ -113,8 +113,17 @@ public class AgentCallTool {
             return error(e.getMessage());
         }
         try (ClaudeAgentSessionRegistry.Waiting _ = sessions.markWaiting(session.getSessionId())) {
-            UUID calledSessionId = start(session, agent, agentContext, callSequence);
-            return await(session, definition, calledSessionId, deadline);
+            UUID calledSessionId;
+            CompletableFuture<AgentSessionResponse> response;
+            // a response that comes before the call waits for it is kept until then
+            responses.startingCall();
+            try {
+                calledSessionId = start(session, agent, agentContext, callSequence);
+                response = responses.expect(calledSessionId);
+            } finally {
+                responses.startFinished();
+            }
+            return await(session, definition, calledSessionId, response, deadline);
         } catch (HttpClientResponseException e) {
             return error(notStarted(agent, e));
         } catch (HttpClientException e) {
@@ -153,9 +162,8 @@ public class AgentCallTool {
     }
 
     private CallToolResult await(ClaudeAgentSession caller, AgentCallToolDefinition definition, UUID calledSessionId,
-                                 Instant deadline) {
+                                 CompletableFuture<AgentSessionResponse> response, Instant deadline) {
         AiAgent agent = definition.agent();
-        CompletableFuture<AgentSessionResponse> response = responses.expect(calledSessionId);
         try {
             long waitMillis = Math.max(0, Duration.between(Instant.now(), deadline).toMillis());
             AgentSessionResponse responded = response.get(waitMillis, TimeUnit.MILLISECONDS);

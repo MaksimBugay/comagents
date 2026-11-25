@@ -131,7 +131,8 @@ A call works like `ask_expert`, with the session `WAITING`:
 2. the called session's `AgentSessionResponse`, which its executor sends to this executor's device too, is the tool's
    result: its agent context as JSON, checked against the called agent's response schema (a response that doesn't
    match is an error result with the reason and the response). No MCP `outputSchema`: with it the MCP server would
-   reject the `NO ANSWER YET …` result below;
+   reject the `NO ANSWER YET …` result below. A response that comes while its call is still being started is kept for
+   it; one without a caller here (killed meanwhile, or delivered twice) is dropped;
 3. without it within `AGENT_QUESTION_ANSWER_TIMEOUT` (counted from the call), the tool returns `NO ANSWER YET …`, and
    the session is archived as for an unanswered question. The response resumes it whenever it comes
    (`claude -p "The <agent name> agent you called responded: …" --resume <session id>`), also after a restart. The
@@ -162,7 +163,7 @@ claude -p "<kickOffPrompt>" \
 ```
 
 - **Session id:** our `sessionId` is Claude's session id, so agent-proxy never reads it back. Resumed runs use
-  `--resume <sessionId>` with the agent's `resumePrompt`, or with the expert's answer.
+  `--resume <sessionId>` with the agent's `resumePrompt`, with the expert's answer, or with the called agent's response.
 - **Environment:** only an allowlist of the container's: `PATH`, `HOME`, `LANG`, `LC_ALL`, `TZ`,
   `DISABLE_AUTOUPDATER`, `ANTHROPIC_*` (API key, base URL) and `CLAUDE_CODE_*`. agent-proxy's own secrets
   (`SOURCES_REPO_ACCESS_TOKEN`, `PUSHCA_API_KEY`, ...) never reach the run. Plus
@@ -175,7 +176,8 @@ claude -p "<kickOffPrompt>" \
   `MAVEN_USER_HOME=<sessions-dir>/<sessionId>/<agentName>/m2` (the run's own Maven repository and wrapper downloads
   in place of the shared `~/.m2`, so parallel sessions never overwrite each other's artifacts; deleted with the
   session, writable in the agent's sandbox), and `CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1`
-  when resuming with the `resumePrompt` (finish the interrupted turn first; not when resuming with an answer).
+  when resuming with the `resumePrompt` (finish the interrupted turn first; not when resuming with an answer or a
+  response).
 - **stdin** is `/dev/null`: with an open pipe, `claude -p` waits 3 s for input on every run.
 
 ### Permissions in headless mode
