@@ -11,7 +11,8 @@
     "WebFetch(domain:central.sonatype.com)",
     "WebFetch(domain:search.maven.org)",
     "WebFetch(domain:repo1.maven.org)",
-    "mcp__agentproxy__ask_expert"
+    "mcp__agentproxy__ask_expert",
+    "mcp__agentproxy__weather_forecast"
   ],
   "sandbox": {
     "enabled": true,
@@ -19,7 +20,7 @@
     "allowUnsandboxedCommands": false,
     "enableWeakerNestedSandbox": true
   },
-  "kickOffPrompt": "First call the ask_expert tool with the question \"What color is your mood?\". If ask_expert returns NO ANSWER YET, that is not an answer: end your turn without a final answer. If the answer is not green, do not review anything: reply only \"Review cancelled: the mood is not green.\" as your final answer. If it is green, review the Java project in the current working directory with the java-code-review skill. Review the whole project: it is a snapshot of the sources without git history, so there is no diff to review. Do not ask anything else: when something is unclear, make the most reasonable assumption, list it under Open questions in the report, and continue. Return the complete review report, in the format the skill defines, as your final answer.",
+  "kickOffPrompt": "First call the ask_expert tool with the question \"What color is your mood?\". If ask_expert returns NO ANSWER YET, that is not an answer: end your turn without a final answer. If the answer is not green, do not review anything: reply only \"Review cancelled: the mood is not green.\" as your final answer. If it is green, call the weather_forecast tool for the location Tallinn. If weather_forecast returns NO ANSWER YET, that is not its response: end your turn without a final answer. If the forecast temperature in Tallinn is not above 15 \u00b0C, do not review anything: reply only \"Review cancelled: the weather in Tallinn is not above 15 \u00b0C.\" as your final answer. If it is above 15 \u00b0C, review the Java project in the current working directory with the java-code-review skill. Review the whole project: it is a snapshot of the sources without git history, so there is no diff to review. Do not ask anything else: when something is unclear, make the most reasonable assumption, list it under Open questions in the report, and continue. Return the complete review report, in the format the skill defines, as your final answer.",
   "requiredItems": [
     {
       "type": "GITHUB_REPOSITORY"
@@ -57,6 +58,47 @@
               "description": "the complete review report, or the cancellation message"
             }
           }
+        }
+      }
+    }
+  },
+  "exposeAsMcp": {
+    "tool": {
+      "name": "code_review",
+      "description": "Reviews a whole Java 25 / Spring Boot project on GitHub for bugs, security issues (including vulnerable dependencies), concurrency, performance and maintainability, and returns a severity-ordered review report. Worth calling when a Java/Spring Boot repository needs an independent, thorough read-only review before a release, a merge or a takeover; not for other languages, single snippets or small questions about code. The agent never changes the repository. A review takes minutes, not seconds."
+    },
+    "requestSchema": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "GITHUB_REPOSITORY"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?(\\.git)?$",
+                  "description": "the clone URL of the Java project to review, e.g. https://github.com/acme/shop.git"
+                }
+              }
+            }
+          ],
+          "items": false
         }
       }
     }

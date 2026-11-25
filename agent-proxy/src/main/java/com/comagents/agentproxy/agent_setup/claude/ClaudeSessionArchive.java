@@ -22,6 +22,8 @@ import java.util.UUID;
  * @param actorAccountId     the Pushca account that started the session: its chat is reopened for it after a restart
  * @param deferredQuestion   the question the agent asked the expert and ended its turn on: the session is resumed with
  *                           the answer as soon as one arrives in its chat
+ * @param deferredAgentCall  the call of another agent the agent ended its turn on: the session is resumed with the
+ *                           called session's response as soon as it arrives
  * @param attributes         what the session was started with (see {@link ClaudeSessionOptions#attributes()})
  */
 @Introspected
@@ -29,6 +31,7 @@ public record ClaudeSessionArchive(UUID sessionId, AiAgent agent, String working
                                    AgentSessionState stateBeforeArchive, Instant startedAt, Instant lastOutputAt,
                                    Instant archivedAt, @Nullable String resultText, boolean verboseOutput,
                                    @Nullable String actorAccountId, @Nullable String deferredQuestion,
+                                   @Nullable DeferredAgentCall deferredAgentCall,
                                    @Nullable AgentSessionAttributes attributes) {
 
     public static final String STATE_FILE = "session-state.json";

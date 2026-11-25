@@ -55,6 +55,9 @@ public final class ClaudeAgentSession {
     private String deferredQuestion;
     private String earlyAnswer;
     private boolean archivedForAnswer;
+    // the same for a call of another agent the run ends its turn on, and its response; guarded by this
+    private DeferredAgentCall deferredAgentCall;
+    private String earlyAgentResponse;
 
     ClaudeAgentSession(UUID sessionId, AiAgent agent, Path workingDirectory, Path transcriptFile, Path responseFile,
                        boolean resumed, boolean structuredResponse, ClaudeSessionOptions options) {
@@ -232,6 +235,50 @@ public final class ClaudeAgentSession {
     synchronized Optional<String> archivedForAnswer() {
         archivedForAnswer = true;
         return Optional.ofNullable(earlyAnswer);
+    }
+
+    synchronized void deferAgentCall(DeferredAgentCall call) {
+        deferredAgentCall = call;
+        earlyAgentResponse = null;
+    }
+
+    synchronized void cancelDeferredAgentCall() {
+        deferredAgentCall = null;
+        earlyAgentResponse = null;
+    }
+
+    synchronized Optional<DeferredAgentCall> deferredAgentCall() {
+        return Optional.ofNullable(deferredAgentCall);
+    }
+
+    /**
+     * Keeps the response of the deferred call of the session {@code calledSessionId} until the run is archived; false
+     * if the run defers no such call or is archived already.
+     */
+    synchronized boolean keepEarlyAgentResponse(UUID calledSessionId, String response) {
+        if (deferredAgentCall == null || !deferredAgentCall.calledSessionId().equals(calledSessionId)
+                || archivedForAnswer) {
+            return false;
+        }
+        earlyAgentResponse = response;
+        return true;
+    }
+
+    /** The response of the deferred agent call that came before the run was archived; read after {@link #archivedForAnswer}. */
+    synchronized Optional<String> earlyAgentResponse() {
+        return Optional.ofNullable(earlyAgentResponse);
+    }
+
+    /** Whether the run ends its turn on something unanswered: a question or a call of another agent. */
+    synchronized boolean isDeferred() {
+        return deferredQuestion != null || deferredAgentCall != null;
+    }
+
+    /** What the run waits for, for the log. */
+    synchronized String describeDeferral() {
+        return deferredQuestion != null
+                ? deferredQuestion
+                : "the response of " + deferredAgentCall.agent().getAgentName() + " session " + deferredAgentCall.calledSessionId();
     }
 
     void recordResult(String text, @Nullable JsonNode structuredOutput, boolean successful) {

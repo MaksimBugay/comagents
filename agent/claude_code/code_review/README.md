@@ -34,10 +34,18 @@ claude -p "/java-code-review"                                       # whole proj
 To run it by hand, copy `CLAUDE.md` and `.claude/` into the project root the same way.
 
 No MCP servers are configured by the agent itself. agent-proxy adds its own MCP server to every run, and `agent.json` allows its
-`mcp__agentproxy__ask_expert` tool: the kick-off prompt first asks the expert in the session chat "What color is your mood?"
-and cancels the review unless the answer is green.
+`mcp__agentproxy__ask_expert` and `mcp__agentproxy__weather_forecast` tools: the kick-off prompt first asks the expert in the
+session chat "What color is your mood?" and cancels the review unless the answer is green; then it calls the
+`weather_forecast` agent for Tallinn and cancels the review unless the forecast temperature is above 15 °C.
+
+## Exposed as MCP tool
+
+`exposeAsMcp` in `agent.json` describes the agent as the MCP tool `code_review`: `tool` says when it is worth
+calling, `requestSchema` is the JSON Schema of the start request's agent context for it: exactly one
+`GITHUB_REPOSITORY` item with the clone URL.
 
 ## Response
 
 `agent.json` sets a `responseSchema`: the final answer is an agent context with exactly one `STRING` item named
-`review`, holding the complete review report (or the cancellation message when the mood is not green).
+`review`, holding the complete review report (or the cancellation message when the mood is not green, or the weather in Tallinn
+is not above 15 °C).

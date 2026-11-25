@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
@@ -20,9 +21,11 @@ public class AgentProxyMcpServer {
     /** The server's name in {@code --mcp-config}; Claude Code calls its tools {@code mcp__<name>__<tool>}. */
     public static final String NAME = "agentproxy";
     public static final String ASK_EXPERT_TOOL = "ask_expert";
+    // how Claude Code names the server's tools
+    private static final String TOOL_PREFIX = "mcp__" + NAME + "__";
     /**
-     * How the {@value #ASK_EXPERT_TOOL} result that is not an answer starts: the run is archived as soon as it shows
-     * up, so the agent never acts on it.
+     * How a result of {@value #ASK_EXPERT_TOOL} or of an agent tool that is not the answer starts: the run is archived
+     * as soon as it shows up, so the agent never acts on it.
      */
     public static final String NO_ANSWER_YET = "NO ANSWER YET.";
     public static final String SESSION_ID_HEADER = "X-Agent-Session-Id";
@@ -46,7 +49,24 @@ public class AgentProxyMcpServer {
 
     /** The server's tools as Claude Code names them, for {@code --allowedTools}. */
     public List<String> allowedTools() {
-        return List.of("mcp__" + NAME + "__" + ASK_EXPERT_TOOL);
+        return List.of(TOOL_PREFIX + ASK_EXPERT_TOOL);
+    }
+
+    /**
+     * The agents an agent calls through this server: its {@code allowedTools} that name a tool of this server
+     * ({@code mcp__agentproxy__<agent name>}) other than {@value #ASK_EXPERT_TOOL}.
+     *
+     * @throws IllegalStateException when such a tool names no agent: a mistake in the calling agent's {@code agent.json}
+     */
+    public static List<AiAgent> calledAgents(List<String> allowedTools) {
+        return allowedTools.stream()
+                .filter(tool -> tool.startsWith(TOOL_PREFIX))
+                .map(tool -> tool.substring(TOOL_PREFIX.length()))
+                .filter(tool -> !tool.equals(ASK_EXPERT_TOOL))
+                .distinct()
+                .map(agentName -> AiAgent.fromAgentName(agentName).orElseThrow(() -> new IllegalStateException(
+                        "allowedTools name " + TOOL_PREFIX + agentName + ", but there is no agent " + agentName)))
+                .toList();
     }
 
     /** The {@code --mcp-config} JSON of one run; next to the MCP servers the agent configures itself. */

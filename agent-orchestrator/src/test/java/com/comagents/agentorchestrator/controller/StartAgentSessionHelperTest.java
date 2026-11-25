@@ -55,7 +55,7 @@ class StartAgentSessionHelperTest {
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(started);
 
         UUID sessionId = UUID.randomUUID();
-        assertSame(started, helper.startAgentSession(sessionId, AiAgent.CODE_REVIEW, null, List.of("CODE_REVIEW"),
+        assertSame(started, helper.startAgentSession(sessionId, AiAgent.CODE_REVIEW, null, List.of("weather_forecast"),
                 "Maks", "waiter-device-1", AgentSessionLoggingLevel.DEBUG));
 
         ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
@@ -67,11 +67,11 @@ class StartAgentSessionHelperTest {
         assertEquals(AiAgent.CODE_REVIEW, sent.agent());
         assertEquals("orchestrator-own", sent.originatorDeviceId(), "this orchestrator's own device");
         assertEquals("waiter-device-1", sent.agentResponseWaiterDeviceId());
-        assertEquals(List.of("CODE_REVIEW"), sent.agentCallSequence());
+        assertEquals(List.of("weather_forecast", "code_review"), sent.agentCallSequence(), "the started agent last");
         assertEquals("Maks", sent.actorAccountId());
         assertEquals(AgentSessionLoggingLevel.DEBUG, sent.loggingLevel());
         assertEquals(Optional.of(new AgentSessionAttributes(sessionId, AiAgent.CODE_REVIEW, null, sent.sequenceId(), "orchestrator-own",
-                "waiter-device-1", "claude-2", List.of("CODE_REVIEW"), "Maks", AgentSessionLoggingLevel.DEBUG,
+                "waiter-device-1", "claude-2", List.of("weather_forecast", "code_review"), "Maks", AgentSessionLoggingLevel.DEBUG,
                 sent.createdAt())), sessions.get(sessionId), "the started session is registered with its executor");
     }
 
@@ -133,7 +133,21 @@ class StartAgentSessionHelperTest {
         ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
         verify(gateway).exchange(any(), request.capture(), eq(AgentInfoResponse.class));
         assertEquals(AgentSessionLoggingLevel.INFO, request.getValue().loggingLevel());
-        assertEquals(List.of(), request.getValue().agentCallSequence());
+        assertEquals(List.of("code_review"), request.getValue().agentCallSequence(), "started by a person: the first agent");
+    }
+
+    @Test
+    void anAgentAlreadyInTheCallSequenceIsNotAddedAgain() {
+        registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
+        when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
+                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1"));
+
+        helper.startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null,
+                List.of("code_review", "weather_forecast"), "Maks", null, null);
+
+        ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
+        verify(gateway).exchange(any(), request.capture(), eq(AgentInfoResponse.class));
+        assertEquals(List.of("code_review", "weather_forecast"), request.getValue().agentCallSequence());
     }
 
     @Test

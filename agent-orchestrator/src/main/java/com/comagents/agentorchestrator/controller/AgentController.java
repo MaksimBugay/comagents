@@ -1,13 +1,13 @@
 package com.comagents.agentorchestrator.controller;
 
-import com.comagents.agentorchestrator.controller.request.StartAgentSessionExternalRequest;
-import com.comagents.agentorchestrator.controller.response.StartAgentSessionExternalResponse;
 import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.agentorchestrator.exception.TooManyStartSessionRequestsException;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
 import com.comagents.commons.exception.ClaudeSessionExistsException;
 import com.comagents.commons.exception.ClaudeSessionLimitException;
 import com.comagents.commons.exception.NoAgentSetupServiceException;
+import com.comagents.commons.request.StartAgentSessionExternalRequest;
+import com.comagents.commons.response.StartAgentSessionExternalResponse;
 import io.micronaut.core.convert.exceptions.ConversionErrorException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;

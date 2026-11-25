@@ -1,11 +1,14 @@
 package com.comagents.agentproxy.agent_setup;
 
+import com.comagents.agentproxy.agent_call.AgentCallToolDefinition;
+import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry.SessionSlot;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
+import com.comagents.agentproxy.mcp.AgentCallTools;
 import com.comagents.agentproxy.vcs.VcsService;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;
@@ -50,15 +53,19 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
 
     private final AgentContextValidator agentContextValidator;
 
+    private final AgentCallTools agentCallTools;
+
     public AgentWithClaudeCodeSetupService(VcsService vcsService, ClaudeAgentSessionRegistry claudeAgentSessionRegistry,
                                            SessionFolders sessionFolders,
                                            AgentSessionWsClientRegistry agentSessionWsClientRegistry,
-                                           AgentContextValidator agentContextValidator) {
+                                           AgentContextValidator agentContextValidator,
+                                           AgentCallTools agentCallTools) {
         this.vcsService = vcsService;
         this.claudeAgentSessionRegistry = claudeAgentSessionRegistry;
         this.sessionFolders = sessionFolders;
         this.agentSessionWsClientRegistry = agentSessionWsClientRegistry;
         this.agentContextValidator = agentContextValidator;
+        this.agentCallTools = agentCallTools;
     }
 
 
@@ -78,11 +85,13 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                 Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
                 AtomicReference<Path> preparedDirectory = new AtomicReference<>();
                 vcsService.cloneComAgentsSources(comAgentsSources -> {
-                    agentContextValidator.validate(agent, attributes.agentContext(),
-                            readConfig(comAgentsSources, agent).requiredItems());
+                    ClaudeAgentConfig config = readConfig(comAgentsSources, agent);
+                    agentContextValidator.validate(agent, attributes.agentContext(), config.requiredItems());
+                    List<AgentCallToolDefinition> agentTools = agentTools(comAgentsSources, config);
                     Path directory = prepareWorkingDirectory(attributes, agentFolder);
                     AgentFiles.copyInto(directory, comAgentsSources, agent, CLAUDE_CODE_FILES);
                     AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
+                    agentCallTools.add(agentFolder, agentTools);
                     preparedDirectory.set(directory);
                 });
                 Path workingDirectory = preparedDirectory.get();
@@ -106,6 +115,13 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         if (Files.exists(sessionFolder)) {
             throw new ClaudeSessionExistsException(sessionId, "already has data in " + sessionFolder);
         }
+    }
+
+    // the agents the agent calls as tools of agent-proxy's MCP server, as their agent.json exposes them
+    private List<AgentCallToolDefinition> agentTools(Path comAgentsSources, ClaudeAgentConfig config) {
+        return AgentProxyMcpServer.calledAgents(config.allowedTools()).stream()
+                .map(called -> AgentCallToolDefinition.of(called, readConfig(comAgentsSources, called)))
+                .toList();
     }
 
     private ClaudeAgentConfig readConfig(Path comAgentsSources, AiAgent agent) {

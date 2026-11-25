@@ -31,13 +31,14 @@ import java.util.Set;
  * @param sandbox       {@code --settings {"sandbox": ...}}: Claude Code's Bash sandbox settings for the run; no sandbox if
  *                      null. They go on the command line, like {@code allowedTools}, so the untrusted folder can't
  *                      weaken them
+ * @param exposeAsMcp   how other agents call this one as an MCP tool; not callable by other agents if null
  */
 @Introspected
 public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
                                 String kickOffPrompt, @Nullable String resumePrompt,
                                 @Nullable Set<RequiredAgentContextItem> requiredItems,
                                 @Nullable JsonNode responseSchema, boolean readOnly, boolean stateless,
-                                @Nullable JsonNode sandbox) {
+                                @Nullable JsonNode sandbox, @Nullable ExposeAsMcp exposeAsMcp) {
 
     public static final String FILE_NAME = "agent.json";
 

@@ -16,11 +16,13 @@ import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextIt
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import com.comagents.commons.request.AgentResponseRequest;
 import com.comagents.commons.request.AgentStatusRequest;
+import com.comagents.commons.request.StartAgentSessionExternalRequest;
 import com.comagents.commons.request.StartAgentSessionRequest;
 import com.comagents.commons.response.AgentInfoResponse;
 import com.comagents.commons.response.AgentResponseReply;
 import com.comagents.commons.response.AgentSessionResponse;
 import com.comagents.commons.response.AgentStatusResponse;
+import com.comagents.commons.response.StartAgentSessionExternalResponse;
 import io.micronaut.core.annotation.Introspected;
 
 /**
@@ -31,6 +33,8 @@ import io.micronaut.core.annotation.Introspected;
 @SuppressWarnings("unused") // read by Micronaut's annotation processor, never referenced in code
 @Introspected(classes = {
         StartAgentSessionRequest.class,
+        StartAgentSessionExternalRequest.class,
+        StartAgentSessionExternalResponse.class,
         AgentStatusRequest.class,
         AgentResponseRequest.class,
         AgentSessionResponse.class,

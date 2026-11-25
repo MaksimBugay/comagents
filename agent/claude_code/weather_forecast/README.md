@@ -31,6 +31,12 @@ cd agent/claude_code/weather_forecast
 claude -p "/weather-forecast Tartu"
 ```
 
+## Exposed as MCP tool
+
+`exposeAsMcp` in `agent.json` describes the agent as the MCP tool `weather_forecast`: `tool` says when it is
+worth calling, `requestSchema` is the JSON Schema of the start request's agent context for it: exactly one
+`STRING` item `location`.
+
 ## Response
 
 `agent.json` sets a `responseSchema`: the final answer is an agent context with exactly one `STRING` item named

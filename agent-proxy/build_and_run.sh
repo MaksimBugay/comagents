@@ -1,7 +1,9 @@
 #!/bin/sh
 # Rebuilds agent-proxy:0.1 (build-image.sh) and agent-orchestrator:0.1 (../agent-orchestrator/build-image.sh), starts
 # agent-proxy with DeepSeek's Anthropic-compatible API as the model provider and agent-orchestrator with the same
-# Pushca key, and follows agent-proxy's logs (Ctrl+C stops following; the containers keep running).
+# Pushca key, and follows agent-proxy's logs (Ctrl+C stops following; the containers keep running). Both run on the
+# Docker network comagents, where agent-proxy reaches the orchestrator (for its agent tools) by its container name, at
+# its default AGENT_PROXY_ORCHESTRATOR_URL http://agent-orchestrator:8080.
 #
 # Usage: ./build_and_run.sh <sources repo access token> <anthropic api key> <pushca api key>
 #
@@ -25,12 +27,15 @@ NAME=agent-proxy
 IMAGE="${NAME}:0.1"
 ORCHESTRATOR_NAME=agent-orchestrator
 ORCHESTRATOR_IMAGE="${ORCHESTRATOR_NAME}:0.1"
+NETWORK=comagents
 
 ./build-image.sh
 ../agent-orchestrator/build-image.sh
 
+docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
+
 echo "Starting ${NAME}"
-docker run -d --name "$NAME" -p 8087:8080 \
+docker run -d --name "$NAME" --network "$NETWORK" -p 8087:8080 \
   -v "${NAME}-sessions:/var/lib/agent-proxy/sessions" \
   -e CLONE_COMAGENTS_SOURCES_URL=https://github.com/MaksimBugay/comagents.git \
   -e SOURCES_REPO_ACCESS_TOKEN \
@@ -41,7 +46,7 @@ docker run -d --name "$NAME" -p 8087:8080 \
   "$IMAGE" >/dev/null
 
 echo "Starting ${ORCHESTRATOR_NAME}"
-docker run -d --name "$ORCHESTRATOR_NAME" -p 8088:8080 \
+docker run -d --name "$ORCHESTRATOR_NAME" --network "$NETWORK" -p 8088:8080 \
   -e PUSHCA_API_KEY \
   "$ORCHESTRATOR_IMAGE" >/dev/null
 

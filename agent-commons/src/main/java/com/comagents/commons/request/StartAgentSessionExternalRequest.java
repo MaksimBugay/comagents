@@ -1,21 +1,25 @@
-package com.comagents.agentorchestrator.controller.request;
+package com.comagents.commons.request;
 
 import com.comagents.commons.domain.AgentSessionLoggingLevel;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.AgentContext;
-import io.micronaut.core.annotation.Introspected;
-import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-// introspected for the @Valid of the HTTP API
-@Introspected
+/**
+ * The body of the orchestrator's {@code POST /start}: a session of {@code agent} to start on the best executor for it.
+ *
+ * @param agentCallSequence           the agents that called this one, the caller last; empty when a person starts
+ *                                    it. The orchestrator appends the started agent
+ * @param agentResponseWaiterDeviceId another device that gets the session's response too; none when null or blank
+ */
 public record StartAgentSessionExternalRequest(@NotNull AiAgent agent,
                                                @Nullable AgentContext agentContext,
                                                List<String> agentCallSequence,
                                                String actorAccountId,
-                                               String agentResponseWaiterDeviceId,
+                                               @Nullable String agentResponseWaiterDeviceId,
                                                AgentSessionLoggingLevel loggingLevel) {
     @SuppressWarnings("unused")
     public StartAgentSessionExternalRequest(AiAgent agent, @Nullable AgentContext agentContext, String actorAccountId) {

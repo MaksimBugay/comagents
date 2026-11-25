@@ -41,6 +41,12 @@ cd agent/claude_code/interview_insights
 claude -p "/interview-insights Wise | Senior Java Engineer | system design"
 ```
 
+## Exposed as MCP tool
+
+`exposeAsMcp` in `agent.json` describes the agent as the MCP tool `interview_insights`: `tool` says when it is
+worth calling, `requestSchema` is the JSON Schema of the start request's agent context for it: the `STRING` items
+`company` and `position`, in that order, then optionally `interviewType`, and nothing else.
+
 ## Response
 
 `agent.json` sets a `responseSchema`: the final answer is an agent context with exactly one `STRING` item named

@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,6 +56,9 @@ public class StartAgentSessionHelper {
      * session is registered in the {@link RunningAgentSessionRegistry}.
      *
      * @param sessionId                   the id of the new session
+     * @param agentCallSequence           the agents that called this one, the caller last; empty or null when a person
+     *                                    starts it. The started agent is appended unless it is in it already: the
+     *                                    session and the agents it calls see the whole chain
      * @param agentResponseWaiterDeviceId another device that gets the session's response too; none when null or
      *                                    blank
      * @return the executor that runs the session, as it was right after taking it
@@ -80,7 +84,7 @@ public class StartAgentSessionHelper {
                 UUID.randomUUID().toString(),
                 conf.getDeviceId(),
                 agentResponseWaiterDeviceId,
-                agentCallSequence,
+                withStartedAgent(agentCallSequence, agent),
                 actorAccountId,
                 loggingLevel == null ? AgentSessionLoggingLevel.INFO : loggingLevel,
                 Instant.now().toEpochMilli());
@@ -90,6 +94,14 @@ public class StartAgentSessionHelper {
         runningAgentSessionRegistry.append(request.sessionId(), attributesOf(request, started.deviceId()));
         LOG.info("Session {} of {} started on executor {}", request.sessionId(), agent, started.deviceId());
         return started;
+    }
+
+    private static List<String> withStartedAgent(@Nullable List<String> agentCallSequence, AiAgent agent) {
+        List<String> sequence = new ArrayList<>(agentCallSequence == null ? List.of() : agentCallSequence);
+        if (!sequence.contains(agent.getAgentName())) {
+            sequence.add(agent.getAgentName());
+        }
+        return List.copyOf(sequence);
     }
 
     // an executor without a free slot after all is forgotten until its next discovery report

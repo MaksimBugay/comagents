@@ -1,7 +1,6 @@
 package com.comagents.agentorchestrator.controller;
 
 import com.comagents.agentorchestrator.agent_registry.AgentDiscoveryRegistry;
-import com.comagents.agentorchestrator.controller.response.StartAgentSessionExternalResponse;
 import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
 import com.comagents.commons.domain.AiAgent;
@@ -11,6 +10,7 @@ import com.comagents.commons.exception.ClaudeSessionExistsException;
 import com.comagents.commons.exception.ClaudeSessionLimitException;
 import com.comagents.commons.exception.NoAgentSetupServiceException;
 import com.comagents.commons.response.AgentInfoResponse;
+import com.comagents.commons.response.StartAgentSessionExternalResponse;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;

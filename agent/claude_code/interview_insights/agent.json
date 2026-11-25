@@ -60,5 +60,94 @@
         }
       }
     }
+  },
+  "exposeAsMcp": {
+    "tool": {
+      "name": "interview_insights",
+      "description": "Researches how a company interviews for a position: stages, typical questions and tasks, what interviewers look for and how to prepare, from candidate and insider reports first, then the company's own information, then less trusted sources and the agent's assumptions, as separate sections. Worth calling when someone prepares for an interview at a named company for a named role; not for general career advice or salary data. Searches the web only; takes minutes."
+    },
+    "requestSchema": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "prefixItems": [
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "name",
+                "value"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "STRING"
+                },
+                "name": {
+                  "const": "company"
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "the company that interviews, e.g. Wise"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "name",
+                "value"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "STRING"
+                },
+                "name": {
+                  "const": "position"
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "the position interviewed for, e.g. Senior Java Engineer"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "name",
+                "value"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "STRING"
+                },
+                "name": {
+                  "const": "interviewType"
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "optional: the one interview stage to cover, e.g. system design; without this item every stage is covered"
+                }
+              }
+            }
+          ],
+          "items": false
+        }
+      }
+    }
   }
 }

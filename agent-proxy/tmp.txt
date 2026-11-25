@@ -1,1 +1,0 @@
-WORKSPACE_ID = "comagents-main", APPLICATION_ID = "AGENT_ORCHESTRATOR", ACCOUNT_DOMAIN = "agent-orchestrator@comagents.com"

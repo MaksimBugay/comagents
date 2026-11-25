@@ -75,6 +75,9 @@ spec:
                 secretKeyRef:
                   name: agent-proxy-secrets
                   key: pushca-api-key
+            # the orchestrator's Service (port 80), whose POST /start the agent tools call
+            - name: AGENT_PROXY_ORCHESTRATOR_URL
+              value: http://agent-orchestrator
             # memory below is sized for this many parallel Claude Code runs
             - name: CLAUDE_SESSION_MAX_CONCURRENT
               value: "2"

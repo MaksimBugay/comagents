@@ -112,6 +112,36 @@ the agent is told to go on with its best judgement. One question per session at 
 Only the run itself can call the tool: its `--mcp-config` carries the session id and a random per-run token
 (`X-Agent-Session-Id`, `X-Agent-Session-Token`), and other calls get an error result.
 
+### Calling other agents (`mcp__agentproxy__<agent name>`)
+
+An agent calls another agent through agent-proxy's MCP server when its `agent.json` `allowedTools` name
+`mcp__agentproxy__<agent name>` (any tool of the server but `ask_expert`). At session setup the called agent's
+`agent.json` is read from the comagents sources: its `exposeAsMcp` gives the tool's description and input schema
+(the called agent's agent context, `{"items": [...]}`), its `responseSchema` the shape of the tool's result (appended to
+the description; without one, the one `STRING` item `response`), its `readOnly` the tool's `readOnlyHint`. A called agent
+without `exposeAsMcp` fails the setup. The tool is added to the MCP server once and stays while agent-proxy runs; it
+is also kept in the session's agent folder (`agent-tools.json`), so the tools of archived sessions are added again
+after a restart.
+
+A call works like `ask_expert`, with the session `WAITING`:
+1. the called agent's session is started with the orchestrator's `POST /start` (`AGENT_PROXY_ORCHESTRATOR_URL`), with
+   this executor's `deviceId` as `agentResponseWaiterDeviceId` and the caller's `agentCallSequence`, which the
+   orchestrator ended with the caller when it started it and now grows by the called agent. A call of the caller itself
+   or of an agent already in the chain is refused: calls must not loop;
+2. the called session's `AgentSessionResponse`, which its executor sends to this executor's device too, is the tool's
+   result: its agent context as JSON, checked against the called agent's response schema (a response that doesn't
+   match is an error result with the reason and the response). No MCP `outputSchema`: with it the MCP server would
+   reject the `NO ANSWER YET …` result below;
+3. without it within `AGENT_QUESTION_ANSWER_TIMEOUT` (counted from the call), the tool returns `NO ANSWER YET …`, and
+   the session is archived as for an unanswered question. The response resumes it whenever it comes
+   (`claude -p "The <agent name> agent you called responded: …" --resume <session id>`), also after a restart. The
+   response is first stored in the session's agent folder (`agent-call-response.json`): when all slots are busy, the
+   session is resumed with it as soon as a run frees one, or at startup.
+
+A refused start is an error result the agent reads: for a 429 (no executor of the called agent has a free slot) it says
+the agent is busy and was not called, to call it again later or continue without it; otherwise the orchestrator's
+status and message.
+
 ## How sessions run
 
 ### Claude Code process
@@ -249,5 +279,6 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `AGENT_PROXY_MESSAGE_TIMEOUT` | `30s`      | How long a message (payload or error) for another device may take to be sent over Pushca; sends finding the connection broken are retried every second until then, and a message not sent by then is dropped with an error logged: the orchestrator has timed out meanwhile and asks again (`agent-proxy.message-timeout`) |
 | `AGENT_PROXY_DISCOVERY_INTERVAL` | `5s` | How often the executor sends a fresh `AgentInfoResponse` to all orchestrators (account `agent-orchestrator@comagents.com`, application `AGENT_ORCHESTRATOR`, any device), so they discover it and its free slots; the next send waits for the current one, and failures are only logged (`agent-proxy.discovery-interval`) |
 | `AGENT_PROXY_MCP_URL`         | `http://127.0.0.1:8080/mcp` | Where Claude Code reaches agent-proxy's MCP server (`agent-proxy.mcp-url`); change it with the port |
-| `AGENT_QUESTION_ANSWER_TIMEOUT` | `4m`       | How long `ask_expert` waits for an answer; below 5 min, after which Claude Code aborts the call (`agent-question.answer-timeout`) |
+| `AGENT_QUESTION_ANSWER_TIMEOUT` | `4m`       | How long `ask_expert` waits for an answer, and an agent tool for the called agent's response; below 5 min, after which Claude Code aborts the call (`agent-question.answer-timeout`) |
+| `AGENT_PROXY_ORCHESTRATOR_URL` | `http://agent-orchestrator:8080` | The agent orchestrator, whose `POST /start` the agent tools call (`micronaut.http.services.agent-orchestrator.url`): by default the orchestrator container on the same Docker network; under Kubernetes its Service, `http://agent-orchestrator` |
 | `AGENT_PROXY_SESSIONS_DIR`    | `/var/lib/agent-proxy/sessions` | One folder per session (`agent-proxy.sessions-dir`); put it on a persistent volume |
