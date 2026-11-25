@@ -16,10 +16,13 @@ import java.util.Objects;
  * @param freeSlots        how many more sessions the executor can take: its concurrent session limit minus its
  *                         sessions running, waiting or being set up
  * @param archivedSessions the executor's archived sessions: they take no slot now, but each takes one again on resume
+ * @param finishedSessions the executor's finished sessions whose data (repository clone, transcript, response) is still
+ *                         on disk: they take no slot, and their data is deleted once the response was sent or fetched,
+ *                         or after {@code agent-response.retention}
  * @param sequenceId       the start request's sequence id; a new random UUID when this answers no request ({@code GET /info})
  * @param createdAt        when the executor made it, in epoch millis; now when not given (0)
  */
-public record AgentInfoResponse(AiHarnessProvider harnessProvider, String version, String deviceId, int maxSlots, int freeSlots, int archivedSessions, String sequenceId, long createdAt) implements WithSequenceId {
+public record AgentInfoResponse(AiHarnessProvider harnessProvider, String version, String deviceId, int maxSlots, int freeSlots, int archivedSessions, int finishedSessions, String sequenceId, long createdAt) implements WithSequenceId {
 
     // the sequence id of every AgentInfoResponse an executor sends unasked, to let the orchestrators discover it
     public static final String AGENT_DISCOVERY_SEQUENCE_ID = "SCHEDULED_AGENT_DISCOVERY_UPDATE";
@@ -34,8 +37,8 @@ public record AgentInfoResponse(AiHarnessProvider harnessProvider, String versio
 
     /** Created now. */
     public AgentInfoResponse(AiHarnessProvider harnessProvider, String version, String deviceId, int maxSlots, int freeSlots,
-                             int archivedSessions, String sequenceId) {
-        this(harnessProvider, version, deviceId, maxSlots, freeSlots, archivedSessions, sequenceId,
+                             int archivedSessions, int finishedSessions, String sequenceId) {
+        this(harnessProvider, version, deviceId, maxSlots, freeSlots, archivedSessions, finishedSessions, sequenceId,
                 System.currentTimeMillis());
     }
 

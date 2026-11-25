@@ -61,14 +61,14 @@ class AgentControllerTest {
     // an executor refusing a session for lack of slots is forgotten: each test has it back
     @BeforeEach
     void discoverAnExecutor() {
-        discoveryRegistry.update(new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 3, 0,
+        discoveryRegistry.update(new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 3, 0, 0,
                 AGENT_DISCOVERY_SEQUENCE_ID, System.currentTimeMillis()));
     }
 
     @Test
     void startsEverySessionWithANewId() {
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
-                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 3, 0, "sequence-1", 0));
+                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 3, 0, 0, "sequence-1", 0));
 
         HttpResponse<StartAgentSessionExternalResponse> first = start();
         HttpResponse<StartAgentSessionExternalResponse> second = start();

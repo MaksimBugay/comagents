@@ -42,7 +42,7 @@ class AgentDiscoveryRegistryTest {
 
     @Test
     void theBestAvailableRunsTheGivenHarness() {
-        registry.update(new AgentInfoResponse(AiHarnessProvider.CODEX, "0.1", "codex-1", 3, 3, 0, "sequence-1", 1_000));
+        registry.update(new AgentInfoResponse(AiHarnessProvider.CODEX, "0.1", "codex-1", 3, 3, 0, 0, "sequence-1", 1_000));
         registry.update(info("claude-1", 3, 1, 0, 1_000));
 
         assertEquals("claude-1",
@@ -68,6 +68,8 @@ class AgentDiscoveryRegistryTest {
         registry.update(info("idle-with-more-slots", 3, 3, 0, 1_000));
         registry.update(info("busy", 3, 2, 0, 1_000));
         registry.update(info("archived", 1, 1, 1, 1_000));
+        registry.update(new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "finished", 1, 1, 0, 1,
+                "sequence-1", 1_000));
 
         assertEquals(List.of("idle-with-more-slots", "idle"),
                 registry.getAllAvailable(true).stream().map(AgentInfoResponse::deviceId).toList());
@@ -104,7 +106,7 @@ class AgentDiscoveryRegistryTest {
     }
 
     private static AgentInfoResponse info(String deviceId, int maxSlots, int freeSlots, int archivedSessions, long createdAt) {
-        return new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", deviceId, maxSlots, freeSlots, archivedSessions,
+        return new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", deviceId, maxSlots, freeSlots, archivedSessions, 0,
                 "sequence-1", createdAt);
     }
 }

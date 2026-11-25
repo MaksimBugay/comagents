@@ -42,8 +42,8 @@ public class AgentInfoListener extends ComagentsGatewayResponseListener<AgentInf
     }
 
     private static String describe(AgentInfoResponse info) {
-        return "%s (%s %s): %d/%d slots free, %d archived, reported %s".formatted(info.deviceId(),
+        return "%s (%s %s): %d/%d slots free, %d archived, %d finished, reported %s".formatted(info.deviceId(),
                 info.harnessProvider(), info.version(), info.freeSlots(), info.maxSlots(), info.archivedSessions(),
-                Instant.ofEpochMilli(info.createdAt()));
+                info.finishedSessions(), Instant.ofEpochMilli(info.createdAt()));
     }
 }

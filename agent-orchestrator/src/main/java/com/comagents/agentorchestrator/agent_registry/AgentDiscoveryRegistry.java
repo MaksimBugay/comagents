@@ -80,9 +80,10 @@ public class AgentDiscoveryRegistry {
     /**
      * The executors that can take a session now, best first: most free slots, then fewest archived sessions.
      *
-     * @param oneSessionPerExecutor only executors with nothing on them, neither running, waiting nor archived sessions
-     *                              ({@code maxSlots - freeSlots + archivedSessions == 0}), so a session never shares an
-     *                              executor with another
+     * @param oneSessionPerExecutor only executors with nothing on them: no running, waiting or archived sessions, and
+     *                              no finished ones whose data is still on disk
+     *                              ({@code maxSlots - freeSlots + archivedSessions + finishedSessions == 0}), so a
+     *                              session never shares an executor with another, nor with what another left
      */
     public List<AgentInfoResponse> getAllAvailable(boolean oneSessionPerExecutor) {
         Predicate<AgentInfoResponse> available = info -> info.freeSlots() > 0;
@@ -116,6 +117,6 @@ public class AgentDiscoveryRegistry {
     }
 
     private static boolean isIdle(AgentInfoResponse info) {
-        return info.maxSlots() - info.freeSlots() + info.archivedSessions() == 0;
+        return info.maxSlots() - info.freeSlots() + info.archivedSessions() + info.finishedSessions() == 0;
     }
 }

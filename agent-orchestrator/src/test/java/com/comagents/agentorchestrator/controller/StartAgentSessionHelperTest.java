@@ -41,16 +41,14 @@ class StartAgentSessionHelperTest {
     private final ComagentsGateway gateway = mock(ComagentsGateway.class);
     private final AgentDiscoveryRegistry registry = new AgentDiscoveryRegistry(Duration.ofMinutes(1));
     private final RunningAgentSessionRegistry sessions = new RunningAgentSessionRegistry(Duration.ofMinutes(1));
-    private final StartAgentSessionHelper helper = new StartAgentSessionHelper(gateway, registry, sessions,
-            new AgentOrchestratorConf("0.1", "https://pushca.example", "pushca-key",
-                    new DeviceIdExtractor("orchestrator-own", "host")));
+    private final StartAgentSessionHelper helper = helper(false);
 
     @Test
     void startsOnTheExecutorWithMostFreeSlotsOfTheAgentsHarness() {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
         registry.update(discovered("claude-2", AiHarnessProvider.CLAUDE_CODE, 2));
         registry.update(discovered("codex-1", AiHarnessProvider.CODEX, 3));
-        AgentInfoResponse started = new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 3, 1, 0,
+        AgentInfoResponse started = new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 3, 1, 0, 0,
                 "sequence-1");
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(started);
 
@@ -81,7 +79,7 @@ class StartAgentSessionHelperTest {
         registry.update(discovered);
         // made after the discovery report, as the executor's reply always is
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
-                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1",
+                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, 0, "sequence-1",
                         discovered.createdAt() + 1));
 
         helper.startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
@@ -114,7 +112,7 @@ class StartAgentSessionHelperTest {
         when(gateway.exchange(eq(executor("claude-1")), any(), eq(AgentInfoResponse.class)))
                 .thenThrow(new ClaudeSessionLimitException(3));
         when(gateway.exchange(eq(executor("claude-2")), any(), eq(AgentInfoResponse.class))).thenReturn(
-                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 3, 0, 0, "sequence-2"));
+                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 3, 0, 0, 0, "sequence-2"));
         assertThrows(ClaudeSessionLimitException.class, () -> helper.startAgentSession(UUID.randomUUID(),
                 AiAgent.CODE_REVIEW, null, null, "Maks", null, null));
 
@@ -126,7 +124,7 @@ class StartAgentSessionHelperTest {
     void theLoggingLevelIsInfoWhenNotGiven() {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
-                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1"));
+                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, 0, "sequence-1"));
 
         helper.startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
 
@@ -140,7 +138,7 @@ class StartAgentSessionHelperTest {
     void anAgentAlreadyInTheCallSequenceIsNotAddedAgain() {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
         when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
-                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, "sequence-1"));
+                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, 0, "sequence-1"));
 
         helper.startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null,
                 List.of("code_review", "weather_forecast"), "Maks", null, null);
@@ -157,6 +155,34 @@ class StartAgentSessionHelperTest {
 
         assertThrows(TooManyStartSessionRequestsException.class, () -> helper.startAgentSession(UUID.randomUUID(),
                 AiAgent.CODE_REVIEW, null, null, "Maks", null, null));
+        verifyNoInteractions(gateway);
+    }
+
+    @Test
+    void oneSessionPerExecutorStartsOnlyOnAnExecutorWithNothingOnIt() {
+        // free slots, but a finished session's data still on it
+        registry.update(new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 3, 0, 1,
+                AGENT_DISCOVERY_SEQUENCE_ID));
+        registry.update(new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 1, 1, 0, 0,
+                AGENT_DISCOVERY_SEQUENCE_ID));
+        when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
+                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-2", 1, 0, 0, 0, "sequence-1"));
+
+        helper(true).startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, null, "Maks", null, null);
+
+        verify(gateway).exchange(eq(DeliveryAddress.agentExecutor("claude-2", AiHarnessProvider.CLAUDE_CODE)), any(),
+                eq(AgentInfoResponse.class));
+    }
+
+    @Test
+    void oneSessionPerExecutorFailsWithoutAnExecutorWithNothingOnIt() {
+        registry.update(new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 3, 0, 1,
+                AGENT_DISCOVERY_SEQUENCE_ID));
+
+        TooManyStartSessionRequestsException e = assertThrows(TooManyStartSessionRequestsException.class,
+                () -> helper(true).startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null, null, "Maks", null,
+                        null));
+        assertEquals("No CLAUDE_CODE executor with nothing on it for CODE_REVIEW", e.getMessage());
         verifyNoInteractions(gateway);
     }
 
@@ -187,7 +213,13 @@ class StartAgentSessionHelperTest {
         return DeliveryAddress.agentExecutor(deviceId, AiHarnessProvider.CLAUDE_CODE);
     }
 
+    private StartAgentSessionHelper helper(boolean oneSessionPerExecutor) {
+        return new StartAgentSessionHelper(gateway, registry, sessions, new AgentOrchestratorConf("0.1",
+                "https://pushca.example", "pushca-key", new DeviceIdExtractor("orchestrator-own", "host"),
+                oneSessionPerExecutor));
+    }
+
     private static AgentInfoResponse discovered(String deviceId, AiHarnessProvider harness, int freeSlots) {
-        return new AgentInfoResponse(harness, "0.1", deviceId, 3, freeSlots, 0, AGENT_DISCOVERY_SEQUENCE_ID);
+        return new AgentInfoResponse(harness, "0.1", deviceId, 3, freeSlots, 0, 0, AGENT_DISCOVERY_SEQUENCE_ID);
     }
 }

@@ -627,11 +627,12 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
-    void countsFreeSlotsAndArchivedSessions() throws Exception {
+    void countsFreeSlotsArchivedAndFinishedSessions() throws Exception {
         registry = registry(fakeClaude("exec sleep 60"), 3, WAIT.multipliedBy(10));
         assertEquals(3, registry.maxSlots());
         assertEquals(3, registry.freeSlots());
         assertEquals(0, registry.archivedSessions());
+        assertEquals(0, registry.finishedSessions());
         UUID running = newSessionId();
         ClaudeAgentSession runningSession = registry.createSession(running, AiAgent.CODE_REVIEW, workingDirectory);
         UUID archived = newSessionId();
@@ -642,11 +643,16 @@ class ClaudeAgentSessionRegistryTest {
         archivedSession.awaitFinished(WAIT);
         assertEquals(2, registry.freeSlots(), "an archived session takes no slot");
         assertEquals(1, registry.archivedSessions());
+        assertEquals(0, registry.finishedSessions(), "archived, not finished");
 
         registry.killSession(running);
         runningSession.awaitFinished(WAIT);
         assertEquals(3, registry.freeSlots());
         assertEquals(1, registry.archivedSessions());
+        assertEquals(1, registry.finishedSessions(), "its data is still on disk");
+
+        registry.cleanAllSessionData(running);
+        assertEquals(0, registry.finishedSessions());
 
         registry = registry(fakeClaude("exec sleep 60"), 3, WAIT.multipliedBy(10));
         assertEquals(1, registry.archivedSessions(), "archives from before a restart count too");

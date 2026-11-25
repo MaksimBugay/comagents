@@ -136,8 +136,10 @@ public class StartAgentSessionHelper {
     }
 
     private AgentInfoResponse findExecutor(AiAgent agent) {
-        return agentDiscoveryRegistry.getBestAvailable(agent.getAiHarnessProvider(), false)
-                .orElseThrow(() -> new TooManyStartSessionRequestsException("No %s executor with a free slot for %s"
-                        .formatted(agent.getAiHarnessProvider(), agent)));
+        boolean oneSessionPerExecutor = conf.isOneSessionPerExecutor();
+        return agentDiscoveryRegistry.getBestAvailable(agent.getAiHarnessProvider(), oneSessionPerExecutor)
+                .orElseThrow(() -> new TooManyStartSessionRequestsException("No %s executor %s for %s".formatted(
+                        agent.getAiHarnessProvider(), oneSessionPerExecutor ? "with nothing on it" : "with a free slot",
+                        agent)));
     }
 }

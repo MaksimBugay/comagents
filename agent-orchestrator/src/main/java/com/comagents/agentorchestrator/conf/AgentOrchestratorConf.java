@@ -11,15 +11,18 @@ public class AgentOrchestratorConf {
     private final String pushcaApiUrl;
     private final String pushcaApiKey;
     private final String deviceId;
+    private final boolean oneSessionPerExecutor;
 
     public AgentOrchestratorConf(@Value("${agent-orchestrator.version:unknown}") String version,
                                  @Value("${pushca.api-url}") String pushcaApiUrl,
                                  @Value("${pushca.api-key}") String pushcaApiKey,
-                                 DeviceIdExtractor deviceIdExtractor) {
+                                 DeviceIdExtractor deviceIdExtractor,
+                                 @Value("${agent-orchestrator.one-session-per-executor:false}") boolean oneSessionPerExecutor) {
         this.version = version;
         this.pushcaApiUrl = pushcaApiUrl;
         this.pushcaApiKey = pushcaApiKey;
         this.deviceId = deviceIdExtractor.extract();
+        this.oneSessionPerExecutor = oneSessionPerExecutor;
     }
 
     public String getVersion() {
@@ -36,5 +39,10 @@ public class AgentOrchestratorConf {
 
     public String getDeviceId() {
         return deviceId;
+    }
+
+    /** Whether a session starts only on an executor with nothing on it ({@code agent-orchestrator.one-session-per-executor}). */
+    public boolean isOneSessionPerExecutor() {
+        return oneSessionPerExecutor;
     }
 }

@@ -6,14 +6,14 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 
 | Method | Path                  | Description                     |
 |--------|-----------------------|---------------------------------|
-| GET    | `/info`               | This agent executor, whatever agent it runs: its `harnessProvider` (`agent-proxy.ai-harness-provider`), version, device id, `maxSlots` (`claude.session.max-concurrent`), `freeSlots` (`maxSlots` minus its sessions running, waiting or being set up) and `archivedSessions` (archived sessions on disk: no slot now, one each on resume); the start reply has them too |
+| GET    | `/info`               | This agent executor, whatever agent it runs: its `harnessProvider` (`agent-proxy.ai-harness-provider`), version, device id, `maxSlots` (`claude.session.max-concurrent`), `freeSlots` (`maxSlots` minus its sessions running, waiting or being set up), `archivedSessions` (archived sessions on disk: no slot now, one each on resume) and `finishedSessions` (finished sessions whose data is still on disk until it is deleted: no slot); the start reply has them too |
 | GET    | `/agent-status/{agentName}/{sessionId}` | Session state (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`, `KILLED`, `ARCHIVED`), times, and whether a response is available |
 | GET    | `/health/liveness`    | Kubernetes liveness probe       |
 | GET    | `/health/readiness`   | Kubernetes readiness probe      |
 
 ```console
 $ curl localhost:8080/info
-{"harnessProvider":"CLAUDE_CODE","version":"0.1","deviceId":"cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3","maxSlots":3,"freeSlots":3,"archivedSessions":0,"sequenceId":"3f1c9a52-7d4e-4b8a-9c21-5e6f7a8b9c0d"}
+{"harnessProvider":"CLAUDE_CODE","version":"0.1","deviceId":"cb960a48877d8a7995f18bd400c563fd1eeb9810cf61ad584e4f2478e7e1abb3","maxSlots":3,"freeSlots":3,"archivedSessions":0,"finishedSessions":0,"sequenceId":"3f1c9a52-7d4e-4b8a-9c21-5e6f7a8b9c0d"}
 ```
 
 ### Over Pushca

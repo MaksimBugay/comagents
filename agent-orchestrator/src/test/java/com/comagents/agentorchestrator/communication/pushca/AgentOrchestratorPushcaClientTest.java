@@ -54,7 +54,7 @@ class AgentOrchestratorPushcaClientTest {
     private final RecordingListener listener = new RecordingListener();
     private final AgentOrchestratorPushcaClient client = new AgentOrchestratorPushcaClient(connectionFactory, queue,
             List.of(listener), new AgentOrchestratorConf("0.1", "https://pushca.example", "pushca-key",
-            new DeviceIdExtractor("orchestrator-device-1", "host")));
+            new DeviceIdExtractor("orchestrator-device-1", "host"), false));
 
     // as on startup
     @BeforeEach

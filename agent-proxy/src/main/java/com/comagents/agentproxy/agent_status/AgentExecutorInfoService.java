@@ -32,6 +32,6 @@ public class AgentExecutorInfoService {
     /** This executor, in answer to the request {@code sequenceId}. */
     public AgentInfoResponse getInfo(String sequenceId) {
         return new AgentInfoResponse(harnessProvider, version, deviceId, sessionRegistry.maxSlots(), sessionRegistry.freeSlots(),
-                sessionRegistry.archivedSessions(), sequenceId);
+                sessionRegistry.archivedSessions(), sessionRegistry.finishedSessions(), sequenceId);
     }
 }

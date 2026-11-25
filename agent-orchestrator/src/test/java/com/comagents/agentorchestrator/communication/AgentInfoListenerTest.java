@@ -27,7 +27,7 @@ class AgentInfoListenerTest {
 
     @Test
     void anExecutorsReportReachesTheRegistry() {
-        AgentInfoResponse info = new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "executor-device-1", 3, 2, 0,
+        AgentInfoResponse info = new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "executor-device-1", 3, 2, 0, 0,
                 AGENT_DISCOVERY_SEQUENCE_ID);
 
         // as an executor's AgentDiscoveryClient sends it

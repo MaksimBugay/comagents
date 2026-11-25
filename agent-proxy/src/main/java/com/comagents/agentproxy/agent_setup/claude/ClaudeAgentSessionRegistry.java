@@ -284,6 +284,17 @@ public class ClaudeAgentSessionRegistry implements ApplicationEventListener<Star
         }
     }
 
+    /**
+     * How many sessions have finished, not archived, with their data still on disk: they take no slot, and are deleted
+     * after their response was sent or fetched, or after {@code agent-response.retention}. After a restart there are
+     * none: the leftovers are deleted at startup.
+     */
+    public int finishedSessions() {
+        return (int) sessions.values().stream()
+                .filter(session -> session.getState().isFinished() && session.getState() != AgentSessionState.ARCHIVED)
+                .count();
+    }
+
     public Optional<ClaudeAgentSession> findSession(UUID sessionId) {
         return Optional.ofNullable(sessions.get(sessionId));
     }
