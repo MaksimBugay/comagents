@@ -9,6 +9,7 @@ import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSession;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.agent_setup.claude.LlmWatchdog;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.conf.AgentProxyConf;
@@ -124,7 +125,7 @@ class AgentCallToolTest {
         sessions = new ClaudeAgentSessionRegistry(claude.toString(), 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, chats,
                 new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
-                ApplicationEventPublisher.noOp());
+                new LlmWatchdog("http://127.0.0.1:8090"), ApplicationEventPublisher.noOp());
         responses = new AgentCallResponses(() -> this.sessions);
         // started by the weather_forecast agent: the call chain is weather_forecast -> code_review
         AgentSessionAttributes attributes = new AgentSessionAttributes(sessionId, AiAgent.CODE_REVIEW, null,
@@ -329,7 +330,7 @@ class AgentCallToolTest {
     }
 
     private AgentCallTool tool(Duration answerTimeout) {
-        AgentProxyConf conf = new AgentProxyConf("0.1", "https://github.com/example/comagents.git", "token", "key",
+        AgentProxyConf conf = new AgentProxyConf("0.1", "https://github.com/example/comagents.git", "token",
                 "https://pushca.example", "pushca-key", AiHarnessProvider.CLAUDE_CODE,
                 new DeviceIdExtractor("executor-device-1", "host"));
         return new AgentCallTool(sessions, responses, orchestrator, conf, schemaValidator, answerTimeout);

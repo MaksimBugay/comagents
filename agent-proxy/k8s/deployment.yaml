@@ -58,23 +58,20 @@ spec:
               value: https://github.com/MaksimBugay/comagents.git
             # kubectl create secret generic agent-proxy-secrets \
             #   --from-literal=sources-repo-access-token="$SOURCES_REPO_ACCESS_TOKEN" \
-            #   --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY" \
             #   --from-literal=pushca-api-key="$PUSHCA_API_KEY"
             - name: SOURCES_REPO_ACCESS_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: agent-proxy-secrets
                   key: sources-repo-access-token
-            - name: ANTHROPIC_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: agent-proxy-secrets
-                  key: anthropic-api-key
             - name: PUSHCA_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: agent-proxy-secrets
                   key: pushca-api-key
+            # the llm-watchdog's Service (port 80), through which Claude Code reaches its model
+            - name: AGENT_PROXY_LLM_WATCHDOG_URL
+              value: http://llm-watchdog
             # the orchestrator's Service (port 80), whose POST /start the agent tools call
             - name: AGENT_PROXY_ORCHESTRATOR_URL
               value: http://agent-orchestrator

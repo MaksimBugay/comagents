@@ -1,0 +1,33 @@
+#!/bin/sh
+# Rebuilds the llm-watchdog Docker image: stops and removes every llm-watchdog container (including ones
+# started from earlier builds), removes the old images, then builds a new llm-watchdog:0.1.
+# Plain POSIX sh, so it runs with both `sh build-image.sh` and `./build-image.sh`.
+set -eu
+
+cd "$(dirname "$0")"
+
+NAME=llm-watchdog
+IMAGE="${NAME}:0.1"
+# set by the Dockerfile on every build, so untagged builds left behind by a moved tag are found too
+LABEL="com.comagents.app=${NAME}"
+
+./remove-running-instances.sh
+
+# ids are normalised to the 12-character short form so the same image is not removed twice
+images=$(docker images -q --filter "label=${LABEL}" | cut -c1-12 | sort -u)
+if [ -n "$images" ]; then
+  echo "Removing old ${NAME} images:" $images
+  # word splitting is intended: one argument per image id
+  docker image rm -f $images >/dev/null
+else
+  echo "No ${NAME} images to remove"
+fi
+
+echo "Building ${IMAGE}"
+# the context is the comagents root, so the build can install agent-commons from its sources
+# (see Dockerfile.dockerignore)
+docker build -f Dockerfile -t "$IMAGE" ..
+
+echo
+echo "Built ${IMAGE}. Run it with:"
+echo "  docker run -d --name ${NAME} -p 8080:8080 -e ANTHROPIC_API_KEY ${IMAGE}"

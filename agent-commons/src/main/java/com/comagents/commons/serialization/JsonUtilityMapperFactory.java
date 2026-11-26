@@ -1,6 +1,5 @@
-package com.comagents.agentorchestrator.conf;
+package com.comagents.commons.serialization;
 
-import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;
@@ -11,9 +10,9 @@ import jakarta.inject.Singleton;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Micronaut's JSON engine (HTTP bodies) is {@link JsonUtility}'s simple mapper: its settings (nulls
- * skipped, unknown properties ignored, ...) with the Jackson modules Micronaut registers itself, which serialize its
- * own types (its JSON tree, error bodies).
+ * Micronaut's JSON engine (HTTP bodies, agent-proxy's MCP server) is {@link JsonUtility}'s simple mapper: its
+ * settings (nulls skipped, unknown properties ignored, ...) with the Jackson modules Micronaut registers itself, which
+ * serialize its own types (its JSON tree, error bodies). A bean of every Micronaut service that has agent-commons.
  */
 @Factory
 public class JsonUtilityMapperFactory {

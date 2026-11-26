@@ -3,6 +3,7 @@
 # target/, IDE files or the rest of the repository.
 *
 !agent-commons/pom.xml
+!agent-commons/parent
 !agent-commons/src
 !agent-orchestrator/.mvn
 !agent-orchestrator/mvnw

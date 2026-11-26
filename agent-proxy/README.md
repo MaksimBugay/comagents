@@ -165,8 +165,11 @@ claude -p "<kickOffPrompt>" \
 - **Session id:** our `sessionId` is Claude's session id, so agent-proxy never reads it back. Resumed runs use
   `--resume <sessionId>` with the agent's `resumePrompt`, with the expert's answer, or with the called agent's response.
 - **Environment:** only an allowlist of the container's: `PATH`, `HOME`, `LANG`, `LC_ALL`, `TZ`,
-  `DISABLE_AUTOUPDATER`, `ANTHROPIC_*` (API key, base URL) and `CLAUDE_CODE_*`. agent-proxy's own secrets
-  (`SOURCES_REPO_ACCESS_TOKEN`, `PUSHCA_API_KEY`, ...) never reach the run. Plus
+  `DISABLE_AUTOUPDATER`, `ANTHROPIC_*` (model settings such as `ANTHROPIC_MODEL`) and `CLAUDE_CODE_*`. agent-proxy's
+  own secrets (`SOURCES_REPO_ACCESS_TOKEN`, `PUSHCA_API_KEY`, ...) never reach the run, and neither does an LLM
+  provider key: agent-proxy has none. The run reaches its model through the llm-watchdog, which holds the provider's
+  key, analyzes each call and forwards it: `ANTHROPIC_BASE_URL=<AGENT_PROXY_LLM_WATCHDOG_URL>` and
+  `ANTHROPIC_API_KEY=<sessionId>` (worthless anywhere else; it tells the watchdog the session). Plus
   `CLAUDE_CONFIG_DIR=<sessions-dir>/<sessionId>/<agentName>/claude-state`
   (Claude Code's own state for the session: settings, the conversation `--resume` reads; deleted with the session,
   kept by an archive, never shared),
@@ -238,7 +241,8 @@ tool and its main argument (path, command, URL), truncates long text and never p
 ## Build & run
 
 ```bash
-./mvnw -f ../agent-commons/pom.xml install   # once, and after agent-commons changes: it is not published
+./mvnw -f ../agent-commons/parent install   # once, and after agent-commons changes: comagents-parent (the parent
+                                     # pom of this service) and agent-commons, not published
 ./mvnw test                          # tests
 ./mvnw package && java -jar target/agent-proxy-0.1.jar   # JVM
 
@@ -248,13 +252,12 @@ docker run -d --name agent-proxy -p 8080:8080 \
   -v agent-proxy-sessions:/var/lib/agent-proxy/sessions \
   -e CLONE_COMAGENTS_SOURCES_URL=https://github.com/<org>/<repo>.git \
   -e SOURCES_REPO_ACCESS_TOKEN \
-  -e ANTHROPIC_API_KEY \
   -e PUSHCA_API_KEY \
+  -e AGENT_PROXY_LLM_WATCHDOG_URL=http://<llm-watchdog host>:8080 \
   agent-proxy:0.1                    # token and key taken from the host env, not the command line
 
 kubectl create secret generic agent-proxy-secrets \
   --from-literal=sources-repo-access-token="$SOURCES_REPO_ACCESS_TOKEN" \
-  --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY" \
   --from-literal=pushca-api-key="$PUSHCA_API_KEY"
 kubectl apply -f k8s/deployment.yaml   # one replica; sessions on a PersistentVolumeClaim, /tmp on emptyDir
 ```
@@ -273,7 +276,7 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `AI_HARNESS_PROVIDER`    | set by the image: `CLAUDE_CODE` | The installed harness that runs the sessions (`agent-proxy.ai-harness-provider`); required outside the image |
 | `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`) |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |
-| `ANTHROPIC_API_KEY`           | — (required) | Claude API key for headless Claude Code (`anthropic.api-key`) |
+| `AGENT_PROXY_LLM_WATCHDOG_URL` | `http://llm-watchdog:8080` | The llm-watchdog, through which Claude Code reaches its model (`agent-proxy.llm-watchdog-url`): by default its container on the same Docker network; under Kubernetes its Service, `http://llm-watchdog` |
 | `PUSHCA_API_KEY`              | — (required) | API key of the organization registered in Pushca (`pushca.api-key`); a key Pushca refuses stops the startup |
 | `PUSHCA_API_URL`              | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |
 | `PUSHCA_CHAT_URL`             | `https://secure.fileshare.ovh/chat-room.html` | Chat page; each new session chat is logged with its join link (`pushca.chat-url`) |

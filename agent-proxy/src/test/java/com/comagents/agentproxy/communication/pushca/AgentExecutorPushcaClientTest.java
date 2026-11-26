@@ -55,7 +55,7 @@ class AgentExecutorPushcaClientTest {
             new QueuedComagentsMessageDeliveryService(queue, Duration.ofSeconds(10));
     private final RecordingListener listener = new RecordingListener();
     private final AgentExecutorPushcaClient client = new AgentExecutorPushcaClient(connectionFactory, queue,
-            List.of(listener), new AgentProxyConf("0.1", "https://github.com/acme/comagents.git", "token", "key",
+            List.of(listener), new AgentProxyConf("0.1", "https://github.com/acme/comagents.git", "token",
             "https://pushca.example", "pushca-key", AiHarnessProvider.CLAUDE_CODE,
             new DeviceIdExtractor("executor-device-1", "host")));
 

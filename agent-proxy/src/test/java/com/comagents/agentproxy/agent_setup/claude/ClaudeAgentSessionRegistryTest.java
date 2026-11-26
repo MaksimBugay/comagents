@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ClaudeAgentSessionRegistryTest {
 
     private static final Duration WAIT = Duration.ofSeconds(20);
+    private static final String LLM_WATCHDOG_URL = "http://127.0.0.1:8090";
 
     private static final String KICK_OFF_PROMPT = "Review the project in the current directory.";
 
@@ -868,12 +869,14 @@ class ClaudeAgentSessionRegistryTest {
 
     @Test
     void claudeCodeGetsOnlyAllowlistedEnvironment() {
-        for (String name : List.of("PATH", "HOME", "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+        for (String name : List.of("PATH", "HOME", "ANTHROPIC_MODEL", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
                 "DISABLE_AUTOUPDATER")) {
             assertTrue(ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name), name);
         }
+        // the provider's endpoint and credentials: the run gets the llm-watchdog's in their place
         for (String name : List.of("SOURCES_REPO_ACCESS_TOKEN", "PUSHCA_API_KEY", "CLONE_COMAGENTS_SOURCES_URL",
-                "CLAUDE_EXECUTABLE", "AGENT_PROXY_SESSIONS_DIR", "JAVA_HOME", "TMPDIR")) {
+                "CLAUDE_EXECUTABLE", "AGENT_PROXY_SESSIONS_DIR", "JAVA_HOME", "TMPDIR", "ANTHROPIC_API_KEY",
+                "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN")) {
             assertFalse(ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name), name);
         }
     }
@@ -894,9 +897,23 @@ class ClaudeAgentSessionRegistryTest {
         // the shell adds PWD, SHLVL and _ itself
         List<String> leaked = names.stream()
                 .filter(name -> !ClaudeAgentSessionRegistry.isInheritedByClaudeCode(name))
-                .filter(name -> !List.of("CLAUDE_CONFIG_DIR", "TMPDIR", "MAVEN_OPTS", "MAVEN_USER_HOME", "PWD", "OLDPWD", "SHLVL", "_").contains(name))
+                .filter(name -> !List.of("CLAUDE_CONFIG_DIR", "TMPDIR", "MAVEN_OPTS", "MAVEN_USER_HOME",
+                        "ANTHROPIC_BASE_URL", "ANTHROPIC_API_KEY", "PWD", "OLDPWD", "SHLVL", "_").contains(name))
                 .toList();
         assertEquals(List.of(), leaked);
+    }
+
+    @Test
+    void reachesTheModelThroughTheLlmWatchdogWithItsSessionIdAsKey() throws Exception {
+        registry = registry(fakeClaude("""
+                printf '%s\\n' "$ANTHROPIC_BASE_URL" "$ANTHROPIC_API_KEY" > "$(dirname "$0")/model-env.txt"
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"done"}'
+                """), 2, WAIT);
+        UUID sessionId = newSessionId();
+
+        registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
+
+        assertEquals(List.of(LLM_WATCHDOG_URL, sessionId.toString()), Files.readAllLines(scripts.resolve("model-env.txt")));
     }
 
     @Test
@@ -1186,7 +1203,7 @@ class ClaudeAgentSessionRegistryTest {
     private ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
         return new ClaudeAgentSessionRegistry(claude.toString(), maxConcurrent, timeout, idleTimeout,
                 sessionFolders, listener, new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
-                responsesReady::add);
+                new LlmWatchdog(LLM_WATCHDOG_URL), responsesReady::add);
     }
 
     private static final class RecordingListener implements ClaudeSessionListener {

@@ -1,9 +1,11 @@
 #!/bin/sh
-# Rebuilds agent-proxy:0.1 (build-image.sh) and agent-orchestrator:0.1 (../agent-orchestrator/build-image.sh), starts
-# agent-proxy with DeepSeek's Anthropic-compatible API as the model provider and agent-orchestrator with the same
-# Pushca key, and follows agent-proxy's logs (Ctrl+C stops following; the containers keep running). Both run on the
-# Docker network comagents, where agent-proxy reaches the orchestrator (for its agent tools) by its container name, at
-# its default AGENT_PROXY_ORCHESTRATOR_URL http://agent-orchestrator:8080.
+# Rebuilds agent-proxy:0.1 (build-image.sh), agent-orchestrator:0.1 (../agent-orchestrator/build-image.sh) and
+# llm-watchdog:0.1 (../llm-watchdog/build-image.sh), starts llm-watchdog with DeepSeek's Anthropic-compatible API as
+# the model provider and the anthropic api key, agent-orchestrator and agent-proxy with the same Pushca key, and
+# follows agent-proxy's logs (Ctrl+C stops following; the containers keep running). All run on the Docker network
+# comagents, where agent-proxy reaches the others by their container names, at its defaults: the orchestrator (for its
+# agent tools) at AGENT_PROXY_ORCHESTRATOR_URL http://agent-orchestrator:8080, and Claude Code its model through the
+# watchdog at AGENT_PROXY_LLM_WATCHDOG_URL http://llm-watchdog:8080. Only the watchdog gets the anthropic api key.
 #
 # Usage: ./build_and_run.sh <sources repo access token> <anthropic api key> <pushca api key>
 #
@@ -27,20 +29,27 @@ NAME=agent-proxy
 IMAGE="${NAME}:0.1"
 ORCHESTRATOR_NAME=agent-orchestrator
 ORCHESTRATOR_IMAGE="${ORCHESTRATOR_NAME}:0.1"
+WATCHDOG_NAME=llm-watchdog
+WATCHDOG_IMAGE="${WATCHDOG_NAME}:0.1"
 NETWORK=comagents
 
 ./build-image.sh
 ../agent-orchestrator/build-image.sh
+../llm-watchdog/build-image.sh
 
 docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
+
+echo "Starting ${WATCHDOG_NAME}"
+docker run -d --name "$WATCHDOG_NAME" --network "$NETWORK" -p 8089:8080 \
+  -e ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic \
+  -e ANTHROPIC_API_KEY \
+  "$WATCHDOG_IMAGE" >/dev/null
 
 echo "Starting ${NAME}"
 docker run -d --name "$NAME" --network "$NETWORK" -p 8087:8080 \
   -v "${NAME}-sessions:/var/lib/agent-proxy/sessions" \
   -e CLONE_COMAGENTS_SOURCES_URL=https://github.com/MaksimBugay/comagents.git \
   -e SOURCES_REPO_ACCESS_TOKEN \
-  -e ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic \
-  -e ANTHROPIC_API_KEY \
   -e CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
   -e PUSHCA_API_KEY \
   "$IMAGE" >/dev/null

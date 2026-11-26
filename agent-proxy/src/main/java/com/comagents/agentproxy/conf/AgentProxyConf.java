@@ -11,7 +11,6 @@ public class AgentProxyConf {
     private final String version;
     private final String sourcesUrl;
     private final String sourcesRepoAccessToken;
-    private final String anthropicApiKey;
     private final String pushcaApiUrl;
     private final String pushcaApiKey;
     private final String deviceId;
@@ -20,7 +19,6 @@ public class AgentProxyConf {
     public AgentProxyConf(@Value("${agent-proxy.version:unknown}") String version,
                           @Value("${clone.comagents.sources.url}") String sourcesUrl,
                           @Value("${sources.repo.access-token}") String sourcesRepoAccessToken,
-                          @Value("${anthropic.api-key}") String anthropicApiKey,
                           @Value("${pushca.api-url}") String pushcaApiUrl,
                           @Value("${pushca.api-key}") String pushcaApiKey,
                           @Value("${agent-proxy.ai-harness-provider}") AiHarnessProvider aiHarnessProvider,
@@ -28,7 +26,6 @@ public class AgentProxyConf {
         this.version = version;
         this.sourcesUrl = sourcesUrl;
         this.sourcesRepoAccessToken = sourcesRepoAccessToken;
-        this.anthropicApiKey = anthropicApiKey;
         this.pushcaApiUrl = pushcaApiUrl;
         this.pushcaApiKey = pushcaApiKey;
         this.aiHarnessProvider = aiHarnessProvider;
@@ -50,10 +47,6 @@ public class AgentProxyConf {
 
     public String getSourcesRepoAccessToken() {
         return sourcesRepoAccessToken;
-    }
-
-    public String getAnthropicApiKey() {
-        return anthropicApiKey;
     }
 
     public String getPushcaApiUrl() {

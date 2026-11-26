@@ -2,22 +2,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.comagents</groupId>
   <artifactId>agent-orchestrator</artifactId>
   <version>0.1</version>
   <packaging>${packaging}</packaging>
 
+  <!-- the Micronaut platform, with the versions set once for all comagents services (Jackson's among them) -->
   <parent>
-    <groupId>io.micronaut.platform</groupId>
-    <artifactId>micronaut-parent</artifactId>
-    <version>5.2.5</version>
+    <groupId>com.comagents</groupId>
+    <artifactId>comagents-parent</artifactId>
+    <version>1.0.0</version>
+    <relativePath>../agent-commons/parent/pom.xml</relativePath>
   </parent>
 
   <properties>
     <!-- jar | native-image | docker | docker-native -->
     <packaging>jar</packaging>
-    <jdk.version>25</jdk.version>
-    <release.version>25</release.version>
     <micronaut.version>5.2.5</micronaut.version>
     <micronaut.aot.enabled>true</micronaut.aot.enabled>
     <micronaut.aot.packageName>com.comagents.agentorchestrator.aot.generated</micronaut.aot.packageName>
@@ -25,54 +24,7 @@
     <exec.mainClass>com.comagents.agentorchestrator.Application</exec.mainClass>
 
     <agent-commons.version>1.0.0</agent-commons.version>
-
-    <!-- security overrides of micronaut-platform 5.2.5 BOM versions; drop once the platform catches up -->
-    <!-- all Jackson 3 modules on one version: core CVE-2026-110729, databind CVE-2026-110879 (via pushca-client) -->
-    <jackson.version>3.2.4</jackson.version>
-    <logback.version>1.6.6</logback.version>           <!-- CVE-2026-19880 (fixed in 1.6.3+ only) -->
-    <slf4j.version>2.0.20</slf4j.version>
-    <reactor-core.version>3.8.8</reactor-core.version>
   </properties>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>tools.jackson.core</groupId>
-        <artifactId>jackson-core</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>tools.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>tools.jackson.dataformat</groupId>
-        <artifactId>jackson-dataformat-xml</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>${logback.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-core</artifactId>
-        <version>${logback.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>${slf4j.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.projectreactor</groupId>
-        <artifactId>reactor-core</artifactId>
-        <version>${reactor-core.version}</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <repositories>
     <repository>
@@ -93,14 +45,8 @@
       <artifactId>micronaut-management</artifactId>
       <scope>compile</scope>
     </dependency>
-    <!-- Micronaut's JSON engine: Jackson, set up like agent-commons' JsonUtility (see JsonUtilityMapperFactory) -->
-    <dependency>
-      <groupId>io.micronaut</groupId>
-      <artifactId>micronaut-jackson-databind</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <!-- Pushca transport, comagents messages and JsonUtility; brings jackson-databind, jackson-core and
-         jackson-annotations -->
+    <!-- Pushca transport, comagents messages, JsonUtility and Micronaut's JSON engine set up like it
+         (micronaut-jackson-databind, Jackson) -->
     <dependency>
       <groupId>com.comagents</groupId>
       <artifactId>agent-commons</artifactId>

@@ -1,0 +1,12 @@
+# The build context is the comagents root (build-image.sh); BuildKit reads this file because it sits next to
+# Dockerfile. Only what the build stage copies goes in: agent-commons' and llm-watchdog's sources, never
+# target/, IDE files or the rest of the repository.
+*
+!agent-commons/pom.xml
+!agent-commons/parent
+!agent-commons/src
+!llm-watchdog/.mvn
+!llm-watchdog/mvnw
+!llm-watchdog/pom.xml
+!llm-watchdog/aot-*.properties
+!llm-watchdog/src

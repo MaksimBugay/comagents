@@ -3,6 +3,7 @@
 # IDE files or the rest of the repository.
 *
 !agent-commons/pom.xml
+!agent-commons/parent
 !agent-commons/src
 !agent-proxy/.mvn
 !agent-proxy/mvnw

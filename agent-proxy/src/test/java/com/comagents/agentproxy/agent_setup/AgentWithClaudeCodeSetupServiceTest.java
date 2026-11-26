@@ -2,6 +2,7 @@ package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.agent_setup.claude.LlmWatchdog;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.domain.agent_context.AgentContextValidator;
@@ -58,11 +59,10 @@ class AgentWithClaudeCodeSetupServiceTest {
         registry = new ClaudeAgentSessionRegistry("false", 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, wsClientRegistry,
                 new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
-                ApplicationEventPublisher.noOp());
+                new LlmWatchdog("http://127.0.0.1:8090"), ApplicationEventPublisher.noOp());
         setupService = new AgentWithClaudeCodeSetupService(
                 // not a GitHub URL: downloading the agent's files, the first setup step, fails without network access
-                new VcsGithubService(new AgentProxyConf("0.1", "https://gitlab.com/example/comagents.git", "token",
-                        "key", "https://pushca.example", "pushca-key", AiHarnessProvider.CLAUDE_CODE,
+                new VcsGithubService(new AgentProxyConf("0.1", "https://gitlab.com/example/comagents.git", "token", "https://pushca.example", "pushca-key", AiHarnessProvider.CLAUDE_CODE,
                         new DeviceIdExtractor("test-device", "host")), null),
                 // no agent tools: the download fails before they are read
                 registry, sessionFolders, wsClientRegistry, new AgentContextValidator(), null);

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>llm-watchdog</artifactId>
+  <version>0.1</version>
+  <packaging>${packaging}</packaging>
+
+  <!-- the Micronaut platform, with the versions set once for all comagents services (Jackson's among them) -->
+  <parent>
+    <groupId>com.comagents</groupId>
+    <artifactId>comagents-parent</artifactId>
+    <version>1.0.0</version>
+    <relativePath>../agent-commons/parent/pom.xml</relativePath>
+  </parent>
+
+  <properties>
+    <!-- jar | native-image | docker | docker-native -->
+    <packaging>jar</packaging>
+    <micronaut.version>5.2.5</micronaut.version>
+    <micronaut.aot.enabled>true</micronaut.aot.enabled>
+    <micronaut.aot.packageName>com.comagents.llmwatchdog.aot.generated</micronaut.aot.packageName>
+    <micronaut.runtime>netty</micronaut.runtime>
+    <exec.mainClass>com.comagents.llmwatchdog.Application</exec.mainClass>
+
+    <agent-commons.version>1.0.0</agent-commons.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.micronaut</groupId>
+      <artifactId>micronaut-http-server-netty</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <!-- forwards the LLM calls to the provider and streams the responses back (ProxyHttpClient) -->
+    <dependency>
+      <groupId>io.micronaut</groupId>
+      <artifactId>micronaut-http-client</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <!-- /health, /health/liveness, /health/readiness for Kubernetes probes -->
+    <dependency>
+      <groupId>io.micronaut</groupId>
+      <artifactId>micronaut-management</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <!-- Micronaut's JSON engine set up like JsonUtility (micronaut-jackson-databind, Jackson) -->
+    <dependency>
+      <groupId>com.comagents</groupId>
+      <artifactId>agent-commons</artifactId>
+      <version>${agent-commons.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.micronaut.test</groupId>
+      <artifactId>micronaut-test-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.micronaut.maven</groupId>
+        <artifactId>micronaut-maven-plugin</artifactId>
+        <configuration>
+          <configFile>aot-${packaging}.properties</configFile>
+          <!-- used by -Dpackaging=docker-native -->
+          <baseImageRun>gcr.io/distroless/base-debian13:nonroot</baseImageRun>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.graalvm.buildtools</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <configuration>
+          <imageName>application</imageName>
+          <buildArgs combine.children="append">
+            <!-- portable across heterogeneous Kubernetes nodes (default targets x86-64-v3) -->
+            <buildArg>-march=compatibility</buildArg>
+          </buildArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths combine.children="append">
+            <path>
+              <groupId>io.micronaut</groupId>
+              <artifactId>micronaut-http-validation</artifactId>
+              <version>${micronaut.core.version}</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-Amicronaut.processing.group=com.comagents.llmwatchdog</arg>
+            <arg>-Amicronaut.processing.module=llm-watchdog</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

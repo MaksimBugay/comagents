@@ -33,7 +33,8 @@ executors (agent-proxy) over Pushca.
 ## Build & run
 
 ```bash
-./mvnw -f ../agent-commons/pom.xml install   # once, and after agent-commons changes: it is not published
+./mvnw -f ../agent-commons/parent install   # once, and after agent-commons changes: comagents-parent (the parent
+                                     # pom of this service) and agent-commons, not published
 ./mvnw test                          # tests
 ./mvnw package && java -jar target/agent-orchestrator-0.1.jar   # JVM
 

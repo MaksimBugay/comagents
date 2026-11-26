@@ -6,6 +6,7 @@ import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSession;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.agent_setup.claude.LlmWatchdog;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AgentSessionState;
@@ -88,7 +89,7 @@ class AskExpertToolTest {
         sessions = new ClaudeAgentSessionRegistry(claude.toString(), 1, Duration.ofMinutes(1),
                 Duration.ofMinutes(1), sessionFolders, chats,
                 new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
-                ApplicationEventPublisher.noOp());
+                new LlmWatchdog("http://127.0.0.1:8090"), ApplicationEventPublisher.noOp());
         session = sessions.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory);
         await().atMost(WAIT).until(() -> Files.exists(scripts.resolve("args.txt")));
     }

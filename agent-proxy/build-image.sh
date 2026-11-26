@@ -31,4 +31,4 @@ docker build --build-arg CLAUDE_CODE_BUILD_ID="$(date +%s)" -f Dockerfile -t "$I
 echo
 echo "Built ${IMAGE}. Run it with:"
 echo "  docker run -d --name ${NAME} -p 8080:8080 -v ${NAME}-sessions:/var/lib/agent-proxy/sessions \\"
-echo "    -e CLONE_COMAGENTS_SOURCES_URL=... -e SOURCES_REPO_ACCESS_TOKEN -e ANTHROPIC_API_KEY -e PUSHCA_API_KEY ${IMAGE}"
+echo "    -e CLONE_COMAGENTS_SOURCES_URL=... -e SOURCES_REPO_ACCESS_TOKEN -e PUSHCA_API_KEY ${IMAGE}"

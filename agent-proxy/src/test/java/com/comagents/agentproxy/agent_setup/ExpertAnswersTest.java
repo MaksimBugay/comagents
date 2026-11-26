@@ -2,6 +2,7 @@ package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
+import com.comagents.agentproxy.agent_setup.claude.LlmWatchdog;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AiAgent;
@@ -31,7 +32,7 @@ class ExpertAnswersTest {
                 Duration.ofMinutes(1), Duration.ofMinutes(1), new SessionFolders(sessionsRoot.toString()),
                 new AgentSessionWsClientRegistry(new FakePushcaConnectionFactory(), new RecordingChatListener(), "https://chat.example"),
                 new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
-                ApplicationEventPublisher.noOp());
+                new LlmWatchdog("http://127.0.0.1:8090"), ApplicationEventPublisher.noOp());
         answers = new ExpertAnswers(() -> sessions);
     }
 

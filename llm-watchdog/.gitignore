@@ -1,0 +1,17 @@
+Thumbs.db
+.gradle
+target/
+out/
+.micronaut/
+*.iml
+*.ipr
+*.iws
+.project
+.settings
+.classpath
+.factorypath
+build/
+# Tooling
+.DS_Store
+# per-user IDE state
+.idea/workspace.xml
