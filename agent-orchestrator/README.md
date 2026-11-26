@@ -23,7 +23,9 @@ executors (agent-proxy) over Pushca.
   report or start reply) updates the `AgentDiscoveryRegistry` (`AgentInfoListener`), which keeps each executor until
   `AGENT_ORCHESTRATOR_DISCOVERY_TTL` passes without a fresher one. A session started here is kept with its executor
   (`RunningAgentSessionRegistry`) until its `AgentSessionResponse` comes (`AgentSessionResponseListener`), or for
-  `AGENT_ORCHESTRATOR_RUNNING_SESSION_TTL`.
+  `AGENT_ORCHESTRATOR_RUNNING_SESSION_TTL`. The response is then kept here, and the executor that ran the session is
+  sent a `SessionCleanupRequest`, so it deletes the session's files at once; an executor that never gets it deletes
+  them after its `agent-response.cleanup-delay` (5 minutes).
 - **Errors:** an executor's error reply becomes the executor's exception again, when it is known here with a
   `(String)` constructor (the agent-commons exceptions), so the HTTP API answers it with the status it maps that exception to.
 - **Outgoing:** every message to an executor goes through one queue and over the one connection, one by one. A send

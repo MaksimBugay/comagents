@@ -4,6 +4,7 @@ import com.comagents.agentproxy.agent_setup.AgentSetupService;
 import com.comagents.agentproxy.agent_setup.AgentSetupServices;
 import com.comagents.agentproxy.agent_status.AgentStatusService;
 import com.comagents.agentproxy.conf.AgentProxyConf;
+import com.comagents.agentproxy.domain.AgentSessionStatus;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AgentSessionAttributes;
 import com.comagents.commons.domain.AgentSessionState;
@@ -37,7 +38,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Hands out an agent's final answer for a session, with the request that started it. The first time a response is found, all of the session's files
  * are scheduled for deletion after {@code agent-response.cleanup-delay} (5 minutes by default), so the caller has
- * that long to fetch it again.
+ * that long to fetch it again. The orchestrator that keeps the response has them deleted at once
+ * ({@link #cleanUpNow}); the scheduled deletion is for when its request never comes.
  */
 @Singleton
 public class AgentResponseService {
@@ -132,14 +134,23 @@ public class AgentResponseService {
         }
     }
 
-    // an archived session is kept for a later resume, so its files stay
+    /**
+     * Deletes the session's files now: the orchestrator keeps its response. A scheduled cleanup of it then finds
+     * nothing left to delete.
+     */
+    public void cleanUpNow(AiAgent agent, UUID sessionId) {
+        LOG.info("[{} {}] response kept by the orchestrator, deleting session files", agent.getAgentName(), sessionId);
+        cleanUp(agent, sessionId);
+    }
+
+    // an archived session is kept for a later resume, so its files stay; an unknown one was deleted already
     private void cleanUp(AiAgent agent, UUID sessionId) {
         try {
             AgentSetupService setupService = setupServiceFor(agent);
-            boolean archived = setupService.status(sessionId)
-                    .map(status -> status.state() == AgentSessionState.ARCHIVED)
-                    .orElse(false);
-            if (archived) {
+            Optional<AgentSessionState> state = setupService.status(sessionId).map(AgentSessionStatus::state);
+            if (state.isEmpty()) {
+                LOG.debug("[{} {}] session files deleted already", agent.getAgentName(), sessionId);
+            } else if (state.get() == AgentSessionState.ARCHIVED) {
                 LOG.info("[{} {}] archived, keeping session files", agent.getAgentName(), sessionId);
             } else {
                 setupService.cleanUp(sessionId);

@@ -42,9 +42,11 @@ As soon as a session's response is on disk, the `AgentSessionResponse`, as a `Co
 (`<base64 of {"payloadString": "com.comagents.commons.response.AgentSessionResponse::<the JSON>", "payloadClassName": "com.comagents.commons.response.AgentSessionResponse"}>`),
 is sent with the start request's `sequenceId` as the message id to the start request's `originatorDeviceId` device,
 and also to its `agentResponseWaiterDeviceId` device when there is one (`comagents-main`, whatever their account and
-application: a device id is one agent-proxy or orchestrator in the cluster). Session files and chat are deleted 5
-minutes after it was sent or first fetched, or 1 hour after the session finished if never fetched (archived sessions
-are kept). After a restart, sessions that are not archived are deleted with their chats.
+application: a device id is one agent-proxy or orchestrator in the cluster). Session files and chat are deleted as soon
+as the orchestrator, which keeps the response, sends a `SessionCleanupRequest` (`agent`, `sessionId`, `sequenceId`;
+nothing is answered). Without one (a delivery that broke), they are deleted 5 minutes after the response was sent or
+first fetched, or 1 hour after the session finished if never fetched. Archived sessions are kept. After a restart,
+sessions that are not archived are deleted with their chats.
 
 Every message to an orchestrator (replies, errors, and the `AgentSessionResponse` sent once a response is on disk)
 goes through one queue and over the one connection, one by one. A send that finds the connection broken is retried

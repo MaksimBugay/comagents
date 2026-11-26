@@ -16,6 +16,7 @@ import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextIt
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import com.comagents.commons.request.AgentResponseRequest;
 import com.comagents.commons.request.AgentStatusRequest;
+import com.comagents.commons.request.SessionCleanupRequest;
 import com.comagents.commons.request.StartAgentSessionExternalRequest;
 import com.comagents.commons.request.StartAgentSessionRequest;
 import com.comagents.commons.response.AgentInfoResponse;
@@ -36,6 +37,7 @@ import io.micronaut.core.annotation.Introspected;
         StartAgentSessionExternalRequest.class,
         StartAgentSessionExternalResponse.class,
         AgentStatusRequest.class,
+        SessionCleanupRequest.class,
         AgentResponseRequest.class,
         AgentSessionResponse.class,
         AgentStatus.class,
