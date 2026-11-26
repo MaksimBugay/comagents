@@ -12,7 +12,8 @@ import java.util.List;
  * The body of the orchestrator's {@code POST /start}: a session of {@code agent} to start on the best executor for it.
  *
  * @param agentCallSequence           the agents that called this one, the caller last; empty when a person starts
- *                                    it. The orchestrator appends the started agent
+ *                                    it. The orchestrator appends the started agent, and refuses one already in it:
+ *                                    agent calls must not loop
  * @param agentResponseWaiterDeviceId another device that gets the session's response too; none when null or blank
  */
 public record StartAgentSessionExternalRequest(@NotNull AiAgent agent,

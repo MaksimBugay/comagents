@@ -24,6 +24,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -88,6 +89,12 @@ class AgentControllerTest {
                 .thenThrow(new ClaudeSessionLimitException(3));
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, startStatus(START));
+    }
+
+    @Test
+    void unprocessableForAnAgentCallLoop() {
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, startStatus(Map.of("agent", "CODE_REVIEW", "actorAccountId", "Maks",
+                "agentCallSequence", List.of("code_review", "weather_forecast"))));
     }
 
     @Test

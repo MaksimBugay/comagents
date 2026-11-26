@@ -2,6 +2,7 @@ package com.comagents.agentorchestrator.controller;
 
 import com.comagents.agentorchestrator.agent_registry.AgentDiscoveryRegistry;
 import com.comagents.agentorchestrator.conf.AgentOrchestratorConf;
+import com.comagents.agentorchestrator.exception.AgentCallLoopException;
 import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.agentorchestrator.exception.TooManyStartSessionRequestsException;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
@@ -135,17 +136,16 @@ class StartAgentSessionHelperTest {
     }
 
     @Test
-    void anAgentAlreadyInTheCallSequenceIsNotAddedAgain() {
+    void anAgentAlreadyInTheCallSequenceIsALoop() {
         registry.update(discovered("claude-1", AiHarnessProvider.CLAUDE_CODE, 1));
-        when(gateway.exchange(any(), any(), eq(AgentInfoResponse.class))).thenReturn(
-                new AgentInfoResponse(AiHarnessProvider.CLAUDE_CODE, "0.1", "claude-1", 3, 0, 0, 0, "sequence-1"));
 
-        helper.startAgentSession(UUID.randomUUID(), AiAgent.CODE_REVIEW, null,
-                List.of("code_review", "weather_forecast"), "Maks", null, null);
+        AgentCallLoopException e = assertThrows(AgentCallLoopException.class, () -> helper.startAgentSession(
+                UUID.randomUUID(), AiAgent.CODE_REVIEW, null, List.of("code_review", "weather_forecast"), "Maks", null,
+                null));
 
-        ArgumentCaptor<StartAgentSessionRequest> request = ArgumentCaptor.forClass(StartAgentSessionRequest.class);
-        verify(gateway).exchange(any(), request.capture(), eq(AgentInfoResponse.class));
-        assertEquals(List.of("code_review", "weather_forecast"), request.getValue().agentCallSequence());
+        assertEquals("Starting code_review would make a loop: it is already in the call chain code_review -> "
+                + "weather_forecast", e.getMessage());
+        verifyNoInteractions(gateway);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.comagents.agentorchestrator.controller;
 
+import com.comagents.agentorchestrator.exception.AgentCallLoopException;
 import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.agentorchestrator.exception.TooManyStartSessionRequestsException;
 import com.comagents.commons.domain.agent_context.InvalidAgentContextException;
@@ -59,6 +60,11 @@ public class AgentController {
     @Error(exception = ClaudeSessionLimitException.class)
     public HttpResponse<JsonError> sessionLimitReached(HttpRequest<?> ignoredRequest, ClaudeSessionLimitException e) {
         return HttpResponse.<JsonError>status(HttpStatus.TOO_MANY_REQUESTS).body(new JsonError(e.getMessage()));
+    }
+
+    @Error(exception = AgentCallLoopException.class)
+    public HttpResponse<JsonError> agentCallLoop(HttpRequest<?> ignoredRequest, AgentCallLoopException e) {
+        return HttpResponse.<JsonError>status(HttpStatus.UNPROCESSABLE_ENTITY).body(new JsonError(e.getMessage()));
     }
 
     @Error(exception = TooManyStartSessionRequestsException.class)

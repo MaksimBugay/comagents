@@ -2,6 +2,7 @@ package com.comagents.agentorchestrator.controller;
 
 import com.comagents.agentorchestrator.agent_registry.AgentDiscoveryRegistry;
 import com.comagents.agentorchestrator.conf.AgentOrchestratorConf;
+import com.comagents.agentorchestrator.exception.AgentCallLoopException;
 import com.comagents.agentorchestrator.exception.ComagentsResponseTimeoutException;
 import com.comagents.agentorchestrator.exception.TooManyStartSessionRequestsException;
 import com.comagents.agentorchestrator.gateway.ComagentsGateway;
@@ -57,11 +58,12 @@ public class StartAgentSessionHelper {
      *
      * @param sessionId                   the id of the new session
      * @param agentCallSequence           the agents that called this one, the caller last; empty or null when a person
-     *                                    starts it. The started agent is appended unless it is in it already: the
-     *                                    session and the agents it calls see the whole chain
+     *                                    starts it. The started agent is appended: the session and the agents it calls
+     *                                    see the whole chain
      * @param agentResponseWaiterDeviceId another device that gets the session's response too; none when null or
      *                                    blank
      * @return the executor that runs the session, as it was right after taking it
+     * @throws AgentCallLoopException               when the agent is in {@code agentCallSequence} already
      * @throws TooManyStartSessionRequestsException when no executor of the agent's harness has a free slot now
      * @throws ComagentsResponseTimeoutException    when no reply came in time
      * @throws ClaudeSessionLimitException          when the executor had no free slot after all
@@ -76,6 +78,7 @@ public class StartAgentSessionHelper {
                                                AgentSessionLoggingLevel loggingLevel) {
         Validate.notNull(sessionId, "sessionId must not be null");
         Validate.notNull(agent, "agent must not be null");
+        List<String> callSequence = withStartedAgent(agentCallSequence, agent);
         AgentInfoResponse executor = findExecutor(agent);
         StartAgentSessionRequest request = new StartAgentSessionRequest(
                 sessionId,
@@ -84,7 +87,7 @@ public class StartAgentSessionHelper {
                 UUID.randomUUID().toString(),
                 conf.getDeviceId(),
                 agentResponseWaiterDeviceId,
-                withStartedAgent(agentCallSequence, agent),
+                callSequence,
                 actorAccountId,
                 loggingLevel == null ? AgentSessionLoggingLevel.INFO : loggingLevel,
                 Instant.now().toEpochMilli());
@@ -96,11 +99,13 @@ public class StartAgentSessionHelper {
         return started;
     }
 
+    // agent calls must not loop
     private static List<String> withStartedAgent(@Nullable List<String> agentCallSequence, AiAgent agent) {
         List<String> sequence = new ArrayList<>(agentCallSequence == null ? List.of() : agentCallSequence);
-        if (!sequence.contains(agent.getAgentName())) {
-            sequence.add(agent.getAgentName());
+        if (sequence.contains(agent.getAgentName())) {
+            throw new AgentCallLoopException(agent, sequence);
         }
+        sequence.add(agent.getAgentName());
         return List.copyOf(sequence);
     }
 
