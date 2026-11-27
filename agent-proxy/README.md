@@ -8,6 +8,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 |--------|-----------------------|---------------------------------|
 | GET    | `/info`               | This agent executor, whatever agent it runs: its `harnessProvider` (`agent-proxy.ai-harness-provider`), version, device id, `maxSlots` (`claude.session.max-concurrent`), `freeSlots` (`maxSlots` minus its sessions running, waiting or being set up), `archivedSessions` (archived sessions on disk: no slot now, one each on resume) and `finishedSessions` (finished sessions whose data is still on disk until it is deleted: no slot); the start reply has them too |
 | GET    | `/agent-status/{agentName}/{sessionId}` | Session state (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`, `KILLED`, `ARCHIVED`), times, and whether a response is available |
+| GET    | `/agent-definition/config?agents=CODE_REVIEW&agents=...` | The `agent.json` of each agent asked, from the agent definitions' source (`COMAGENTS_AGENT_DEFINITION_SOURCE_TYPE`), as `AgentConfigResponse` (agent-commons), `{"agentConfigs": [{"agent": "CODE_REVIEW", "config": {...}}, ...]}` in the order asked; an unknown agent is a **400** |
 | GET    | `/health/liveness`    | Kubernetes liveness probe       |
 | GET    | `/health/readiness`   | Kubernetes readiness probe      |
 

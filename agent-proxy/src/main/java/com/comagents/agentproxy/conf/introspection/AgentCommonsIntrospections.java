@@ -22,6 +22,7 @@ import com.comagents.commons.request.AgentStatusRequest;
 import com.comagents.commons.request.SessionCleanupRequest;
 import com.comagents.commons.request.StartAgentSessionExternalRequest;
 import com.comagents.commons.request.StartAgentSessionRequest;
+import com.comagents.commons.response.AgentConfigResponse;
 import com.comagents.commons.response.AgentInfoResponse;
 import com.comagents.commons.response.AgentResponseReply;
 import com.comagents.commons.response.AgentSessionResponse;
@@ -62,6 +63,8 @@ import io.micronaut.core.annotation.Introspected;
         ClaudeAgentConfig.class,
         ExposeAsMcp.class,
         ExposeAsMcp.Tool.class,
+        AgentConfigResponse.class,
+        AgentConfigResponse.AgentConfig.class,
         ComagentsMessage.class,
         ComagentsError.class})
 final class AgentCommonsIntrospections {

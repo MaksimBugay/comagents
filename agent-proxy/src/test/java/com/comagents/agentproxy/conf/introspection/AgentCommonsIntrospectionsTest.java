@@ -3,6 +3,7 @@ package com.comagents.agentproxy.conf.introspection;
 import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.commons.agent_definition.claude.ExposeAsMcp;
 import com.comagents.commons.domain.agent_context.RequiredAgentContextItem;
+import com.comagents.commons.response.AgentConfigResponse;
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionAttributes;
@@ -36,7 +37,7 @@ class AgentCommonsIntrospectionsTest {
     @Test
     void agentDefinitionsAreIntrospected() {
         for (Class<?> type : List.of(ClaudeAgentConfig.class, ExposeAsMcp.class, ExposeAsMcp.Tool.class,
-                RequiredAgentContextItem.class)) {
+                RequiredAgentContextItem.class, AgentConfigResponse.class, AgentConfigResponse.AgentConfig.class)) {
             assertTrue(BeanIntrospector.SHARED.findIntrospection(type).isPresent(), type.getName());
         }
     }
