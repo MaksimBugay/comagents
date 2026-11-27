@@ -13,7 +13,7 @@ import java.util.List;
  * {@code agent/<harness>/<agent name>/}, into the folder the harness will run in.
  * Every agent must have a {@code README.md}.
  */
-final class AgentFiles {
+public final class AgentFiles {
 
     static final String README = "README.md";
 
@@ -41,7 +41,7 @@ final class AgentFiles {
     }
 
     /** The agent's folder in the comagents sources, {@code agent/<harness>/<agent name>}. */
-    static String sourcesFolder(AiAgent agent) {
+    public static String sourcesFolder(AiAgent agent) {
         return "agent/" + agent.getAiHarnessProvider().getHarnessName() + "/" + agent.getAgentName();
     }
 

@@ -65,7 +65,7 @@ class AgentWithClaudeCodeSetupServiceTest {
                 new VcsGithubService(new AgentProxyConf("0.1", "https://gitlab.com/example/comagents.git", "token", "https://pushca.example", "pushca-key", AiHarnessProvider.CLAUDE_CODE,
                         new DeviceIdExtractor("test-device", "host")), null),
                 // no agent tools: the download fails before they are read
-                registry, sessionFolders, wsClientRegistry, new AgentContextValidator(), null);
+                registry, sessionFolders, wsClientRegistry, new AgentContextValidator(), null, null);
     }
 
     @Test

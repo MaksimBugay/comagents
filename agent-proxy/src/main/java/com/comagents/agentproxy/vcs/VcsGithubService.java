@@ -108,11 +108,25 @@ public final class VcsGithubService implements VcsService {
                 downloadFolder(repoPath, folder, root);
             }
         } catch (HttpClientResponseException e) {
-            throw new IllegalStateException("GitHub returned " + e.code() + " " + e.getStatus().getReason() + " for "
-                    + folder + " of " + repoPath, e);
+            throw githubError(e, folder, repoPath);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to download " + folder + " of " + repoPath, e);
         }
+    }
+
+    @Override
+    public byte[] downloadComAgentsFile(String file) {
+        String repoPath = GithubRepositoryUrl.parse(comAgentsSourcesUrl).fullName();
+        try {
+            return fileContent(repoPath, file);
+        } catch (HttpClientResponseException e) {
+            throw githubError(e, file, repoPath);
+        }
+    }
+
+    private static IllegalStateException githubError(HttpClientResponseException e, String path, String repoPath) {
+        return new IllegalStateException("GitHub returned " + e.code() + " " + e.getStatus().getReason() + " for "
+                + path + " of " + repoPath, e);
     }
 
     // the contents endpoint lists a folder: each file is fetched raw, each subfolder listed in turn

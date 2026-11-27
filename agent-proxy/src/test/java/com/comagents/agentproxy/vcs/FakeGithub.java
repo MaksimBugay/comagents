@@ -23,10 +23,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Controller("/repos/acme/comagents/contents")
 public class FakeGithub {
 
-    static final String SPEC = "FakeGithub";
+    public static final String SPEC = "FakeGithub";
 
     // repository path -> content; a folder is every path below it
-    final Map<String, String> files = new ConcurrentHashMap<>();
+    public final Map<String, String> files = new ConcurrentHashMap<>();
     // listed as symlinks wherever they are
     final Set<String> symlinks = ConcurrentHashMap.newKeySet();
     // added to the listing of the folder they name, e.g. an entry whose path leaves the folder

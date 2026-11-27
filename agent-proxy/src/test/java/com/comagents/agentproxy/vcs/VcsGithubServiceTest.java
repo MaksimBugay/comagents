@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -107,6 +108,21 @@ class VcsGithubServiceTest {
         assertThrows(UncheckedIOException.class, () -> vcsService.downloadComAgentsFolder(comAgentsSources, CODE_REVIEW));
 
         assertFalse(Files.exists(comAgentsSources.resolve("../escaped.md").normalize()));
+    }
+
+    @Test
+    void downloadsOneFile() {
+        byte[] content = vcsService.downloadComAgentsFile(CODE_REVIEW + "/CLAUDE.md");
+
+        assertEquals("role", new String(content, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void aMissingFileFails() {
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> vcsService.downloadComAgentsFile(CODE_REVIEW + "/unknown.md"));
+
+        assertTrue(e.getMessage().contains("404"), e.getMessage());
     }
 
     @Test

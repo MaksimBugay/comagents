@@ -278,6 +278,7 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `AI_HARNESS_PROVIDER`    | set by the image: `CLAUDE_CODE` | The installed harness that runs the sessions (`agent-proxy.ai-harness-provider`); required outside the image |
 | `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`); each setup downloads only the folders it reads, `agent/<harness>/<agent name>` of the agent and of the agents it calls |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |
+| `COMAGENTS_AGENT_DATA_SOURCE_TYPE` | `GIT_HUB` | Where the `agent.json` of the agents an agent calls as MCP tools comes from (`comagents.agent-data.source.type`): `GIT_HUB`, the file alone from the agent sources repository |
 | `AGENT_PROXY_LLM_WATCHDOG_URL` | `http://llm-watchdog:8080` | The llm-watchdog, through which Claude Code reaches its model (`agent-proxy.llm-watchdog-url`): by default its container on the same Docker network; under Kubernetes its Service, `http://llm-watchdog` |
 | `PUSHCA_API_KEY`              | — (required) | API key of the organization registered in Pushca (`pushca.api-key`); a key Pushca refuses stops the startup |
 | `PUSHCA_API_URL`              | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |

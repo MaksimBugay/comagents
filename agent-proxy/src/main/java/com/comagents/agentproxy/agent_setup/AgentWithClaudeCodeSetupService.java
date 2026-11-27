@@ -1,6 +1,7 @@
 package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_call.AgentCallToolDefinition;
+import com.comagents.agentproxy.agent_data.AgentDataService;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry.SessionSlot;
@@ -29,6 +30,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -55,17 +57,20 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
 
     private final AgentCallTools agentCallTools;
 
+    private final AgentDataService agentDataService;
+
     public AgentWithClaudeCodeSetupService(VcsService vcsService, ClaudeAgentSessionRegistry claudeAgentSessionRegistry,
                                            SessionFolders sessionFolders,
                                            AgentSessionWsClientRegistry agentSessionWsClientRegistry,
                                            AgentContextValidator agentContextValidator,
-                                           AgentCallTools agentCallTools) {
+                                           AgentCallTools agentCallTools, AgentDataService agentDataService) {
         this.vcsService = vcsService;
         this.claudeAgentSessionRegistry = claudeAgentSessionRegistry;
         this.sessionFolders = sessionFolders;
         this.agentSessionWsClientRegistry = agentSessionWsClientRegistry;
         this.agentContextValidator = agentContextValidator;
         this.agentCallTools = agentCallTools;
+        this.agentDataService = agentDataService;
     }
 
 
@@ -104,7 +109,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         try {
             ClaudeAgentConfig config = readConfig(comAgentsSources, agent);
             agentContextValidator.validate(agent, attributes.agentContext(), config.requiredItems());
-            List<AgentCallToolDefinition> agentTools = agentTools(comAgentsSources, config);
+            List<AgentCallToolDefinition> agentTools = agentTools(config);
             Path workingDirectory = prepareWorkingDirectory(attributes, agentFolder);
             AgentFiles.copyInto(workingDirectory, comAgentsSources, agent, CLAUDE_CODE_FILES);
             AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
@@ -133,13 +138,15 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     }
 
     // the agents the agent calls as tools of agent-proxy's MCP server, as their agent.json exposes them
-    private List<AgentCallToolDefinition> agentTools(Path comAgentsSources, ClaudeAgentConfig config) {
-        return AgentProxyMcpServer.calledAgents(config.allowedTools()).stream()
-                .map(called -> AgentCallToolDefinition.of(called, readConfig(comAgentsSources, called)))
+    private List<AgentCallToolDefinition> agentTools(ClaudeAgentConfig config) {
+        List<AiAgent> calledAgents = AgentProxyMcpServer.calledAgents(config.allowedTools());
+        Map<AiAgent, ClaudeAgentConfig> configs = agentDataService.getAgentConfig(calledAgents);
+        return calledAgents.stream()
+                .map(called -> AgentCallToolDefinition.of(called, configs.get(called)))
                 .toList();
     }
 
-    // downloads the agent's folder of the comagents sources first, the only part of them a setup reads
+    // downloads the agent's folder of the comagents sources first
     private ClaudeAgentConfig readConfig(Path comAgentsSources, AiAgent agent) {
         vcsService.downloadComAgentsFolder(comAgentsSources, AgentFiles.sourcesFolder(agent));
         Path configFile = AgentFiles.agentConfigFile(comAgentsSources, agent);

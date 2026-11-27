@@ -20,4 +20,12 @@ public sealed interface VcsService permits VcsGithubService {
      * not downloaded again.
      */
     void downloadComAgentsFolder(Path comAgentsSources, String folder);
+
+    /**
+     * Downloads one file of the comagents sources, e.g. {@code agent/claude_code/code_review/agent.json}, from the
+     * default branch.
+     *
+     * @return the file's content
+     */
+    byte[] downloadComAgentsFile(String file);
 }
