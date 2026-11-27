@@ -1,8 +1,8 @@
 package com.comagents.agentproxy.agent_definition.vcs;
 
-import com.comagents.agentproxy.agent_definition.AgentDefinitionService;
+import com.comagents.commons.agent_definition.AgentDefinitionService;
 import com.comagents.agentproxy.agent_setup.AgentFiles;
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.vcs.VcsService;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.serialization.JsonUtility;

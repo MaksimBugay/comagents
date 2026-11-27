@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.domain.agent_context;
 
+import com.comagents.commons.domain.agent_context.RequiredAgentContextItem;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.AgentContext;
 import com.comagents.commons.domain.agent_context.AgentContextItemType;

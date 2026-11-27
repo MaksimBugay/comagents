@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.communication;
 
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;
 import com.comagents.agentproxy.workspace.SessionFolders;

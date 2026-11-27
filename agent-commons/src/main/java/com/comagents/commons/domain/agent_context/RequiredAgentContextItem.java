@@ -1,15 +1,11 @@
-package com.comagents.agentproxy.domain.agent_context;
+package com.comagents.commons.domain.agent_context;
 
-import com.comagents.commons.domain.agent_context.AgentContextItem;
-import com.comagents.commons.domain.agent_context.AgentContextItemType;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * An item an agent can't work without ({@code requiredItems} in its {@code agent.json}): any item of that type and
  * name. Without a type any item of that name matches, without a name any item of that type. Names ignore case.
  */
-@Introspected
 public record RequiredAgentContextItem(@Nullable AgentContextItemType type, @Nullable String name) {
 
     /**

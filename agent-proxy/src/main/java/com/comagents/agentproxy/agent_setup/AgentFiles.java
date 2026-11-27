@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_setup;
 
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.commons.domain.AiAgent;
 

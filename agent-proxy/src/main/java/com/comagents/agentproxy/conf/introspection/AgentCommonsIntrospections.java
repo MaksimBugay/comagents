@@ -1,5 +1,7 @@
 package com.comagents.agentproxy.conf.introspection;
 
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ExposeAsMcp;
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionAttributes;
@@ -13,6 +15,7 @@ import com.comagents.commons.domain.agent_context.AgentContextItem;
 import com.comagents.commons.domain.agent_context.AgentContextItemType;
 import com.comagents.commons.domain.agent_context.FileAgentContextItem;
 import com.comagents.commons.domain.agent_context.GithubRepositoryAgentContextItem;
+import com.comagents.commons.domain.agent_context.RequiredAgentContextItem;
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;
 import com.comagents.commons.request.AgentResponseRequest;
 import com.comagents.commons.request.AgentStatusRequest;
@@ -55,6 +58,10 @@ import io.micronaut.core.annotation.Introspected;
         StringAgentContextItem.class,
         FileAgentContextItem.class,
         GithubRepositoryAgentContextItem.class,
+        RequiredAgentContextItem.class,
+        ClaudeAgentConfig.class,
+        ExposeAsMcp.class,
+        ExposeAsMcp.Tool.class,
         ComagentsMessage.class,
         ComagentsError.class})
 final class AgentCommonsIntrospections {

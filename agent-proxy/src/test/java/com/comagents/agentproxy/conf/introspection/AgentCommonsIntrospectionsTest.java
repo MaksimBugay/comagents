@@ -1,5 +1,8 @@
 package com.comagents.agentproxy.conf.introspection;
 
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ExposeAsMcp;
+import com.comagents.commons.domain.agent_context.RequiredAgentContextItem;
 import com.comagents.commons.communication.ComagentsError;
 import com.comagents.commons.communication.ComagentsMessage;
 import com.comagents.commons.domain.AgentSessionAttributes;
@@ -25,6 +28,15 @@ class AgentCommonsIntrospectionsTest {
         for (Class<?> type : List.of(ComagentsMessage.class, ComagentsError.class, AgentSessionResponse.class,
                 AgentStatusRequest.class, AgentStatusResponse.class, AgentResponseRequest.class,
                 AgentResponseReply.class, AgentInfoResponse.class, AiHarnessProvider.class)) {
+            assertTrue(BeanIntrospector.SHARED.findIntrospection(type).isPresent(), type.getName());
+        }
+    }
+
+    // read from agent.json with Jackson, in the native image too
+    @Test
+    void agentDefinitionsAreIntrospected() {
+        for (Class<?> type : List.of(ClaudeAgentConfig.class, ExposeAsMcp.class, ExposeAsMcp.Tool.class,
+                RequiredAgentContextItem.class)) {
             assertTrue(BeanIntrospector.SHARED.findIntrospection(type).isPresent(), type.getName());
         }
     }

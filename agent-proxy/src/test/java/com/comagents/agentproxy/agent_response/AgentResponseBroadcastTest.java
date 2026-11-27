@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.agent_response;
 
 import bmv.org.pushca.client.exception.PushcaCommandException;
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
 import com.comagents.agentproxy.communication.pushca.FakePushcaConnectionFactory;

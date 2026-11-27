@@ -1,6 +1,6 @@
 package com.comagents.agentproxy.agent_definition.vcs;
 
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.conf.AgentProxyConf;
 import com.comagents.agentproxy.vcs.FakeGithub;
 import com.comagents.agentproxy.vcs.VcsGithubService;

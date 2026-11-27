@@ -1,6 +1,6 @@
-package com.comagents.agentproxy.agent_definition;
+package com.comagents.commons.agent_definition;
 
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.commons.domain.AiAgent;
 
 import java.util.List;

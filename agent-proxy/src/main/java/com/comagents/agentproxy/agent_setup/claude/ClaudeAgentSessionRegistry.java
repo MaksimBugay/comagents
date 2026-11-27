@@ -1,5 +1,6 @@
 package com.comagents.agentproxy.agent_setup.claude;
 
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.domain.AgentResponseReady;
 import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.agentproxy.workspace.SessionFolders;

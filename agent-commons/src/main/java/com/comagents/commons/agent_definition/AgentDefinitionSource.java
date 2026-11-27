@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.agent_definition;
+package com.comagents.commons.agent_definition;
 
 /**
  * The values of {@code comagents.agent-definition.source.type}, where agent definitions come from; each selects one

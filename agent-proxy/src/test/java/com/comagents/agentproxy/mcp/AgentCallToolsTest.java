@@ -2,7 +2,7 @@ package com.comagents.agentproxy.mcp;
 
 import com.comagents.agentproxy.agent_call.AgentCallToolDefinition;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.domain.agent_context.AgentContext;
 import com.comagents.commons.domain.agent_context.StringAgentContextItem;

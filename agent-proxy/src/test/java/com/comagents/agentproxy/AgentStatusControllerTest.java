@@ -1,6 +1,6 @@
 package com.comagents.agentproxy;
 
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.workspace.SessionFolders;
 import com.comagents.commons.domain.AgentSessionState;

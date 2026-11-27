@@ -1,6 +1,5 @@
-package com.comagents.agentproxy.agent_setup.claude;
+package com.comagents.commons.agent_definition.claude;
 
-import io.micronaut.core.annotation.Introspected;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -11,14 +10,12 @@ import tools.jackson.databind.JsonNode;
  * @param requestSchema the JSON Schema of the tool's input: the agent context ({@code {"items": [...]}}) of the
  *                      called agent's start request
  */
-@Introspected
 public record ExposeAsMcp(Tool tool, JsonNode requestSchema) {
 
     /**
      * @param name        the tool's name: the agent's name
      * @param description when it is worth calling the agent, for the calling agent's model
      */
-    @Introspected
     public record Tool(String name, String description) {
     }
 }

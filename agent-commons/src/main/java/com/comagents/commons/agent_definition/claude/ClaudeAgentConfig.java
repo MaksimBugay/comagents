@@ -1,8 +1,7 @@
-package com.comagents.agentproxy.agent_setup.claude;
+package com.comagents.commons.agent_definition.claude;
 
-import com.comagents.agentproxy.domain.agent_context.RequiredAgentContextItem;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.Nullable;
+import com.comagents.commons.domain.agent_context.RequiredAgentContextItem;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
@@ -33,10 +32,9 @@ import java.util.Set;
  *                      weaken them
  * @param exposeAsMcp   how other agents call this one as an MCP tool; not callable by other agents if null
  */
-@Introspected
-public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, @Nullable List<String> allowedTools,
-                                String kickOffPrompt, @Nullable String resumePrompt,
-                                @Nullable Set<RequiredAgentContextItem> requiredItems,
+public record ClaudeAgentConfig(@Nullable String model, @Nullable String effort, List<String> allowedTools,
+                                String kickOffPrompt, String resumePrompt,
+                                Set<RequiredAgentContextItem> requiredItems,
                                 @Nullable JsonNode responseSchema, boolean readOnly, boolean stateless,
                                 @Nullable JsonNode sandbox, @Nullable ExposeAsMcp exposeAsMcp) {
 

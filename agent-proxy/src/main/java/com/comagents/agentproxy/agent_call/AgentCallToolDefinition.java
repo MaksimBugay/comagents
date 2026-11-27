@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.agent_call;
 
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
-import com.comagents.agentproxy.agent_setup.claude.ExposeAsMcp;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ExposeAsMcp;
 import com.comagents.commons.domain.AiAgent;
 import com.comagents.commons.serialization.JsonUtility;
 import io.micronaut.core.annotation.Introspected;

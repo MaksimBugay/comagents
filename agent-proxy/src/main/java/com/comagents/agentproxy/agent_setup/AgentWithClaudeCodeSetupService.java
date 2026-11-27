@@ -1,9 +1,9 @@
 package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_call.AgentCallToolDefinition;
-import com.comagents.agentproxy.agent_definition.AgentDefinitionService;
+import com.comagents.commons.agent_definition.AgentDefinitionService;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
-import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
+import com.comagents.commons.agent_definition.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry.SessionSlot;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeSessionOptions;
