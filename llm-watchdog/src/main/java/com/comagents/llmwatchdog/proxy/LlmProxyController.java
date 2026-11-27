@@ -21,7 +21,7 @@ import io.micronaut.http.client.ProxyHttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class LlmProxyController {
                               @Value("${llm-watchdog.anthropic-api-key}") String apiKey,
                               AnalyzeLlmRequestService analyzeLlmRequestService) {
         this.provider = provider;
-        this.providerUrl = StringUtils.removeEnd(providerUrl, "/");
+        this.providerUrl = Strings.CS.removeEnd(providerUrl, "/");
         this.apiKey = apiKey;
         this.analyzeLlmRequestService = analyzeLlmRequestService;
     }
