@@ -9,6 +9,7 @@ Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/K
 | GET    | `/info`               | This agent executor, whatever agent it runs: its `harnessProvider` (`agent-proxy.ai-harness-provider`), version, device id, `maxSlots` (`claude.session.max-concurrent`), `freeSlots` (`maxSlots` minus its sessions running, waiting or being set up), `archivedSessions` (archived sessions on disk: no slot now, one each on resume) and `finishedSessions` (finished sessions whose data is still on disk until it is deleted: no slot); the start reply has them too |
 | GET    | `/agent-status/{agentName}/{sessionId}` | Session state (`RUNNING`, `WAITING`, `DONE`, `FAILED`, `TIMED_OUT`, `KILLED`, `ARCHIVED`), times, and whether a response is available |
 | GET    | `/agent-definition/config?agents=CODE_REVIEW&agents=...` | The `agent.json` of each agent asked, from the agent definitions' source (`COMAGENTS_AGENT_DEFINITION_SOURCE_TYPE`), as `AgentConfigResponse` (agent-commons), `{"agentConfigs": [{"agent": "CODE_REVIEW", "config": {...}}, ...]}` in the order asked; an unknown agent is a **400** |
+| POST, GET | `/llm/{sessionId}/...` | The LLM hop: the model endpoint of the session's Claude Code run (`ANTHROPIC_BASE_URL=<AGENT_PROXY_LLM_HOP_URL>/<sessionId>`). Each call goes on to the llm-watchdog (`AGENT_PROXY_LLM_WATCHDOG_URL`) with the path after the session id, the query, the body and the headers except the hop's and the caller's `Authorization`; the session's JWT, when it has one, goes on as the bearer token. The watchdog's response, streamed or not, comes back as it comes. Callers on other hosts get **403** |
 | GET    | `/health/liveness`    | Kubernetes liveness probe       |
 | GET    | `/health/readiness`   | Kubernetes readiness probe      |
 
@@ -171,7 +172,8 @@ claude -p "<kickOffPrompt>" \
   `DISABLE_AUTOUPDATER`, `ANTHROPIC_*` (model settings such as `ANTHROPIC_MODEL`) and `CLAUDE_CODE_*`. agent-proxy's
   own secrets (`SOURCES_REPO_ACCESS_TOKEN`, `PUSHCA_API_KEY`, ...) never reach the run, and neither does an LLM
   provider key: agent-proxy has none. The run reaches its model through the llm-watchdog, which holds the provider's
-  key, analyzes each call and forwards it: `ANTHROPIC_BASE_URL=<AGENT_PROXY_LLM_WATCHDOG_URL>` and
+  key, analyzes each call and forwards it. It gets there through agent-proxy's LLM hop, which adds the session's JWT
+  that the run never sees: `ANTHROPIC_BASE_URL=<AGENT_PROXY_LLM_HOP_URL>/<sessionId>` and
   `ANTHROPIC_API_KEY=<sessionId>` (worthless anywhere else; it tells the watchdog the session). Plus
   `CLAUDE_CONFIG_DIR=<sessions-dir>/<sessionId>/<agentName>/claude-state`
   (Claude Code's own state for the session: settings, the conversation `--resume` reads; deleted with the session,
@@ -280,7 +282,8 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`); each setup downloads only the folders it reads, `agent/<harness>/<agent name>` of the agent and of the agents it calls |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |
 | `COMAGENTS_AGENT_DEFINITION_SOURCE_TYPE` | `GIT_HUB` | Where the `agent.json` of the agents an agent calls as MCP tools comes from (`comagents.agent-definition.source.type`): `GIT_HUB`, the file alone from the agent sources repository |
-| `AGENT_PROXY_LLM_WATCHDOG_URL` | `http://llm-watchdog:8080` | The llm-watchdog, through which Claude Code reaches its model (`agent-proxy.llm-watchdog-url`): by default its container on the same Docker network; under Kubernetes its Service, `http://llm-watchdog` |
+| `AGENT_PROXY_LLM_WATCHDOG_URL` | `http://llm-watchdog:8080` | The llm-watchdog, through which Claude Code reaches its model (`agent-proxy.llm-watchdog-url`): the LLM hop forwards each call there. By default its container on the same Docker network; under Kubernetes its Service, `http://llm-watchdog` |
+| `AGENT_PROXY_LLM_HOP_URL`     | `http://127.0.0.1:8080/llm` | Where Claude Code reaches the LLM hop, without the session id (`agent-proxy.llm-hop-url`); change it with the port |
 | `PUSHCA_API_KEY`              | — (required) | API key of the organization registered in Pushca (`pushca.api-key`); a key Pushca refuses stops the startup |
 | `PUSHCA_API_URL`              | `https://secure.fileshare.ovh/pushca` | Pushca server (`pushca.api-url`) |
 | `PUSHCA_CHAT_URL`             | `https://secure.fileshare.ovh/chat-room.html` | Chat page; each new session chat is logged with its join link (`pushca.chat-url`) |

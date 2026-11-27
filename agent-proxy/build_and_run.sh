@@ -4,8 +4,9 @@
 # the model provider and the anthropic api key, agent-orchestrator and agent-proxy with the same Pushca key, and
 # follows agent-proxy's logs (Ctrl+C stops following; the containers keep running). All run on the Docker network
 # comagents, where agent-proxy reaches the others by their container names, at its defaults: the orchestrator (for its
-# agent tools) at AGENT_PROXY_ORCHESTRATOR_URL http://agent-orchestrator:8080, and Claude Code its model through the
-# watchdog at AGENT_PROXY_LLM_WATCHDOG_URL http://llm-watchdog:8080. Only the watchdog gets the anthropic api key.
+# agent tools) at AGENT_PROXY_ORCHESTRATOR_URL http://agent-orchestrator:8080, and Claude Code its model through
+# agent-proxy's LLM hop and the watchdog at AGENT_PROXY_LLM_WATCHDOG_URL http://llm-watchdog:8080. Only the watchdog
+# gets the anthropic api key.
 #
 # Usage: ./build_and_run.sh <sources repo access token> <anthropic api key> <pushca api key>
 #

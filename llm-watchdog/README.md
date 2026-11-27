@@ -1,8 +1,9 @@
 # llm-watchdog
 
 Micronaut 5 (Java 25) microservice, built as a GraalVM native image for Docker/Kubernetes. Every call Claude Code
-makes to the LLM provider goes through it: agent-proxy points each Claude Code run at it (`ANTHROPIC_BASE_URL`), and
-only this service has the provider's API key. Each call is analyzed before it is sent (`AnalyzeLlmRequestService`);
+makes to the LLM provider goes through it: agent-proxy points each Claude Code run at its LLM hop
+(`ANTHROPIC_BASE_URL`), which forwards every call here with the session's JWT as a bearer token when the session has
+one, and only this service has the provider's API key. Each call is analyzed before it is sent (`AnalyzeLlmRequestService`);
 for now the analysis prints the call and lets it go on. A security analysis that rejects suspicious calls replaces it
 later.
 

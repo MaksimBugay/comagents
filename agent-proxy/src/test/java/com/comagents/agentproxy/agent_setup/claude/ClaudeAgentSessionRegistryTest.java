@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ClaudeAgentSessionRegistryTest {
 
     private static final Duration WAIT = Duration.ofSeconds(20);
-    private static final String LLM_WATCHDOG_URL = "http://127.0.0.1:8090";
+    private static final String LLM_HOP_URL = "http://127.0.0.1:8080/llm";
 
     private static final String KICK_OFF_PROMPT = "Review the project in the current directory.";
 
@@ -905,7 +905,7 @@ class ClaudeAgentSessionRegistryTest {
     }
 
     @Test
-    void reachesTheModelThroughTheLlmWatchdogWithItsSessionIdAsKey() throws Exception {
+    void reachesTheModelThroughTheLlmHopWithItsSessionIdAsKey() throws Exception {
         registry = registry(fakeClaude("""
                 printf '%s\\n' "$ANTHROPIC_BASE_URL" "$ANTHROPIC_API_KEY" > "$(dirname "$0")/model-env.txt"
                 printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"result":"done"}'
@@ -914,7 +914,8 @@ class ClaudeAgentSessionRegistryTest {
 
         registry.createSession(sessionId, AiAgent.CODE_REVIEW, workingDirectory).awaitFinished(WAIT);
 
-        assertEquals(List.of(LLM_WATCHDOG_URL, sessionId.toString()), Files.readAllLines(scripts.resolve("model-env.txt")));
+        assertEquals(List.of(LLM_HOP_URL + "/" + sessionId, sessionId.toString()),
+                Files.readAllLines(scripts.resolve("model-env.txt")));
     }
 
     @Test
@@ -1204,7 +1205,7 @@ class ClaudeAgentSessionRegistryTest {
     private ClaudeAgentSessionRegistry registry(Path claude, int maxConcurrent, Duration timeout, Duration idleTimeout) {
         return new ClaudeAgentSessionRegistry(claude.toString(), maxConcurrent, timeout, idleTimeout,
                 sessionFolders, listener, new AgentProxyMcpServer("http://127.0.0.1:8080/mcp", Duration.ofMinutes(4)),
-                new LlmWatchdog(LLM_WATCHDOG_URL), responsesReady::add);
+                new LlmWatchdog(LLM_HOP_URL), responsesReady::add);
     }
 
     private static final class RecordingListener implements ClaudeSessionListener {
