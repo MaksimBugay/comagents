@@ -276,7 +276,7 @@ use (`claude -p "<prompt>"`). `./build-image.sh` reinstalls the latest Claude Co
 | `AGENT_PROXY_VERSION`    | `0.1`   | Reported `version`     |
 | `AGENT_PROXY_DEVICE_ID`  | —       | Reported `deviceId` (`agent-proxy.device-id`); when not set: the Docker container id, or the Kubernetes pod UID or `HOSTNAME` (`local` without it) with a random suffix, so every instance is a device of its own; a set one must be unique in the cluster |
 | `AI_HARNESS_PROVIDER`    | set by the image: `CLAUDE_CODE` | The installed harness that runs the sessions (`agent-proxy.ai-harness-provider`); required outside the image |
-| `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`) |
+| `CLONE_COMAGENTS_SOURCES_URL` | — (required) | Agent sources repository URL (`clone.comagents.sources.url`); each setup downloads only the folders it reads, `agent/<harness>/<agent name>` of the agent and of the agents it calls |
 | `SOURCES_REPO_ACCESS_TOKEN`   | — (required) | Access token for that repository (`sources.repo.access-token`) |
 | `AGENT_PROXY_LLM_WATCHDOG_URL` | `http://llm-watchdog:8080` | The llm-watchdog, through which Claude Code reaches its model (`agent-proxy.llm-watchdog-url`): by default its container on the same Docker network; under Kubernetes its Service, `http://llm-watchdog` |
 | `PUSHCA_API_KEY`              | — (required) | API key of the organization registered in Pushca (`pushca.api-key`); a key Pushca refuses stops the startup |

@@ -25,12 +25,12 @@ import com.comagents.commons.serialization.SerializationException;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
 // non-sealed, not final: method validation (@NotNull on setup) needs a generated subclass proxy
 @Singleton
@@ -82,19 +82,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
         try (SessionSlot slot = claudeAgentSessionRegistry.reserve(sessionId)) {
             requireNoSessionFolder(sessionId);
             try {
-                Path agentFolder = sessionFolders.agentFolder(sessionId, agent);
-                AtomicReference<Path> preparedDirectory = new AtomicReference<>();
-                vcsService.cloneComAgentsSources(comAgentsSources -> {
-                    ClaudeAgentConfig config = readConfig(comAgentsSources, agent);
-                    agentContextValidator.validate(agent, attributes.agentContext(), config.requiredItems());
-                    List<AgentCallToolDefinition> agentTools = agentTools(comAgentsSources, config);
-                    Path directory = prepareWorkingDirectory(attributes, agentFolder);
-                    AgentFiles.copyInto(directory, comAgentsSources, agent, CLAUDE_CODE_FILES);
-                    AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
-                    agentCallTools.add(agentFolder, agentTools);
-                    preparedDirectory.set(directory);
-                });
-                Path workingDirectory = preparedDirectory.get();
+                Path workingDirectory = prepareSessionFiles(agent, attributes);
                 agentSessionWsClientRegistry.openConnection(sessionId, agent, attributes.actorAccountId());
                 slot.start(agent, workingDirectory, new ClaudeSessionOptions(
                         attributes.loggingLevel() == AgentSessionLoggingLevel.DEBUG, attributes.actorAccountId(), attributes),
@@ -105,6 +93,33 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                 agentSessionWsClientRegistry.removeConnection(sessionId);
                 throw e;
             }
+        }
+    }
+
+    // the agent's files are copied into the session from the comagents sources readConfig downloads, into a temporary
+    // folder per setup, so concurrent setups never share or delete each other's
+    private Path prepareSessionFiles(AiAgent agent, AgentSessionAttributes attributes) {
+        Path agentFolder = sessionFolders.agentFolder(attributes.sessionId(), agent);
+        Path comAgentsSources = createTemporaryFolder();
+        try {
+            ClaudeAgentConfig config = readConfig(comAgentsSources, agent);
+            agentContextValidator.validate(agent, attributes.agentContext(), config.requiredItems());
+            List<AgentCallToolDefinition> agentTools = agentTools(comAgentsSources, config);
+            Path workingDirectory = prepareWorkingDirectory(attributes, agentFolder);
+            AgentFiles.copyInto(workingDirectory, comAgentsSources, agent, CLAUDE_CODE_FILES);
+            AgentFiles.copyInto(agentFolder, comAgentsSources, agent, AGENT_FOLDER_FILES);
+            agentCallTools.add(agentFolder, agentTools);
+            return workingDirectory;
+        } finally {
+            FileTrees.deleteIfExists(comAgentsSources);
+        }
+    }
+
+    private static Path createTemporaryFolder() {
+        try {
+            return Files.createTempDirectory("comagents-");
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to create a temporary folder", e);
         }
     }
 
@@ -124,7 +139,9 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
                 .toList();
     }
 
+    // downloads the agent's folder of the comagents sources first, the only part of them a setup reads
     private ClaudeAgentConfig readConfig(Path comAgentsSources, AiAgent agent) {
+        vcsService.downloadComAgentsFolder(comAgentsSources, AgentFiles.sourcesFolder(agent));
         Path configFile = AgentFiles.agentConfigFile(comAgentsSources, agent);
         try {
             return JsonUtility.fromJson(Files.readAllBytes(configFile), ClaudeAgentConfig.class);

@@ -1,8 +1,8 @@
 package com.comagents.agentproxy.vcs;
 
 import com.comagents.agentproxy.conf.AgentProxyConf;
-import com.comagents.agentproxy.workspace.FileTrees;
 import com.comagents.commons.domain.GithubRepositoryUrl;
+import io.micronaut.core.type.Argument;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.StreamingHttpClient;
@@ -15,21 +15,30 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.function.Consumer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
  * "Clones" a GitHub repository by downloading a snapshot of its default branch through the
- * GitHub REST API zipball endpoint. The result has no {@code .git} directory.
+ * GitHub REST API zipball endpoint. The result has no {@code .git} directory. Folders of the comagents sources are
+ * downloaded alone, file by file, through the contents endpoint.
  */
 @Singleton
 public final class VcsGithubService implements VcsService {
 
     private static final String GITHUB_API_URL = "https://api.github.com";
+
+    private static final String JSON = "application/vnd.github+json";
+
+    private static final String RAW = "application/vnd.github.raw+json";
 
     private final String accessToken;
 
@@ -45,17 +54,14 @@ public final class VcsGithubService implements VcsService {
     }
 
     @Override
-    public void clone(String sourcesRepoUrl, String destinationPath) {
-        String repoPath = GithubRepositoryUrl.parse(sourcesRepoUrl).fullName();
-        Path destination = Path.of(destinationPath).toAbsolutePath().normalize();
+    public Path clone(String sourcesRepoUrl, Path parentFolder) {
+        GithubRepositoryUrl repository = GithubRepositoryUrl.parse(sourcesRepoUrl);
+        String repoPath = repository.fullName();
+        Path destination = parentFolder.resolve(repository.repository()).toAbsolutePath().normalize();
 
         // the API answers with a redirect to codeload.github.com; the client follows it and drops
         // the Authorization header on the cross-origin hop (the redirect URL carries its own token)
-        HttpRequest<?> request = HttpRequest.GET("/repos/" + repoPath + "/zipball")
-                .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
-                .header(HttpHeaders.USER_AGENT, "agent-proxy")
-                .header("X-GitHub-Api-Version", "2022-11-28")
-                .bearerAuth(accessToken);
+        HttpRequest<?> request = githubRequest("/repos/" + repoPath + "/zipball", JSON);
         Path zipball = null;
         try {
             ensureEmptyDirectory(destination);
@@ -75,6 +81,7 @@ public final class VcsGithubService implements VcsService {
             try (InputStream in = Files.newInputStream(zipball)) {
                 unzip(in, destination);
             }
+            return destination;
         } catch (HttpClientResponseException e) {
             throw new IllegalStateException("GitHub returned " + e.code() + " " + e.getStatus().getReason() + " for " + repoPath, e);
         } catch (IOException e) {
@@ -93,23 +100,64 @@ public final class VcsGithubService implements VcsService {
     }
 
     @Override
-    public void cloneComAgentsSources(Consumer<Path> sourcesConsumer) {
-        // a folder per call: concurrent setups never share or delete each other's sources
-        Path sources = createSourcesDirectory();
+    public void downloadComAgentsFolder(Path comAgentsSources, String folder) {
+        String repoPath = GithubRepositoryUrl.parse(comAgentsSourcesUrl).fullName();
+        Path root = comAgentsSources.toAbsolutePath().normalize();
         try {
-            clone(comAgentsSourcesUrl, sources.toString());
-            sourcesConsumer.accept(sources);
-        } finally {
-            FileTrees.deleteIfExists(sources);
+            if (!Files.isDirectory(insideOf(root, folder))) {
+                downloadFolder(repoPath, folder, root);
+            }
+        } catch (HttpClientResponseException e) {
+            throw new IllegalStateException("GitHub returned " + e.code() + " " + e.getStatus().getReason() + " for "
+                    + folder + " of " + repoPath, e);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to download " + folder + " of " + repoPath, e);
         }
     }
 
-    private static Path createSourcesDirectory() {
-        try {
-            return Files.createTempDirectory("comagents-");
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to create a temporary folder", e);
+    // the contents endpoint lists a folder: each file is fetched raw, each subfolder listed in turn
+    private void downloadFolder(String repoPath, String folder, Path root) throws IOException {
+        Files.createDirectories(insideOf(root, folder));
+        List<GithubContent> entries = githubClient.toBlocking()
+                .retrieve(contentsRequest(repoPath, folder, JSON), Argument.listOf(GithubContent.class));
+        for (GithubContent entry : entries) {
+            switch (entry.type()) {
+                case "dir" -> downloadFolder(repoPath, entry.path(), root);
+                case "file" -> Files.write(insideOf(root, entry.path()), fileContent(repoPath, entry.path()));
+                default -> {
+                    // symlinks and submodules are no agent files
+                }
+            }
         }
+    }
+
+    private byte[] fileContent(String repoPath, String file) {
+        return githubClient.toBlocking().exchange(contentsRequest(repoPath, file, RAW), byte[].class)
+                .getBody().orElseGet(() -> new byte[0]);
+    }
+
+    private HttpRequest<?> contentsRequest(String repoPath, String path, String accept) {
+        String encodedPath = Arrays.stream(path.split("/"))
+                .map(segment -> URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20"))
+                .collect(Collectors.joining("/"));
+        return githubRequest("/repos/" + repoPath + "/contents/" + encodedPath, accept);
+    }
+
+    private HttpRequest<?> githubRequest(String uri, String accept) {
+        return HttpRequest.GET(uri)
+                .header(HttpHeaders.ACCEPT, accept)
+                .header(HttpHeaders.USER_AGENT, "agent-proxy")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .bearerAuth(accessToken);
+    }
+
+    // a path from the caller or from GitHub's listing never lands outside the sources folder
+    private static Path insideOf(Path root, String path) throws IOException {
+        Path target = root.resolve(path).normalize();
+        if (!target.startsWith(root) || target.equals(root)) {
+            throw new IOException("Path escapes " + root + ": " + path);
+        }
+        return target;
     }
 
     private static boolean hasFiles(Path directory) {

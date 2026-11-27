@@ -40,6 +40,11 @@ final class AgentFiles {
         }
     }
 
+    /** The agent's folder in the comagents sources, {@code agent/<harness>/<agent name>}. */
+    static String sourcesFolder(AiAgent agent) {
+        return "agent/" + agent.getAiHarnessProvider().getHarnessName() + "/" + agent.getAgentName();
+    }
+
     /**
      * The agent's {@code agent.json} in the comagents sources.
      *
@@ -50,9 +55,7 @@ final class AgentFiles {
     }
 
     private static Path agentFolder(Path comAgentsSources, AiAgent agent) {
-        Path folder = comAgentsSources.resolve("agent")
-                .resolve(agent.getAiHarnessProvider().getHarnessName())
-                .resolve(agent.getAgentName());
+        Path folder = comAgentsSources.resolve(sourcesFolder(agent));
         if (!Files.isDirectory(folder)) {
             throw new IllegalStateException("No files for agent " + agent.getAgentName() + " in " + folder);
         }

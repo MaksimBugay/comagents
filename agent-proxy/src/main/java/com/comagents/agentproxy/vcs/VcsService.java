@@ -1,19 +1,8 @@
 package com.comagents.agentproxy.vcs;
 
-import com.comagents.commons.domain.GithubRepositoryUrl;
-
 import java.nio.file.Path;
-import java.util.function.Consumer;
 
 public sealed interface VcsService permits VcsGithubService {
-
-    void clone(String sourcesRepoUrl, String destinationPath);
-
-    /**
-     * Clones the comagents sources into a temporary folder, hands it to {@code sourcesConsumer}, and
-     * deletes it afterwards, so the folder is only valid while the consumer runs.
-     */
-    void cloneComAgentsSources(Consumer<Path> sourcesConsumer);
 
     /**
      * Clones into {@code <parentFolder>/<repo name>}, the repo name being the last URL path segment without
@@ -21,19 +10,14 @@ public sealed interface VcsService permits VcsGithubService {
      * {@code <session folder>/agents}.
      *
      * @return the folder the repository was cloned into
+     * @throws IllegalArgumentException when the URL names no GitHub repository
      */
-    default Path clone(String sourcesRepoUrl, Path parentFolder) {
-        Path destination = parentFolder.resolve(repoName(sourcesRepoUrl));
-        clone(sourcesRepoUrl, destination.toString());
-        return destination;
-    }
+    Path clone(String sourcesRepoUrl, Path parentFolder);
 
     /**
-     * The repository name in a clone URL, without the owner: its last path segment without {@code .git}.
-     *
-     * @throws IllegalArgumentException when the URL has none
+     * Downloads one folder of the comagents sources, e.g. {@code agent/claude_code/code_review}, with all its files and
+     * subfolders, from the default branch to the same path under {@code comAgentsSources}. A folder already there is
+     * not downloaded again.
      */
-    static String repoName(String sourcesRepoUrl) {
-        return GithubRepositoryUrl.parse(sourcesRepoUrl).repository();
-    }
+    void downloadComAgentsFolder(Path comAgentsSources, String folder);
 }
