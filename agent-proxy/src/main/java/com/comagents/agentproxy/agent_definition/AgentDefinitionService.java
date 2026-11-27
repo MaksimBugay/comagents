@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.agent_data;
+package com.comagents.agentproxy.agent_definition;
 
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.commons.domain.AiAgent;
@@ -6,7 +6,7 @@ import com.comagents.commons.domain.AiAgent;
 import java.util.List;
 import java.util.Map;
 
-public interface AgentDataService {
+public interface AgentDefinitionService {
 
     Map<AiAgent, ClaudeAgentConfig> getAgentConfig(List<AiAgent> agents);
 }

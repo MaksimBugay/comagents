@@ -1,7 +1,7 @@
 package com.comagents.agentproxy.agent_setup;
 
 import com.comagents.agentproxy.agent_call.AgentCallToolDefinition;
-import com.comagents.agentproxy.agent_data.AgentDataService;
+import com.comagents.agentproxy.agent_definition.AgentDefinitionService;
 import com.comagents.agentproxy.agent_setup.claude.AgentProxyMcpServer;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentSessionRegistry.SessionSlot;
@@ -57,20 +57,20 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
 
     private final AgentCallTools agentCallTools;
 
-    private final AgentDataService agentDataService;
+    private final AgentDefinitionService agentDefinitionService;
 
     public AgentWithClaudeCodeSetupService(VcsService vcsService, ClaudeAgentSessionRegistry claudeAgentSessionRegistry,
                                            SessionFolders sessionFolders,
                                            AgentSessionWsClientRegistry agentSessionWsClientRegistry,
                                            AgentContextValidator agentContextValidator,
-                                           AgentCallTools agentCallTools, AgentDataService agentDataService) {
+                                           AgentCallTools agentCallTools, AgentDefinitionService agentDefinitionService) {
         this.vcsService = vcsService;
         this.claudeAgentSessionRegistry = claudeAgentSessionRegistry;
         this.sessionFolders = sessionFolders;
         this.agentSessionWsClientRegistry = agentSessionWsClientRegistry;
         this.agentContextValidator = agentContextValidator;
         this.agentCallTools = agentCallTools;
-        this.agentDataService = agentDataService;
+        this.agentDefinitionService = agentDefinitionService;
     }
 
 
@@ -140,7 +140,7 @@ public non-sealed class AgentWithClaudeCodeSetupService implements AgentSetupSer
     // the agents the agent calls as tools of agent-proxy's MCP server, as their agent.json exposes them
     private List<AgentCallToolDefinition> agentTools(ClaudeAgentConfig config) {
         List<AiAgent> calledAgents = AgentProxyMcpServer.calledAgents(config.allowedTools());
-        Map<AiAgent, ClaudeAgentConfig> configs = agentDataService.getAgentConfig(calledAgents);
+        Map<AiAgent, ClaudeAgentConfig> configs = agentDefinitionService.getAgentConfig(calledAgents);
         return calledAgents.stream()
                 .map(called -> AgentCallToolDefinition.of(called, configs.get(called)))
                 .toList();

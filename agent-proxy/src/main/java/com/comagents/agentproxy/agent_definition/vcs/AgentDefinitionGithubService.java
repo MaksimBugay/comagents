@@ -1,6 +1,6 @@
-package com.comagents.agentproxy.agent_data.vcs;
+package com.comagents.agentproxy.agent_definition.vcs;
 
-import com.comagents.agentproxy.agent_data.AgentDataService;
+import com.comagents.agentproxy.agent_definition.AgentDefinitionService;
 import com.comagents.agentproxy.agent_setup.AgentFiles;
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.vcs.VcsService;
@@ -15,16 +15,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Agent data from the comagents sources on GitHub: each agent's {@code agent.json} is downloaded alone, from
+ * Agent definitions from the comagents sources on GitHub: each agent's {@code agent.json} is downloaded alone, from
  * {@code agent/<harness>/<agent name>/}.
  */
 @Singleton
-@Requires(property = "comagents.agent-data.source.type", value = "GIT_HUB", defaultValue = "GIT_HUB")
-public class AgentDataGithubService implements AgentDataService {
+@Requires(property = "comagents.agent-definition.source.type", value = "GIT_HUB", defaultValue = "GIT_HUB")
+public class AgentDefinitionGithubService implements AgentDefinitionService {
 
     private final VcsService vcsService;
 
-    public AgentDataGithubService(VcsService vcsService) {
+    public AgentDefinitionGithubService(VcsService vcsService) {
         this.vcsService = vcsService;
     }
 

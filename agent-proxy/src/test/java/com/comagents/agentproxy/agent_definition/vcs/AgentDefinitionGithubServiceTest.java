@@ -1,4 +1,4 @@
-package com.comagents.agentproxy.agent_data.vcs;
+package com.comagents.agentproxy.agent_definition.vcs;
 
 import com.comagents.agentproxy.agent_setup.claude.ClaudeAgentConfig;
 import com.comagents.agentproxy.conf.AgentProxyConf;
@@ -24,12 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** The agent.json of called agents, each downloaded alone from a fake GitHub. */
-class AgentDataGithubServiceTest {
+class AgentDefinitionGithubServiceTest {
 
     private static EmbeddedServer githubServer;
     private static StreamingHttpClient githubClient;
 
-    private AgentDataGithubService agentDataService;
+    private AgentDefinitionGithubService agentDefinitionService;
 
     @BeforeAll
     static void startGithub() {
@@ -53,7 +53,7 @@ class AgentDataGithubServiceTest {
                 "agent/claude_code/interview_insights/agent.json", """
                         {"kickOffPrompt": "Find insights"}""",
                 "agent/claude_code/code_review/agent.json", "not json"));
-        agentDataService = new AgentDataGithubService(new VcsGithubService(new AgentProxyConf("0.1",
+        agentDefinitionService = new AgentDefinitionGithubService(new VcsGithubService(new AgentProxyConf("0.1",
                 "https://github.com/acme/comagents.git", "token", "https://pushca.example", "pushca-key",
                 AiHarnessProvider.CLAUDE_CODE, new DeviceIdExtractor("test-device", "host")), githubClient));
     }
@@ -61,7 +61,7 @@ class AgentDataGithubServiceTest {
     @Test
     void readsTheConfigOfEachAgentInOrder() {
         Map<AiAgent, ClaudeAgentConfig> configs =
-                agentDataService.getAgentConfig(List.of(AiAgent.WEATHER_FORECAST, AiAgent.INTERVIEW_INSIGHTS));
+                agentDefinitionService.getAgentConfig(List.of(AiAgent.WEATHER_FORECAST, AiAgent.INTERVIEW_INSIGHTS));
 
         assertEquals(List.of(AiAgent.WEATHER_FORECAST, AiAgent.INTERVIEW_INSIGHTS), List.copyOf(configs.keySet()));
         assertEquals("Forecast it", configs.get(AiAgent.WEATHER_FORECAST).kickOffPrompt());
@@ -71,13 +71,13 @@ class AgentDataGithubServiceTest {
 
     @Test
     void noAgentsNoConfigs() {
-        assertTrue(agentDataService.getAgentConfig(List.of()).isEmpty());
+        assertTrue(agentDefinitionService.getAgentConfig(List.of()).isEmpty());
     }
 
     @Test
     void anUnreadableConfigFails() {
         IllegalStateException e = assertThrows(IllegalStateException.class,
-                () -> agentDataService.getAgentConfig(List.of(AiAgent.CODE_REVIEW)));
+                () -> agentDefinitionService.getAgentConfig(List.of(AiAgent.CODE_REVIEW)));
 
         assertTrue(e.getMessage().contains("agent/claude_code/code_review/agent.json"), e.getMessage());
     }
